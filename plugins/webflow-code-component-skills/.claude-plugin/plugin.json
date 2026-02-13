@@ -1,0 +1,6 @@
+{
+  "name": "webflow-code-component-skills",
+  "description": "Skills for building and deploying Webflow Code Components - scaffolding, styling, validation, and deployment workflows",
+  "version": "1.0.0",
+  "skills": "./skills/"
+}
