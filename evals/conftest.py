@@ -93,8 +93,20 @@ def extract_skill_invocations(events: list[dict[str, Any]]) -> list[str]:
     """Extract skill names from Skill tool_use calls.
 
     When Claude triggers a skill via natural language, it calls the Skill tool
-    with input like {"skill": "webflow-skills:safe-publish"}.
+    with input like {"skill": "webflow-skills:safe-publish"} or {"skill": "safe-publish"}.
+    Returns both the raw name and, if it lacks a plugin prefix, also returns
+    possible fully-qualified names by matching against the init event's skills list.
     """
+    # Build a lookup from short name -> full name using the init event
+    short_to_full: dict[str, str] = {}
+    for event in events:
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            for full_name in event.get("skills", []):
+                if ":" in full_name:
+                    short = full_name.split(":", 1)[1]
+                    short_to_full[short] = full_name
+            break
+
     skills = []
     for event in events:
         if event.get("type") != "assistant":
@@ -103,8 +115,16 @@ def extract_skill_invocations(events: list[dict[str, Any]]) -> list[str]:
         for block in message.get("content", []):
             if block.get("type") == "tool_use" and block.get("name") == "Skill":
                 skill_name = block.get("input", {}).get("skill", "")
-                if skill_name:
-                    skills.append(skill_name)
+                if not skill_name:
+                    continue
+                skills.append(skill_name)
+                # Also add the full name if Claude used the short form
+                if ":" not in skill_name and skill_name in short_to_full:
+                    skills.append(short_to_full[skill_name])
+                # Also add the short name if Claude used the full form
+                if ":" in skill_name:
+                    short = skill_name.split(":", 1)[1]
+                    skills.append(short)
     return skills
 
 

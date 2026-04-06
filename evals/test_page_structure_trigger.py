@@ -47,8 +47,8 @@ class TestPageStructurePositiveTriggers:
         self._assert_skill_triggered("Change the heading text in the hero section")
 
     def test_trigger_components_list(self):
-        """'What components does my Webflow site have?' -> page-structure"""
-        self._assert_skill_triggered("What components does my Webflow site have?")
+        """'List the components I can use on this page' -> page-structure"""
+        self._assert_skill_triggered("List the components I can use on this page")
 
     def test_trigger_update_component(self):
         """'Update the text in my navbar component' -> page-structure"""
