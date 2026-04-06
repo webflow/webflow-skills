@@ -1,6 +1,6 @@
 ---
 name: page-structure
-description: Build and manage page structure, elements, and components in Webflow Designer. Use when adding sections, creating layouts, building elements, managing components, restructuring pages, or styling specific elements. Requires Webflow Designer connection.
+description: Build and manage page structure, elements, and components in Webflow Designer. Use when adding sections, creating layouts, building elements, inspecting or updating components, viewing what's inside a component, restructuring pages, creating new pages, previewing page structure, or styling specific elements. Requires Webflow Designer connection.
 ---
 
 # Page Structure

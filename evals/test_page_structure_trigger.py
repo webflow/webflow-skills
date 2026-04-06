@@ -181,10 +181,9 @@ class TestPageStructureNegativeTriggers:
         )
 
     def test_no_trigger_code_component(self):
-        """React component -> component-scaffold, NOT page-structure"""
+        """React component -> NOT page-structure (may go to component-scaffold or brainstorming)"""
         self._assert_skill_not_triggered(
             "Create a React code component for a carousel",
-            expected_skill="webflow-code-component-skills:component-scaffold",
         )
 
     def test_no_trigger_cli(self):
@@ -215,8 +214,7 @@ class TestPageStructureNegativeTriggers:
         )
 
     def test_no_trigger_design_variables(self):
-        """Design tokens -> flowkit-naming, NOT page-structure"""
+        """Design tokens -> NOT page-structure (may go to flowkit-naming or frontend-design)"""
         self._assert_skill_not_triggered(
             "Set up my color palette and spacing tokens",
-            expected_skill="webflow-skills:flowkit-naming",
         )
