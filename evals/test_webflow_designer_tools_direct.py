@@ -1,4 +1,4 @@
-"""Direct invocation tests for webflow-designer-tools:page-structure skill.
+"""Direct invocation tests for webflow-designer-tools skills.
 
 All tests use /page-structure prefix to bypass trigger matching.
 These test execution quality: correct tool calls, ordering, and arguments.

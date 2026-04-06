@@ -1,4 +1,4 @@
-"""Trigger accuracy tests for webflow-designer-tools:page-structure skill.
+"""Trigger accuracy tests for webflow-designer-tools skills.
 
 Tests whether the skill activates (or doesn't) from natural language prompts.
 No /page-structure prefix — relies on skill description matching.
