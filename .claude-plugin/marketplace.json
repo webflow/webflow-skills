@@ -33,6 +33,15 @@
       },
       "source": "./plugins/webflow-cli-skills",
       "category": "productivity"
+    },
+    {
+      "name": "webflow-designer-tools",
+      "description": "Build and manage page structure, elements, and components in Webflow Designer",
+      "author": {
+        "name": "Webflow"
+      },
+      "source": "./plugins/webflow-designer-tools",
+      "category": "productivity"
     }
   ]
 }

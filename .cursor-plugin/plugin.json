@@ -24,7 +24,8 @@
   "skills": [
     "plugins/webflow-skills/skills",
     "plugins/webflow-code-component-skills/skills",
-    "plugins/webflow-cli-skills/skills"
+    "plugins/webflow-cli-skills/skills",
+    "plugins/webflow-designer-tools/skills"
   ],
   "agents": ["agents"]
 }

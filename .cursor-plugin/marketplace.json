@@ -7,7 +7,7 @@
     {
       "name": "webflow",
       "source": "./",
-      "description": "Production-ready agent skills for Webflow - CMS management, site auditing, asset optimization, and safe publishing."
+      "description": "Production-ready agent skills for Webflow - CMS management, site auditing, asset optimization, safe publishing, and Designer page structure tools."
     }
   ]
 }
