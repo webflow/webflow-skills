@@ -1,21 +1,21 @@
 """Trigger accuracy tests for webflow-designer-tools skills.
 
 Tests whether the skill activates (or doesn't) from natural language prompts.
-No /page-structure prefix — relies on skill description matching.
+No /designer-tools prefix — relies on skill description matching.
 """
 import pytest
 from conftest import run_claude, extract_skill_invocations
 from constants import MAX_TURNS_TRIGGER
 
 
-SKILL_NAME = "webflow-designer-tools:page-structure"
+SKILL_NAME = "webflow-designer-tools:designer-tools"
 
 
-# -- Positive Triggers (SHOULD activate page-structure) --
+# -- Positive Triggers (SHOULD activate designer-tools) --
 
 @pytest.mark.trigger
 @pytest.mark.designer
-class TestPageStructurePositiveTriggers:
+class TestDesignerToolsPositiveTriggers:
 
     @pytest.fixture(autouse=True)
     def _shared(self):
@@ -31,67 +31,67 @@ class TestPageStructurePositiveTriggers:
         )
 
     def test_trigger_add_section(self):
-        """'Add a hero section to my Webflow page' -> page-structure"""
+        """'Add a hero section to my Webflow page' -> designer-tools"""
         self._assert_skill_triggered("Add a hero section to my Webflow page")
 
     def test_trigger_build_layout(self):
-        """'Build a three-column grid layout on the homepage' -> page-structure"""
+        """'Build a three-column grid layout on the homepage' -> designer-tools"""
         self._assert_skill_triggered("Build a three-column grid layout on the homepage")
 
     def test_trigger_list_elements(self):
-        """'Show me all the elements on this page' -> page-structure"""
+        """'Show me all the elements on this page' -> designer-tools"""
         self._assert_skill_triggered("Show me all the elements on this page")
 
     def test_trigger_edit_element(self):
-        """'Change the heading text in the hero section' -> page-structure"""
+        """'Change the heading text in the hero section' -> designer-tools"""
         self._assert_skill_triggered("Change the heading text in the hero section")
 
     def test_trigger_components_list(self):
-        """'List the components I can use on this page' -> page-structure"""
+        """'List the components I can use on this page' -> designer-tools"""
         self._assert_skill_triggered("List the components I can use on this page")
 
     def test_trigger_update_component(self):
-        """'Update the text in my navbar component' -> page-structure"""
+        """'Update the text in my navbar component' -> designer-tools"""
         self._assert_skill_triggered("Update the text in my navbar component")
 
     def test_trigger_create_page(self):
-        """'Create a new landing page for my Webflow site' -> page-structure"""
+        """'Create a new landing page for my Webflow site' -> designer-tools"""
         self._assert_skill_triggered("Create a new landing page for my Webflow site")
 
     def test_trigger_restructure(self):
-        """'Reorganize the sections on my about page' -> page-structure"""
+        """'Reorganize the sections on my about page' -> designer-tools"""
         self._assert_skill_triggered("Reorganize the sections on my about page")
 
     def test_trigger_add_element(self):
-        """'Add a button below the hero image' -> page-structure"""
+        """'Add a button below the hero image' -> designer-tools"""
         self._assert_skill_triggered("Add a button below the hero image")
 
     def test_trigger_page_preview(self):
-        """'Show me a preview of the current page structure' -> page-structure"""
+        """'Show me a preview of the current page structure' -> designer-tools"""
         self._assert_skill_triggered("Show me a preview of the current page structure")
 
     def test_trigger_component_structure(self):
-        """'What's inside my footer component?' -> page-structure"""
+        """'What's inside my footer component?' -> designer-tools"""
         self._assert_skill_triggered("What's inside my footer component?")
 
     def test_trigger_nested_elements(self):
-        """'Create a card with an image, title, and description' -> page-structure"""
+        """'Create a card with an image, title, and description' -> designer-tools"""
         self._assert_skill_triggered("Create a card with an image, title, and description")
 
     def test_trigger_delete_section(self):
-        """'Remove the testimonials section from the page' -> page-structure"""
+        """'Remove the testimonials section from the page' -> designer-tools"""
         self._assert_skill_triggered("Remove the testimonials section from the page")
 
     def test_trigger_style_elements(self):
-        """'Make the hero section full-width with dark background' -> page-structure"""
+        """'Make the hero section full-width with dark background' -> designer-tools"""
         self._assert_skill_triggered("Make the hero section full-width with dark background")
 
 
-# -- Negative Triggers (SHOULD NOT activate page-structure) --
+# -- Negative Triggers (SHOULD NOT activate designer-tools) --
 
 @pytest.mark.trigger
 @pytest.mark.negative
-class TestPageStructureNegativeTriggers:
+class TestDesignerToolsNegativeTriggers:
 
     @pytest.fixture(autouse=True)
     def _shared(self):
@@ -111,83 +111,83 @@ class TestPageStructureNegativeTriggers:
             )
 
     def test_no_trigger_cms_create(self):
-        """CMS collection creation -> cms-collection-setup, NOT page-structure"""
+        """CMS collection creation -> cms-collection-setup, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Create a new blog post collection in Webflow",
             expected_skill="webflow-skills:cms-collection-setup",
         )
 
     def test_no_trigger_cms_update(self):
-        """Bulk CMS update -> bulk-cms-update, NOT page-structure"""
+        """Bulk CMS update -> bulk-cms-update, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Add 20 new blog posts to my CMS",
             expected_skill="webflow-skills:bulk-cms-update",
         )
 
     def test_no_trigger_publish(self):
-        """Publishing -> safe-publish, NOT page-structure"""
+        """Publishing -> safe-publish, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Publish my Webflow site",
             expected_skill="webflow-skills:safe-publish",
         )
 
     def test_no_trigger_site_audit(self):
-        """Site audit -> site-audit, NOT page-structure"""
+        """Site audit -> site-audit, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Run a full audit of my Webflow site",
             expected_skill="webflow-skills:site-audit",
         )
 
     def test_no_trigger_accessibility(self):
-        """Accessibility -> accessibility-audit, NOT page-structure"""
+        """Accessibility -> accessibility-audit, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Check my site for WCAG accessibility issues",
             expected_skill="webflow-skills:accessibility-audit",
         )
 
     def test_no_trigger_asset_audit(self):
-        """Asset audit -> asset-audit, NOT page-structure"""
+        """Asset audit -> asset-audit, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Check all images for missing alt text",
             expected_skill="webflow-skills:asset-audit",
         )
 
     def test_no_trigger_link_check(self):
-        """Link checking -> link-checker, NOT page-structure"""
+        """Link checking -> link-checker, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Find broken links on my site",
             expected_skill="webflow-skills:link-checker",
         )
 
     def test_no_trigger_custom_code(self):
-        """Custom code -> custom-code-management, NOT page-structure"""
+        """Custom code -> custom-code-management, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Add Google Analytics tracking to my site",
             expected_skill="webflow-skills:custom-code-management",
         )
 
     def test_no_trigger_naming(self):
-        """CSS naming -> flowkit-naming, NOT page-structure"""
+        """CSS naming -> flowkit-naming, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Audit my CSS class names for FlowKit compliance",
             expected_skill="webflow-skills:flowkit-naming",
         )
 
     def test_no_trigger_cms_practices(self):
-        """CMS advice -> cms-best-practices, NOT page-structure"""
+        """CMS advice -> cms-best-practices, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "How should I structure my CMS for an e-commerce site?",
             expected_skill="webflow-skills:cms-best-practices",
         )
 
     def test_no_trigger_code_component(self):
-        """React component -> NOT page-structure (may go to component-scaffold or brainstorming)"""
+        """React component -> NOT designer-tools (may go to component-scaffold or brainstorming)"""
         self._assert_skill_not_triggered(
             "Create a React code component for a carousel",
         )
 
     def test_no_trigger_cli(self):
-        """CLI deploy -> webflow-cli:cloud, NOT page-structure"""
+        """CLI deploy -> webflow-cli:cloud, NOT designer-tools"""
         self._assert_skill_not_triggered(
             "Deploy my site using the Webflow CLI",
             expected_skill="webflow-cli-skills:webflow-cloud-command",
@@ -203,18 +203,18 @@ class TestPageStructureNegativeTriggers:
         assert SKILL_NAME not in skills
 
     def test_no_trigger_seo(self):
-        """SEO optimization -> site-audit or cms-best-practices, NOT page-structure"""
+        """SEO optimization -> site-audit or cms-best-practices, NOT designer-tools"""
         events = run_claude(
             prompt="Optimize my page titles and meta descriptions",
             max_turns=self.max_turns,
         )
         skills = extract_skill_invocations(events)
         assert SKILL_NAME not in skills, (
-            f"Expected page-structure NOT to trigger for SEO task. Skills: {skills}"
+            f"Expected designer-tools NOT to trigger for SEO task. Skills: {skills}"
         )
 
     def test_no_trigger_design_variables(self):
-        """Design tokens -> NOT page-structure (may go to flowkit-naming or frontend-design)"""
+        """Design tokens -> NOT designer-tools (may go to flowkit-naming or frontend-design)"""
         self._assert_skill_not_triggered(
             "Set up my color palette and spacing tokens",
         )

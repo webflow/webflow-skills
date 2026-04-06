@@ -1,6 +1,6 @@
 """Direct invocation tests for webflow-designer-tools skills.
 
-All tests use /page-structure prefix to bypass trigger matching.
+All tests use the /designer-tools prefix to bypass trigger matching.
 These test execution quality: correct tool calls, ordering, and arguments.
 
 Note: In non-interactive (-p) mode, mutating operations will ask for
@@ -48,12 +48,12 @@ def assistant_text(events: list[dict]) -> str:
 
 @pytest.mark.designer
 @pytest.mark.direct
-class TestPageStructureExecution:
+class TestDesignerToolsExecution:
 
     def test_guide_called_first(self):
         """webflow_guide_tool should be the first MCP tool called."""
         events = run_claude(
-            prompt="/page-structure Show me the elements on this page",
+            prompt="/designer-tools Show me the elements on this page",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -66,7 +66,7 @@ class TestPageStructureExecution:
     def test_site_discovery(self):
         """Should call data_sites_tool to discover the site."""
         events = run_claude(
-            prompt="/page-structure List all elements on the homepage",
+            prompt="/designer-tools List all elements on the homepage",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -78,7 +78,7 @@ class TestPageStructureExecution:
     def test_list_page_elements(self):
         """Listing page elements should call de_page_tool and element_tool."""
         events = run_claude(
-            prompt='/page-structure List all elements on the current page of the "Yan\'s Test Case" site in the Designer',
+            prompt='/designer-tools List all elements on the current page of the "Yan\'s Test Case" site in the Designer',
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -99,7 +99,7 @@ class TestPageStructureExecution:
     def test_build_hero_section(self):
         """Building a hero section should use element_builder or ask for confirmation."""
         events = run_claude(
-            prompt="/page-structure Add a hero section with heading and CTA button. Confirm yes.",
+            prompt="/designer-tools Add a hero section with heading and CTA button. Confirm yes.",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -113,7 +113,7 @@ class TestPageStructureExecution:
     def test_build_two_column_layout(self):
         """Building a layout should use element_builder or ask for confirmation."""
         events = run_claude(
-            prompt="/page-structure Create a two-column layout with text on left and image on right. Confirm yes.",
+            prompt="/designer-tools Create a two-column layout with text on left and image on right. Confirm yes.",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -127,7 +127,7 @@ class TestPageStructureExecution:
     def test_list_components(self):
         """Listing components should use data_components_tool."""
         events = run_claude(
-            prompt='/page-structure List all available components on the "Yan\'s Test Case" site',
+            prompt='/designer-tools List all available components on the "Yan\'s Test Case" site',
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -139,7 +139,7 @@ class TestPageStructureExecution:
     def test_get_component_content(self):
         """Inspecting a component should use data_components_tool or de_component_tool."""
         events = run_claude(
-            prompt="/page-structure Inspect the contents of the navbar component on the current site",
+            prompt="/designer-tools Inspect the contents of the navbar component on the current site",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -151,7 +151,7 @@ class TestPageStructureExecution:
     def test_update_component_requires_confirmation(self):
         """Updating a component should request confirmation before mutation."""
         events = run_claude(
-            prompt="/page-structure Update the footer copyright text to 2026",
+            prompt="/designer-tools Update the footer copyright text to 2026",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -160,7 +160,7 @@ class TestPageStructureExecution:
     def test_create_page_requires_confirmation(self):
         """Creating a page should use de_page_tool or ask for confirmation."""
         events = run_claude(
-            prompt='/page-structure Create a new page called "About Us"',
+            prompt='/designer-tools Create a new page called "About Us"',
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -174,7 +174,7 @@ class TestPageStructureExecution:
     def test_snapshot_before_changes(self):
         """Restructuring should snapshot before making changes or ask for confirmation."""
         events = run_claude(
-            prompt="/page-structure Restructure the hero section layout",
+            prompt="/designer-tools Restructure the hero section layout",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -188,7 +188,7 @@ class TestPageStructureExecution:
     def test_style_application(self):
         """Adding styles should use style_tool or ask for confirmation."""
         events = run_claude(
-            prompt="/page-structure Add padding and a dark background to the hero section. Confirm yes.",
+            prompt="/designer-tools Add padding and a dark background to the hero section. Confirm yes.",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -203,12 +203,12 @@ class TestPageStructureExecution:
 
 @pytest.mark.designer
 @pytest.mark.direct
-class TestPageStructureSafety:
+class TestDesignerToolsSafety:
 
     def test_no_silent_mutation(self):
         """Deleting elements must request confirmation before destructive tool call."""
         events = run_claude(
-            prompt="/page-structure Delete the footer section",
+            prompt="/designer-tools Delete the footer section",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -217,7 +217,7 @@ class TestPageStructureSafety:
     def test_no_silent_component_update(self):
         """Bulk style changes must request confirmation."""
         events = run_claude(
-            prompt="/page-structure Change all button colors to red",
+            prompt="/designer-tools Change all button colors to red",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -226,7 +226,7 @@ class TestPageStructureSafety:
     def test_no_hallucinated_tools(self):
         """All tool calls should be known tools."""
         events = run_claude(
-            prompt="/page-structure Build a contact form",
+            prompt="/designer-tools Build a contact form",
             max_turns=MAX_TURNS_DIRECT,
         )
         tools = extract_tool_calls(events)
@@ -236,7 +236,7 @@ class TestPageStructureSafety:
     def test_completes_within_budget(self):
         """Skill should complete without hitting max_turns."""
         events = run_claude(
-            prompt="/page-structure List the page elements",
+            prompt="/designer-tools List the page elements",
             max_turns=MAX_TURNS_DIRECT,
         )
         result = get_result(events)
