@@ -11,6 +11,7 @@ Build, inspect, and manage page elements and components in the Webflow Designer.
 
 **ALWAYS use Webflow MCP tools for all operations:**
 - Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call**
+- Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
 - Use Webflow MCP's `de_page_tool` to get current page, switch pages, or create pages/folders
 - Use Webflow MCP's `element_tool` with action `get_all_elements` to retrieve page elements
 - Use Webflow MCP's `element_tool` with action `select_element` to select a specific element
@@ -33,8 +34,9 @@ Build, inspect, and manage page elements and components in the Webflow Designer.
 
 ### Phase 1: Discovery
 1. **Call `webflow_guide_tool` first** — always the first MCP tool call in any workflow
-2. **Get current page**: Use `de_page_tool` to identify which page is active in the Designer
-3. **If user specifies a different page**: Use `de_page_tool` to switch to it before proceeding
+2. **Get the site**: Use `data_sites_tool` with action `list_sites` to identify the target site. If only one site exists, use it automatically.
+3. **Get current page**: Use `de_page_tool` to identify which page is active in the Designer
+4. **If user specifies a different page**: Use `de_page_tool` to switch to it before proceeding
 4. **Identify the task type**:
    - **Inspect**: List elements, view structure, preview → go to Phase 2
    - **Build/Modify/Delete**: Add, update, restructure, remove → go to Phase 3
@@ -75,17 +77,19 @@ Before creating, updating, or deleting anything:
 **User:** "Show me all elements on the homepage"
 
 1. Call `webflow_guide_tool` for best practices
-2. Call `de_page_tool` to confirm current page is homepage (switch if needed)
-3. Call `element_tool` with `get_all_elements` to retrieve page structure
-4. Present organized summary of sections, elements, and nesting
+2. Call `data_sites_tool` with `list_sites` to identify the site
+3. Call `de_page_tool` to confirm current page is homepage (switch if needed)
+4. Call `element_tool` with `get_all_elements` to retrieve page structure
+5. Present organized summary of sections, elements, and nesting
 
 ### Example 2: Build a hero section
 
 **User:** "Add a hero section with a heading and CTA button"
 
 1. Call `webflow_guide_tool` for best practices
-2. Call `de_page_tool` to get current page
-3. Call `element_snapshot_tool` to capture current state
+2. Call `data_sites_tool` with `list_sites` to identify the site
+3. Call `de_page_tool` to get current page
+4. Call `element_snapshot_tool` to capture current state
 4. Present plan: "I'll create a Section with a Heading and Button. Would you like me to proceed?"
 5. After confirmation: call `element_builder` with nested structure
 6. Call `style_tool` to apply styles (padding, background, typography)
@@ -96,7 +100,8 @@ Before creating, updating, or deleting anything:
 **User:** "Update the footer copyright text to 2026"
 
 1. Call `webflow_guide_tool` for best practices
-2. Call `data_components_tool` with `list_components` to find the footer
+2. Call `data_sites_tool` with `list_sites` to identify the site
+3. Call `data_components_tool` with `list_components` to find the footer
 3. Call `data_components_tool` with `get_component_content` to inspect it
 4. Present: "I'll update the copyright text from '2025' to '2026'. Would you like me to proceed?"
 5. After confirmation: call `data_components_tool` with `update_component_content`
@@ -107,7 +112,8 @@ Before creating, updating, or deleting anything:
 **User:** "Restructure the hero section layout"
 
 1. Call `webflow_guide_tool` for best practices
-2. Call `de_page_tool` to get current page
+2. Call `data_sites_tool` with `list_sites` to identify the site
+3. Call `de_page_tool` to get current page
 3. Call `element_snapshot_tool` to capture current hero section
 4. Call `element_tool` to inspect current structure
 5. Present restructuring plan with before/after description
@@ -119,7 +125,8 @@ Before creating, updating, or deleting anything:
 **User:** "Create a two-column layout with text on left and image on right"
 
 1. Call `webflow_guide_tool` for best practices
-2. Call `de_page_tool` to get current page
+2. Call `data_sites_tool` with `list_sites` to identify the site
+3. Call `de_page_tool` to get current page
 3. Call `element_snapshot_tool` to capture current state
 4. Present plan: "I'll create a Grid with two columns — text block on left, image on right. Would you like me to proceed?"
 5. After confirmation: call `element_builder` with grid structure
