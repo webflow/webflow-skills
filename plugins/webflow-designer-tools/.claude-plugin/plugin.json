@@ -1,6 +1,0 @@
-{
-  "name": "webflow-designer-tools",
-  "description": "Webflow Designer tools for building page structure and managing components",
-  "version": "0.1.0",
-  "skills": "./skills/"
-}
