@@ -1,30 +1,31 @@
 ---
-name: webflow-mcp:site-audit
-description: Comprehensive audit of a Webflow site including pages, CMS collections, health scoring, and actionable insights. Use for site analysis, migration planning, or understanding site structure.
+name: site-audit
+description: "Audit a Webflow site via MCP — counts pages, catalogs CMS collection schemas, detects missing SEO metadata, scores content health 0-100, and exports inventory as Markdown/JSON/CSV. Use when a user asks for a Webflow audit, site review, content inventory, site health check, or migration planning."
 ---
 
 # Site Audit
 
 Comprehensive audit of a Webflow site's structure, content health, and quality with detailed analysis and multiple export formats.
 
-## Important Note
+## MCP Tool Reference
 
-**ALWAYS use Webflow MCP tools for all operations:**
-- Use Webflow MCP's `data_sites_tool` with action `list_sites` for listing available sites
-- Use Webflow MCP's `data_sites_tool` with action `get_site` for detailed site information
-- Use Webflow MCP's `data_pages_tool` with action `list_pages` for retrieving all pages
-- Use Webflow MCP's `data_cms_tool` with action `get_collection_list` for listing CMS collections
-- Use Webflow MCP's `data_cms_tool` with action `get_collection_details` for detailed collection schemas
-- Use Webflow MCP's `data_cms_tool` with action `list_collection_items` for counting items
-- Use Webflow MCP's `webflow_guide_tool` to get best practices before starting
-- DO NOT use any other tools or methods for Webflow operations
-- All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
+All operations MUST use Webflow MCP tools — no other tools or methods. Every call requires a `context` parameter (15-25 words, third-person).
+
+| Action | Tool | MCP Action |
+|--------|------|------------|
+| List sites | `data_sites_tool` | `list_sites` |
+| Get site details | `data_sites_tool` | `get_site` |
+| List pages | `data_pages_tool` | `list_pages` |
+| List collections | `data_cms_tool` | `get_collection_list` |
+| Get collection schema | `data_cms_tool` | `get_collection_details` |
+| Count collection items | `data_cms_tool` | `list_collection_items` |
+| Get best practices | `webflow_guide_tool` | — |
 
 ## Instructions
 
 ### Phase 1: Site Selection & Discovery
 1. **Get site**: Identify the target site. If user does not provide site ID, ask for it.
-2. **Fetch site details**: Use Webflow MCP's `data_sites_tool` with action `get_site` to retrieve:
+2. **Fetch site details** via `data_sites_tool` → `get_site` to retrieve:
    - Site name and ID
    - Last published date
    - Last updated date
@@ -37,8 +38,10 @@ Comprehensive audit of a Webflow site's structure, content health, and quality w
    - Detailed inventory (includes all field schemas, item samples, SEO data)
    - Full export (everything + export to file format)
 
+**Checkpoint:** Confirm site ID resolved and detail level chosen before proceeding.
+
 ### Phase 2: Pages Inventory
-4. **List all pages**: Use Webflow MCP's `data_pages_tool` with action `list_pages` to fetch all pages
+4. **List all pages** via `data_pages_tool` → `list_pages`
 5. **Categorize pages**:
    - Static pages (no collectionId)
    - CMS template pages (has collectionId)
@@ -50,11 +53,13 @@ Comprehensive audit of a Webflow site's structure, content health, and quality w
    - Detect orphaned pages (no navigation links)
    - Check for duplicate slugs
 
+**Checkpoint:** If `list_pages` fails, log the error and continue to Phase 3.
+
 ### Phase 3: CMS Collections Inventory
-7. **List all collections**: Use Webflow MCP's `data_cms_tool` with action `get_collection_list`
+7. **List all collections** via `data_cms_tool` → `get_collection_list`
 8. **For each collection**:
-   - Get detailed schema using Webflow MCP's `data_cms_tool` with action `get_collection_details`
-   - Count items using Webflow MCP's `data_cms_tool` with action `list_collection_items`
+   - Get schema via `get_collection_details`
+   - Count items via `list_collection_items`
    - Analyze field types and requirements
    - Identify required vs optional fields
    - Detect reference fields and relationships
@@ -63,6 +68,8 @@ Comprehensive audit of a Webflow site's structure, content health, and quality w
    - Unused collections (no template page)
    - Large collections (100+ items)
    - Collections with missing required fields
+
+**Checkpoint:** If `get_collection_details` fails for a collection, show basic info and continue.
 
 ### Phase 4: Analysis & Insights
 10. **Generate insights**:
@@ -86,7 +93,7 @@ Comprehensive audit of a Webflow site's structure, content health, and quality w
     - JSON (machine-readable, for migrations)
     - CSV (spreadsheet-friendly, for analysis)
     - Text summary (console output only)
-14. **Generate report** in requested format
+14. **Generate report** in requested format. See [export-templates.md](references/export-templates.md) for format structure.
 15. **Provide actionable insights**: Suggest next steps based on findings
 
 ## Examples
@@ -193,192 +200,23 @@ Blog Posts:
 Export this inventory? (markdown/json/csv/no)
 ```
 
-**Step 3: Export Options**
-```
-📥 Export Format Options:
-
-1. **Markdown** - Human-readable documentation
-   - Great for README files, wikis, documentation
-   - Preserves structure and formatting
-
-2. **JSON** - Machine-readable structured data
-   - Perfect for migrations, integrations
-   - Includes all raw API data
-
-3. **CSV** - Spreadsheet-friendly
-   - Easy to analyze in Excel/Google Sheets
-   - Separate files for pages and collections
-
-Which format would you like? (1/2/3)
-```
-
 ## Guidelines
 
-### Phase 1: Critical Requirements
+### Health Scoring Formula (0-100)
 
-**Site Information:**
-- Always fetch complete site details using `data_sites_tool` with action `get_site`
-- Include last published and last updated dates
-- Show timezone and locale information
-- Display custom domains if configured
+Start at 100 and deduct for issues found:
+- −5 per page missing meta description (max −25)
+- −10 per empty collection
+- −5 per unused collection with no template page
+- −3 per draft page (max −15)
+- −10 if site not published in last 90 days
+- −5 if no reference fields exist across all collections
 
-**User Options:**
-Offer multiple detail levels:
-- Quick: Just counts
-- Standard: Pages + collections + basic info
-- Detailed: Full schema + analysis + insights
-- Export: Everything + file output
+Categorize issues: 🔴 Critical (missing required fields, duplicate slugs) | ⚠️ Warning (empty collections, missing SEO) | 💡 Suggestion (add pages, create relationships).
 
-### Phase 2: Pages Analysis
+### Operational Guidelines
 
-**Page Categorization:**
-- Separate static pages from CMS template pages
-- Flag archived and draft pages separately
-- Show page slugs/URLs for reference
-- Identify pages with missing SEO metadata
-
-**Page Health Checks:**
-- Missing meta descriptions
-- Missing OG tags
-- Duplicate slugs (error condition)
-- Orphaned pages (not linked in nav)
-
-### Phase 3: Collections Analysis
-
-**Collection Details:**
-For each collection, show:
-- Display name and singular name
-- Slug (URL structure)
-- Total field count
-- Required vs optional fields breakdown
-- Item count (published/draft/archived)
-- Last updated date
-
-**Field Analysis:**
-Categorize by type:
-- Text fields (PlainText, RichText)
-- Media fields (Image, Video, File)
-- Relationship fields (Reference, MultiReference)
-- Data fields (DateTime, Number, Color)
-- Boolean fields (Switch)
-- Selection fields (Option)
-
-**Field Validation:**
-- Show max length constraints
-- Show validation patterns
-- Flag required fields
-- Identify reference field targets
-
-### Phase 4: Analysis & Insights
-
-**Content Health Score (0-100):**
-Calculate based on:
-- SEO metadata completeness (25 points)
-- Content-to-page ratio (20 points)
-- Field utilization (20 points)
-- Recent updates (15 points)
-- Structure quality (20 points)
-
-**Issue Detection:**
-- 🔴 Critical: Missing required fields, duplicate slugs
-- ⚠️ Warning: Empty collections, missing SEO, drafts
-- 💡 Suggestion: Add pages, create relationships, organize
-
-**Recommendations:**
-Suggest improvements based on:
-- Missing page types (About, Contact, etc.)
-- Underutilized collections
-- Missing relationships between collections
-- SEO optimization opportunities
-
-### Phase 5: Export Formats
-
-**Markdown Export:**
-```markdown
-# Site Audit: [Site Name]
-
-## Site Information
-- ID: [site-id]
-- Last Published: [date]
-
-## Pages
-### Static Pages
-- Home (/)
-- About (/about)
-
-### CMS Templates
-- Blog Post (/post/[slug])
-
-## Collections
-### Blog Posts (47 items)
-**Fields:**
-- Title (PlainText, required)
-- Slug (PlainText, required)
-- Content (RichText)
-...
-```
-
-**JSON Export:**
-```json
-{
-  "site": {
-    "id": "...",
-    "name": "...",
-    "lastPublished": "..."
-  },
-  "pages": [...],
-  "collections": [...]
-}
-```
-
-**CSV Export:**
-Generate separate files:
-- `pages.csv`: All pages with metadata
-- `collections.csv`: Collection metadata
-- `fields.csv`: All fields across collections
-- `items.csv`: Item counts per collection
-
-### Performance Optimization
-
-**Batch Processing:**
-- For sites with 20+ collections, show progress
-- For collections with 100+ items, paginate counts
-- Provide estimated time for large sites
-
-**Error Handling:**
-- If `data_pages_tool` with action `list_pages` fails, continue with collections
-- If `data_cms_tool` with action `get_collection_details` fails, show basic collection info
-- Report partial successes separately
-- Offer to retry failed operations
-
-**Data Efficiency:**
-- Use pagination for large result sets
-- Only fetch detailed schemas when needed
-- Limit item samples to 3-5 per collection
-- Cache site info for repeat operations
-
-### Best Practices
-
-**Read-Only Operation:**
-- No confirmation needed (read-only)
-- Safe to run multiple times
-- No side effects or modifications
-
-**Clear Organization:**
-- Group by content type (pages/collections)
-- Use visual hierarchy (├── └──)
-- Show counts prominently
-- Highlight issues with icons (✅ ⚠️ 🔴 💡)
-
-**Actionable Output:**
-- Always end with recommendations
-- Offer export options for detailed inventories
-- Suggest next steps based on findings
-- Provide comparison against best practices
-
-**Version Tracking:**
-If user runs inventory multiple times:
-- Compare with previous run
-- Show changes (new pages, deleted collections)
-- Track content growth over time
-- Alert on significant changes
+- **Read-only**: No confirmation needed. Safe to run repeatedly with no side effects.
+- **Graceful degradation**: If any MCP call fails, report what succeeded and continue. Offer to retry failed operations.
+- **Pagination**: For 20+ collections show progress; for 100+ item collections paginate counts. Only fetch detailed schemas at Detailed/Export level. Limit item samples to 3-5 per collection.
+- **Version tracking**: If user runs audit multiple times, compare with previous run and highlight changes.
