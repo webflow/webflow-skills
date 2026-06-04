@@ -111,6 +111,10 @@ All skills ship from the single `webflow-skills` plugin.
 - [Available Tools](https://developers.webflow.com/mcp/v1.0.0/reference/how-it-works#available-tools) - Complete tool reference
 - [Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) - Learn about the Agent Skills standard
 
+## Contributing
+
+Internal and external contributions are both welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) — it covers how to design a skill (Anthropic's skill-design guide + the `skill-creator` skill), the `SKILL.md` structure and conventions, and the pull request process.
+
 ## License
 
 MIT

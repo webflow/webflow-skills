@@ -60,4 +60,4 @@ Optional frontmatter: `license`, `model`, `allowed-tools`
 
 ## Adding/Editing Skills
 
-Follow `CONTRIBUTING.md`. PR title format: `feat(skills): Add [skill-name]`. Keep SKILL.md under 500 lines. Every skill needs Instructions, Examples, and Guidelines sections.
+Before authoring or editing a skill, read `CONTRIBUTING.md` — especially **Designing skills (start here)**, which links Anthropic's skill-design guide and the `skill-creator` skill. PR title format: `feat(skills): Add [skill-name]`. Keep SKILL.md under 500 lines. Every skill needs Instructions, Examples, and Guidelines sections.

@@ -1,6 +1,15 @@
 # Contributing
 
-Guidelines for adding and improving Webflow skills.
+Guidelines for adding and improving Webflow skills. Internal and external contributions are both welcome.
+
+## Designing skills (start here)
+
+New to writing skills? Use Anthropic's guidance and tooling before you start — it's the fastest way to get a skill right the first time:
+
+- **[The Complete Guide to Building Skills for Claude](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf)** — how to scope, structure, and name a skill, write descriptions with strong trigger keywords, apply progressive disclosure, and include effective examples.
+- **[`skill-creator` skill](https://github.com/anthropics/skills/blob/main/skills/skill-creator)** — install it and let it scaffold and refine your `SKILL.md` instead of starting from a blank file.
+
+Then follow the structure and conventions below.
 
 ## Adding a New Skill
 
