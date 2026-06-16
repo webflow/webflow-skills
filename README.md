@@ -73,6 +73,7 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-mcp:bulk-cms-update | Batch create/update CMS items with validation and preview |
 | webflow-mcp:cms-collection-setup | Create collections with custom fields and relationships (16 field types) |
 | webflow-mcp:cms-best-practices | Expert guidance on CMS architecture and optimization |
+| webflow-mcp:compress-cms-image | Compress and convert CMS item image fields to webp or avif |
 | webflow-mcp:site-audit | Comprehensive health check with scoring (0-100) and recommendations |
 | webflow-mcp:asset-audit | Identify optimization opportunities for images and files |
 | webflow-mcp:link-checker | Scan and fix broken/insecure links across pages and CMS content |
