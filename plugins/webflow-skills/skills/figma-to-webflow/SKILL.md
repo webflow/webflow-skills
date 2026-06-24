@@ -34,7 +34,7 @@ Webflow MCP has **two kinds of tools with different requirements**:
 ### 1. Workflow order
 
 1. **Gather** — Figma structure, tokens, per-section code/colors/assets; Webflow site, pages, existing styles.
-2. **Choose naming strategy** — ask how new Webflow styles should be named before creating any classes (see §3).
+2. **Choose style preferences** — ask how new Webflow styles should be named and which CSS units to use before creating any classes (see §3).
 3. **Set up foundations** — page wrapper w/ base typography; design tokens; fonts.
 4. **Build section by section** via `data_whtml_builder` (capture each returned element id to nest the next piece). Verify after each.
 5. **Attach assets** (images by ID; inline SVGs via embeds).
@@ -52,9 +52,11 @@ Confirm ambiguous design intent up front (e.g., a button whose label is a repeat
   - **Gotcha:** the SVG export wraps the node in its ancestor chain and **bakes in background fills** clipped to the node box (page background rect, card background, a node "backing" rect). Strip the full-bleed background `<rect>`/`<path>` elements that aren't part of the target → clean transparent vector. (Remaining `fill="white"` inside `<defs><clipPath>` are just clip masks — leave them.)
 - **Raster (photos, complex product mockups): can't get 2× from `get_screenshot`.** Use the design-context layer export URLs (often already 2×) or composite the 2× image locally, then upload (see §5, §6).
 
-### 3. Naming new Webflow styles
+### 3. Style preferences
 
-Before creating new classes, ask:
+Before creating new classes or CSS, ask about naming and units.
+
+**Naming prompt:**
 
 > Do you want to use FlowKit naming conventions for new styles?
 
@@ -65,6 +67,18 @@ Offer these choices, with FlowKit selected as the recommended default:
 3. **Use clear semantic names for this build** — create layout/structure-based kebab-case names that are easy to maintain, without forcing FlowKit if the site does not use it.
 
 If the user does not choose, default to **FlowKit naming**. Never mix naming strategies casually within the same build; if an established site system conflicts with FlowKit, call out the tradeoff and ask before proceeding.
+
+**Unit prompt:**
+
+> Do you want this build to use px, rem, or em units?
+
+Offer these choices, with px selected as the default:
+
+1. **px (default)** — match Figma/Webflow values directly and avoid conversion drift.
+2. **rem** — use scalable root-relative units for typography and spacing where practical.
+3. **em** — use component-relative units where the design intentionally scales with local font size.
+
+If the user does not choose, default to **px**. Keep units consistent within a build; only mix units when there is a clear reason, such as `%` for fluid widths or `em` for icon/text relationships.
 
 ### 4. Webflow CSS rules (these bite)
 
@@ -80,6 +94,7 @@ If the user does not choose, default to **FlowKit naming**. Never mix naming str
 - **Forbidden / dropped:** `calc()`, `clamp()`, `min()/max()`, `@keyframes`, `@font-face`, multi-layer `box-shadow`, logical props, vendor prefixes. For animation use IX2 or a custom-code embed.
 - Put inheritable typography (font-family, color, base size/line-height) once on `.page-wrapper`; single font names, no fallback stacks.
 - Naming: follow the selected naming strategy. If using FlowKit, reference `webflow-mcp:flowkit-naming`; otherwise use layout/structure-based, kebab-case names and never page-prefixed names.
+- Units: follow the selected unit preference. Default to `px`; convert to `rem`/`em` only when the user chooses that strategy.
 
 ### 5. Building elements
 
@@ -90,11 +105,14 @@ If the user does not choose, default to **FlowKit naming**. Never mix naming str
 
 ### 6. Images & assets
 
-Two upload paths:
+Use the headless Data API asset path first. Do **not** rely on `asset_tool upload_image_by_url` as the primary path; it is Designer Bridge-gated and may be removed.
 
-- **Public URL → `asset_tool upload_image_by_url`.** Works for a Figma asset URL or any reachable CDN URL; **fully processes the asset (variants)** so it renders. This is the easy path.
-- **Local file → 3 steps:** `data_assets_tool create_asset` (with `file_hash` = MD5 of the bytes) → `curl` POST the bytes to the returned **presigned S3 form** → **then re-ingest via `upload_image_by_url` on the resulting CDN URL.** Skipping the re-ingest leaves the asset at `size:0` / no variants, and **the Designer won't render it.**
+- **Download Figma asset bytes locally first.** Use the Figma design-context/export URL promptly, write the file to `/tmp/`, and compute the MD5 hash of the actual bytes.
+- **Create the asset via `data_assets_tool create_asset`.** Pass `site_id`, `file_name`, and `file_hash`, then POST the local file bytes to the returned presigned S3 form.
   - The presigned **policy is base64 — validate it is pure ASCII** before POSTing (`grep '[^A-Za-z0-9+/=]'`); transcription homoglyphs cause a 403.
+  - Append the file field last in the multipart POST.
+- **Verify processing before placing the image.** Fetch/check the created asset after upload. If it remains `size:0` or has no variants, tell the user the upload succeeded but Webflow has not processed a renderable asset yet.
+- **Bridge-gated fallback:** if processed variants are required and `create_asset` does not process them, ask the user to open and foreground Webflow Designer before using any bridge-gated asset processing fallback. Do not assume `upload_image_by_url` will remain available.
 - **`whtml <img src="...">` does NOT link to the asset library by URL** ("inserted without a managed asset"). After inserting, `query_elements` for the `Image` and `set_image_asset` by asset ID.
 - **hiDPI/retina:** Webflow's HiDPI checkbox is Designer-UI-only. Equivalent via API: ship a **2× source and let CSS constrain it to its display width** → crisp automatically.
 - Delete orphaned `size:0` assets to keep the library clean.
@@ -192,15 +210,16 @@ Keep all **desktop visual styling** (colors, padding, link/burger-bar look) as n
 ### 14. Reference: local-file upload (presigned S3)
 
 ```bash
-# 1) create_asset returns uploadUrl + uploadDetails (presigned form) + hostedUrl
-# 2) POST the bytes (field order: form fields first, file LAST):
+# 1) Download/export the image locally and compute MD5 of the bytes.
+# 2) create_asset returns uploadUrl + uploadDetails (presigned form) + hostedUrl
+# 3) POST the bytes (field order: form fields first, file LAST):
 curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
   -F "key=$KEY" -F "acl=public-read" -F "Content-Type=image/png" \
   -F "cache-control=max-age=31536000" -F "success_action_status=201" \
   -F "X-Amz-Algorithm=..." -F "X-Amz-Credential=..." -F "X-Amz-Date=..." \
   -F "X-Amz-Signature=$SIG" -F "policy=$POLICY" -F "bucket=..." \
   -F "file=@/path/to/image.png"
-# 3) then upload_image_by_url on the returned hostedUrl  → processed asset that renders
+# 4) Verify the asset has nonzero size / variants before using its asset ID.
 ```
 
 > Validate `$POLICY` is pure base64 ASCII before sending: `printf '%s' "$POLICY" | grep -q '[^A-Za-z0-9+/=]' && echo "ABORT: non-ASCII in policy"`.
@@ -213,7 +232,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 1. Use Figma MCP to gather metadata, design context, variables, screenshots, and export URLs for the requested frame.
 2. Use Webflow MCP to call `webflow_guide_tool`, confirm the user/site/page, and inspect existing styles.
-3. Ask whether to use FlowKit naming, the existing Webflow design system, or clear semantic names for this build.
+3. Ask whether to use FlowKit naming, the existing Webflow design system, or clear semantic names; then ask whether to use `px`, `rem`, or `em` units.
 4. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
 5. Build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
 
@@ -223,7 +242,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 1. Extract the section's Figma tokens, assets, and reference code.
 2. Confirm the target Webflow site/page and Designer connection.
-3. Confirm the naming strategy before generating new Webflow classes; default to FlowKit if the user has no preference.
+3. Confirm naming and unit strategy before generating new Webflow classes/CSS; default to FlowKit and `px` if the user has no preference.
 4. Present a concise preview plan and require explicit confirmation before creating elements.
 5. Insert one section, constrain images with 2× sources where needed, verify with Designer snapshots, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
 
@@ -231,7 +250,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 - Always use Figma MCP for design extraction and Webflow MCP for Webflow operations; never use direct Webflow API calls.
 - Call `webflow_guide_tool` before other Webflow tools in the workflow.
-- Ask for a style naming strategy before creating classes. Default to FlowKit and reference `webflow-mcp:flowkit-naming` when that option is selected.
+- Ask for style naming and CSS unit strategy before creating classes. Default to FlowKit naming and `px`; reference `webflow-mcp:flowkit-naming` when FlowKit is selected.
 - Treat mutating Webflow operations as confirmation-gated. Require explicit user approval before creating, updating, publishing, or deleting.
 - Prefer `data_whtml_builder` for section construction, then use element tools for precise asset binding, embeds, and refinements.
 - Keep CSS Webflow-compatible: longhand properties, class selectors, desktop-first breakpoints, flexbox-first layout, and custom code for unsupported behavior.
