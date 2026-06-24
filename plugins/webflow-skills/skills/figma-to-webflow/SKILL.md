@@ -34,14 +34,15 @@ Webflow MCP has **two kinds of tools with different requirements**:
 ### 1. Workflow order
 
 1. **Gather** — Figma structure, tokens, per-section code/colors/assets; Webflow site, pages, existing styles.
-2. **Set up foundations** — page wrapper w/ base typography; design tokens; fonts.
-3. **Build section by section** via `data_whtml_builder` (capture each returned element id to nest the next piece). Verify after each.
-4. **Attach assets** (images by ID; inline SVGs via embeds).
-5. **Responsive pass** (desktop-first overrides).
-6. **Custom code / interactions** last (mobile menu, animated backgrounds, blur).
-7. **Publish to the `.webflow.io` subdomain** for the user to review; iterate.
+2. **Choose naming strategy** — ask how new Webflow styles should be named before creating any classes (see §3).
+3. **Set up foundations** — page wrapper w/ base typography; design tokens; fonts.
+4. **Build section by section** via `data_whtml_builder` (capture each returned element id to nest the next piece). Verify after each.
+5. **Attach assets** (images by ID; inline SVGs via embeds).
+6. **Responsive pass** (desktop-first overrides).
+7. **Custom code / interactions** last (mobile menu, animated backgrounds, blur).
+8. **Offer review/publish next steps** — default to **no publish**. Only publish to the `.webflow.io` subdomain if the user explicitly asks or confirms after reviewing the build.
 
-Confirm ambiguous design intent up front (e.g., a button whose label is a repeated component placeholder) rather than guessing. **If the build includes a navbar, ask which breakpoint the mobile menu should collapse at before building it (see §9).**
+Confirm ambiguous design intent up front (e.g., a button whose label is a repeated component placeholder) rather than guessing. **If the build includes a navbar, ask which breakpoint the mobile menu should collapse at before building it (see §10).**
 
 ### 2. Extracting from Figma
 
@@ -49,9 +50,23 @@ Confirm ambiguous design intent up front (e.g., a button whose label is a repeat
 - **Asset URLs from design-context live ~7 days; `get_screenshot` URLs are short-lived** — upload promptly.
 - **Vector assets (logos, icons, marks): use `download_assets` with `defaultFormat: "svg"`** — NOT `get_screenshot`. Screenshot only rasterizes and **never upscales past the node's native size** (so it can't give you 2×, and it bakes in surrounding background).
   - **Gotcha:** the SVG export wraps the node in its ancestor chain and **bakes in background fills** clipped to the node box (page background rect, card background, a node "backing" rect). Strip the full-bleed background `<rect>`/`<path>` elements that aren't part of the target → clean transparent vector. (Remaining `fill="white"` inside `<defs><clipPath>` are just clip masks — leave them.)
-- **Raster (photos, complex product mockups): can't get 2× from `get_screenshot`.** Use the design-context layer export URLs (often already 2×) or composite the 2× image locally, then upload (see §4, §7).
+- **Raster (photos, complex product mockups): can't get 2× from `get_screenshot`.** Use the design-context layer export URLs (often already 2×) or composite the 2× image locally, then upload (see §5, §6).
 
-### 3. Webflow CSS rules (these bite)
+### 3. Naming new Webflow styles
+
+Before creating new classes, ask:
+
+> Do you want to use FlowKit naming conventions for new styles?
+
+Offer these choices, with FlowKit selected as the recommended default:
+
+1. **Yes, use FlowKit naming (recommended)** — follow the `webflow-mcp:flowkit-naming` skill when creating new styles. Use FlowKit patterns such as `fk-[component]`, `fk-[component]-[element]`, utility classes like `fk-section` / `fk-container`, and combo-state classes like `is-active`.
+2. **Use the existing Webflow design system if one exists** — inspect existing classes/styles first, reuse the site's established tokens and naming patterns, and only introduce new names that fit that system.
+3. **Use clear semantic names for this build** — create layout/structure-based kebab-case names that are easy to maintain, without forcing FlowKit if the site does not use it.
+
+If the user does not choose, default to **FlowKit naming**. Never mix naming strategies casually within the same build; if an established site system conflicts with FlowKit, call out the tradeoff and ask before proceeding.
+
+### 4. Webflow CSS rules (these bite)
 
 - **Longhand only.** Expand `padding`, `margin`, `border`, `border-radius` (4 corners), `font`, `background`, `transition`, `flex`.
 - **Class selectors only.** No tag/ID/descendant/attribute selectors. `:hover` is the only safe pseudo-class; no `::before`/`::after` (use real elements).
@@ -64,16 +79,16 @@ Confirm ambiguous design intent up front (e.g., a button whose label is a repeat
 - **Flexbox-first**; grid only for true 2D.
 - **Forbidden / dropped:** `calc()`, `clamp()`, `min()/max()`, `@keyframes`, `@font-face`, multi-layer `box-shadow`, logical props, vendor prefixes. For animation use IX2 or a custom-code embed.
 - Put inheritable typography (font-family, color, base size/line-height) once on `.page-wrapper`; single font names, no fallback stacks.
-- Naming: layout/structure-based, kebab-case; never page-prefixed.
+- Naming: follow the selected naming strategy. If using FlowKit, reference `webflow-mcp:flowkit-naming`; otherwise use layout/structure-based, kebab-case names and never page-prefixed names.
 
-### 4. Building elements
+### 5. Building elements
 
 - **`data_whtml_builder` is the workhorse** — pass HTML + raw CSS; class selectors become real Webflow styles automatically. Build one section per call, set `return_element_info:true`, and use the returned id as the parent for the next insert.
 - **Element identity & page context:** an element id is `{component, element}` where **`component` IS the page id**. `data_element_tool` actions must run with the **matching top-level `pageId`** — a mismatch returns "Element not found." This is exactly how you target a *duplicated* page's elements (pass that page's id).
 - `data_element_builder` (typed elements, supports `set_style`/`set_image_asset`/children at creation) is the fallback when you need precise control; component instances need `component_builder`.
 - Keep nesting ≤4–5 levels.
 
-### 5. Images & assets
+### 6. Images & assets
 
 Two upload paths:
 
@@ -84,7 +99,7 @@ Two upload paths:
 - **hiDPI/retina:** Webflow's HiDPI checkbox is Designer-UI-only. Equivalent via API: ship a **2× source and let CSS constrain it to its display width** → crisp automatically.
 - Delete orphaned `size:0` assets to keep the library clean.
 
-### 6. SVG, logos, icons → use embeds
+### 7. SVG, logos, icons → use embeds
 
 - **An SVG uploaded as an asset and placed via `<img>` can render as a filled blob** when it has gradients/complex fills. **Inline the SVG inside an `HtmlEmbed`** for crisp, transparent, recolorable vectors.
 - **Setting embed code:** create the `HtmlEmbed` (code can't be set at creation), then `data_element_tool set_settings` with key `"code"` and the raw markup as `static_text`.
@@ -92,19 +107,19 @@ Two upload paths:
 - **`set_text("")` on a Link wipes its child embeds.** Never clear a link's text after inserting an icon embed (or re-add the embed after).
 - For multiple logos of different proportions, **crop each SVG `viewBox` to its content bounds** so you can size them uniformly in a flex row.
 
-### 7. Fonts (`data_fonts_tool`)
+### 8. Fonts (`data_fonts_tool`)
 
 - `create_font` (`file_hash` = MD5 of the woff2) → presigned upload → POST the bytes. Source woff2 from the Google Fonts `css2` endpoint (latin subset) with a desktop User-Agent.
 - Custom fonts resolve by **exact family name** referenced in your CSS once published — then you can remove any temporary Google Fonts `<head>` link.
 
-### 8. Custom code & interactions
+### 9. Custom code & interactions
 
 - **Prefer `data_scripts_tool set_site_freeform_code` (head/footer) for `<style>`/`<script>`.** The *registered-script* apply endpoints (`add_site_script`/`add_page_script`) may 404 depending on the site; freeform code is reliable.
 - **Unused combo classes get stripped from published CSS.** A class you only toggle at runtime via JS (e.g., `.menu.is-open`) has **no matching rule** unless you (a) apply the combo to an element in the Designer, or (b) **guarantee the rule in a head `<style>`**. This silently makes JS toggles do nothing.
 - **HTML embed + `<style>`/`<script>` is the escape hatch** for anything Webflow's panel can't express: parent-state→child selectors, custom mobile-menu toggle, or any CSS/JS Webflow strips or can't model.
 - **Native components (Navbar, etc.) cannot be created via API/whtml** — whtml just produces generic blocks with `w-*` class names (no real component JS/CSS). Either build a custom equivalent (+ a small delegated-click script) or have the user add the native element in the Designer.
 
-### 9. Navbar (reusable recipe)
+### 10. Navbar (reusable recipe)
 
 Webflow's native Navbar component can't be created via the API/whtml (whtml only yields generic blocks), yet most sites need one. Build a **semantic `<nav>` from Webflow custom elements** + a **CSS-only mobile toggle in a code embed** — no JS, no native component.
 
@@ -153,20 +168,20 @@ Webflow's native Navbar component can't be created via the API/whtml (whtml only
 
 Keep all **desktop visual styling** (colors, padding, link/burger-bar look) as normal Webflow classes; the embed holds only the responsive + toggle **behavior**.
 
-**Tradeoffs:** the pure-CSS toggle is zero-JS and publish-safe, but doesn't set `aria-expanded` or close on outside-click. If the client needs those, swap the embed for a small JS toggle (delegated click + class toggle) — but a JS-toggled class needs its open-state rule **guaranteed in custom code** (an unused combo class is stripped from published CSS — see §8). Optionally animate the bars to an "X" via `.nav-cb:checked ~ .nav-burger` rules inside the same embed.
+**Tradeoffs:** the pure-CSS toggle is zero-JS and publish-safe, but doesn't set `aria-expanded` or close on outside-click. If the client needs those, swap the embed for a small JS toggle (delegated click + class toggle) — but a JS-toggled class needs its open-state rule **guaranteed in custom code** (an unused combo class is stripped from published CSS — see §9). Optionally animate the bars to an "X" via `.nav-cb:checked ~ .nav-burger` rules inside the same embed.
 
-### 10. Isolating experiments / "branching"
+### 11. Isolating experiments / "branching"
 
 - **Page-branching API may be unavailable** (`create_branch`/`list_branches` → 404). Substitute: **`create_page` with `duplicateOf`** to clone the page as an experiment "branch" (gets its own page id; target its elements with that `pageId`). Revert main by deleting the experimental elements.
 - For reversible enhancements, **layer the new thing over a static fallback** (e.g., an animated canvas over the static gradient image) rather than replacing it.
 
-### 11. Verification & its hard limits
+### 12. Verification & its hard limits
 
 - `element_snapshot_tool`: Designer-foreground only; **desktop viewport only (no responsive/mobile simulation)**; **does not execute embeds / WebGL / `backdrop-filter`** (those render only on the published/preview site). An isolated-section snapshot renders transparent areas as **black** — not a bug.
 - You **cannot fetch `*.webflow.io`** (robots-blocked) or run JS on it. So:
-  - **Publish to the subdomain and ask the user to confirm** anything you can't see in the Designer — embed behavior, custom-code, mobile/responsive widths. Never claim an embed is verified from your side.
+  - If the user chooses to publish to the subdomain, ask them to confirm anything you can't see in the Designer — embed behavior, custom-code, mobile/responsive widths. Never claim an embed is verified from your side.
 
-### 12. Layout patterns worth reusing
+### 13. Layout patterns worth reusing
 
 - **Background grid lines:** `repeating-linear-gradient` for dashes (control dash/gap precisely — a CSS dashed *border* can't). Give each line element a **real width (≥1px)** so Webflow doesn't flag it as an empty/clickable zero-width element. Place at `z-index:-1` inside a stacking-context wrapper so it sits behind content but above the page background.
 - **Perceived weight ≠ literal alpha:** lines *behind* content read lighter than identical lines *in front* (occlusion). Match the perceived weight when pairing them.
@@ -174,7 +189,7 @@ Keep all **desktop visual styling** (colors, padding, link/burger-bar look) as n
 - **Fixed vs sticky nav:** `fixed` lets the first section sit *under* the bar (useful when the nav is translucent/overlays content); then add top-padding to that section to clear the bar. `sticky` reserves space (content starts below the bar).
 - **Replacing an `<img>` with an embed loses the img's classes/margins** — reapply spacing on the embed.
 
-### 13. Reference: local-file upload (presigned S3)
+### 14. Reference: local-file upload (presigned S3)
 
 ```bash
 # 1) create_asset returns uploadUrl + uploadDetails (presigned form) + hostedUrl
@@ -198,8 +213,9 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 1. Use Figma MCP to gather metadata, design context, variables, screenshots, and export URLs for the requested frame.
 2. Use Webflow MCP to call `webflow_guide_tool`, confirm the user/site/page, and inspect existing styles.
-3. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
-4. Build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then publish to the `.webflow.io` subdomain for review.
+3. Ask whether to use FlowKit naming, the existing Webflow design system, or clear semantic names for this build.
+4. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
+5. Build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
 
 ### Example 2: Recreate a Figma section in an existing Webflow page
 
@@ -207,17 +223,19 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 1. Extract the section's Figma tokens, assets, and reference code.
 2. Confirm the target Webflow site/page and Designer connection.
-3. Present a concise preview plan and require explicit confirmation before creating elements.
-4. Insert one section, constrain images with 2× sources where needed, verify with Designer snapshots, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
+3. Confirm the naming strategy before generating new Webflow classes; default to FlowKit if the user has no preference.
+4. Present a concise preview plan and require explicit confirmation before creating elements.
+5. Insert one section, constrain images with 2× sources where needed, verify with Designer snapshots, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
 
 ## Guidelines
 
 - Always use Figma MCP for design extraction and Webflow MCP for Webflow operations; never use direct Webflow API calls.
 - Call `webflow_guide_tool` before other Webflow tools in the workflow.
+- Ask for a style naming strategy before creating classes. Default to FlowKit and reference `webflow-mcp:flowkit-naming` when that option is selected.
 - Treat mutating Webflow operations as confirmation-gated. Require explicit user approval before creating, updating, publishing, or deleting.
 - Prefer `data_whtml_builder` for section construction, then use element tools for precise asset binding, embeds, and refinements.
 - Keep CSS Webflow-compatible: longhand properties, class selectors, desktop-first breakpoints, flexbox-first layout, and custom code for unsupported behavior.
-- Publish to the `.webflow.io` subdomain for review before custom domains unless the user explicitly asks otherwise.
+- Do not publish by default. If the user wants a live review link, publish to the `.webflow.io` subdomain before any custom domains.
 
 ## Checklist before declaring done
 
@@ -227,4 +245,4 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 - [ ] Fonts uploaded + referenced by exact family name; temp `<head>` link removed.
 - [ ] Runtime-toggled classes have guaranteed CSS (not stripped).
 - [ ] Responsive overrides at medium/small/tiny.
-- [ ] Published to subdomain; user asked to confirm anything you can't self-verify (embeds, WebGL, blur, mobile).
+- [ ] If published to subdomain, user asked to confirm anything you can't self-verify (embeds, WebGL, blur, mobile).
