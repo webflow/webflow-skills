@@ -34,8 +34,8 @@ Webflow MCP has **two kinds of tools with different requirements**:
 ### 1. Workflow order
 
 1. **Gather** — Figma structure, tokens, per-section code/colors/assets; Webflow site, pages, existing styles.
-2. **Choose style preferences** — ask how new Webflow styles should be named and which CSS units to use before creating any classes (see §3).
-3. **Set up foundations** — page wrapper w/ base typography; design tokens; fonts.
+2. **Choose style preferences** — ask how Webflow variables, new styles, and CSS units should be handled before creating any classes/CSS (see §3).
+3. **Set up foundations** — Webflow variables/design tokens, page wrapper w/ base typography, and fonts.
 4. **Build section by section** via `data_whtml_builder` (capture each returned element id to nest the next piece). Verify after each.
 5. **Attach assets** (images by ID; inline SVGs via embeds).
 6. **Responsive pass** (desktop-first overrides).
@@ -54,7 +54,20 @@ Confirm ambiguous design intent up front (e.g., a button whose label is a repeat
 
 ### 3. Style preferences
 
-Before creating new classes or CSS, ask about naming and units.
+Before creating Webflow variables, classes, or CSS, ask about design-system strategy, naming, and units.
+
+**Design-system prompt:**
+
+> How should I handle Webflow variables for this build?
+
+Offer these choices, with "read existing variables and create missing ones" selected as the recommended default for existing sites:
+
+1. **Read existing variables and create missing ones (recommended)** — inspect current Webflow variables first, map Figma tokens to existing variables when possible, and create only the missing colors, typography, spacing, and radius variables needed for the design.
+2. **Create a new design system from scratch** — create a fresh variable set from the Figma design's colors, typography, spacing, and radii before building sections. Best for blank/new sites or isolated experiments.
+3. **Use existing variables only** — inspect and use only variables that already exist in Webflow. If a Figma token has no match, ask before hard-coding or changing the design.
+4. **Do not use Webflow variables** — hard-code values in the generated styles. Use only when the user explicitly chooses speed or one-off output over maintainability.
+
+If the user does not choose, default to **read existing variables and create missing ones**. For a brand-new/blank site, recommend **create a new design system from scratch** and explain why before proceeding.
 
 **Naming prompt:**
 
@@ -93,6 +106,7 @@ If the user does not choose, default to **px**. Keep units consistent within a b
 - **Flexbox-first**; grid only for true 2D.
 - **Forbidden / dropped:** `calc()`, `clamp()`, `min()/max()`, `@keyframes`, `@font-face`, multi-layer `box-shadow`, logical props, vendor prefixes. For animation use IX2 or a custom-code embed.
 - Put inheritable typography (font-family, color, base size/line-height) once on `.page-wrapper`; single font names, no fallback stacks.
+- Variables: follow the selected design-system strategy before building sections. Prefer Webflow variables for repeated colors, typography, spacing, and radii unless the user explicitly chooses hard-coded styles.
 - Naming: follow the selected naming strategy. If using FlowKit, reference `webflow-mcp:flowkit-naming`; otherwise use layout/structure-based, kebab-case names and never page-prefixed names.
 - Units: follow the selected unit preference. Default to `px`; convert to `rem`/`em` only when the user chooses that strategy.
 
@@ -232,9 +246,9 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 1. Use Figma MCP to gather metadata, design context, variables, screenshots, and export URLs for the requested frame.
 2. Use Webflow MCP to call `webflow_guide_tool`, confirm the user/site/page, and inspect existing styles.
-3. Ask whether to use FlowKit naming, the existing Webflow design system, or clear semantic names; then ask whether to use `px`, `rem`, or `em` units.
+3. Ask how to handle Webflow variables, whether to use FlowKit naming / existing class patterns / semantic names, and whether to use `px`, `rem`, or `em` units.
 4. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
-5. Build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
+5. Set up or map variables according to the selected design-system strategy, build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
 
 ### Example 2: Recreate a Figma section in an existing Webflow page
 
@@ -242,7 +256,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 1. Extract the section's Figma tokens, assets, and reference code.
 2. Confirm the target Webflow site/page and Designer connection.
-3. Confirm naming and unit strategy before generating new Webflow classes/CSS; default to FlowKit and `px` if the user has no preference.
+3. Confirm variable, naming, and unit strategy before generating new Webflow classes/CSS; default to existing variables plus missing variables, FlowKit, and `px` if the user has no preference.
 4. Present a concise preview plan and require explicit confirmation before creating elements.
 5. Insert one section, constrain images with 2× sources where needed, verify with Designer snapshots, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
 
@@ -250,7 +264,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 
 - Always use Figma MCP for design extraction and Webflow MCP for Webflow operations; never use direct Webflow API calls.
 - Call `webflow_guide_tool` before other Webflow tools in the workflow.
-- Ask for style naming and CSS unit strategy before creating classes. Default to FlowKit naming and `px`; reference `webflow-mcp:flowkit-naming` when FlowKit is selected.
+- Ask for Webflow variable, style naming, and CSS unit strategy before creating classes. Default to existing variables plus missing variables, FlowKit naming, and `px`; reference `webflow-mcp:flowkit-naming` when FlowKit is selected.
 - Treat mutating Webflow operations as confirmation-gated. Require explicit user approval before creating, updating, publishing, or deleting.
 - Prefer `data_whtml_builder` for section construction, then use element tools for precise asset binding, embeds, and refinements.
 - Keep CSS Webflow-compatible: longhand properties, class selectors, desktop-first breakpoints, flexbox-first layout, and custom code for unsupported behavior.
@@ -259,6 +273,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 ## Checklist before declaring done
 
 - [ ] All CSS longhand; correct breakpoints; flexbox-first.
+- [ ] Webflow variables handled according to the selected strategy; repeated colors/type/spacing/radii are mapped or created unless hard-coding was explicitly selected.
 - [ ] Images attached by asset ID (not orphan `<img src>`); 2× where crispness matters.
 - [ ] Vector marks are clean inline-SVG embeds (backgrounds stripped).
 - [ ] Fonts uploaded + referenced by exact family name; temp `<head>` link removed.
