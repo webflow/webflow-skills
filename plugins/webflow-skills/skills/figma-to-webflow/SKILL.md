@@ -44,6 +44,15 @@ Webflow MCP has **two kinds of tools with different requirements**:
 7. **Custom code / interactions** last (mobile menu, animated backgrounds, blur).
 8. **Offer review/publish next steps** — default to **no publish**. Only publish to the `.webflow.io` subdomain if the user explicitly asks or confirms after reviewing the build.
 
+### Speed defaults
+
+- Build in section-sized batches with `data_whtml_builder`; avoid element-by-element construction unless precision requires it.
+- Create variables/classes for common primitives once (containers, typography, spacing, buttons, image-fill, cards, nav) and reuse them aggressively.
+- Snapshot groups/wrappers, not every element. Prefer structural verification with `query_elements` / `query_styles` between visual checks.
+- Export complex layered visuals as 2× composed images instead of rebuilding every layer in Webflow.
+- Gather Figma metadata, variables, and major-section design context up front; avoid repeated per-node Figma calls for small children.
+- If using Designer Bridge, keep the tab foregrounded and batch several headless `data_*` operations between bridge snapshots.
+
 Confirm ambiguous design intent up front (e.g., a button whose label is a repeated component placeholder) rather than guessing. **If the build includes a navbar, ask which breakpoint the mobile menu should collapse at before building it (see §10).**
 
 ### 2. Extracting from Figma
