@@ -127,6 +127,7 @@ If the user does not choose, default to **px**. Keep units consistent within a b
 
 ### 4. Webflow CSS rules (these bite)
 
+- **Apply styles via `data_style_tool`, never via the `data_whtml_builder` `css` param or raw `var()` strings.** CSS passed as a raw blob through the WHTML `css` param lands in the Designer's **"Custom properties"** bucket (the arbitrary-custom-CSS panel) instead of mapping onto native Style-panel controls — the build looks non-native and is hard to edit. Use `create_style` / `update_style` to set properties (including responsive overrides), and bind variables natively with `variable_as_value: "<variable-id>"` (the id from `data_variable_tool`) — a raw `var(--collection---token)` string never renders the native variable pill. Only genuinely non-native CSS (`backdrop-filter`, `aspect-ratio`, `repeating-linear-gradient` backgrounds, etc.) should remain in Custom properties; that's expected even in a hand-built site.
 - **Longhand only.** Expand `padding`, `margin`, `border`, `border-radius` (4 corners), `font`, `background`, `transition`, `flex`.
 - **Class selectors only.** No tag/ID/descendant/attribute selectors. `:hover` is the only safe pseudo-class; no `::before`/`::after` (use real elements).
 - **Gaps:** emit `grid-row-gap` / `grid-column-gap` even on flex (Webflow's stored keys) — not `row-gap`/`column-gap`.
@@ -144,7 +145,7 @@ If the user does not choose, default to **px**. Keep units consistent within a b
 
 ### 5. Building elements
 
-- **`data_whtml_builder` is the workhorse** — pass HTML + raw CSS; class selectors become real Webflow styles automatically. Build one section per call, set `return_element_info:true`, and use the returned id as the parent for the next insert.
+- **`data_whtml_builder` is the workhorse for DOM/structure** — pass HTML to build markup, nesting, and semantic tags; referencing class names in the HTML is fine. Build one section per call, set `return_element_info:true`, and use the returned id as the parent for the next insert. Class selectors in the WHTML `css` param do become real Webflow styles, but they get stored as non-native **Custom properties** rather than native style-panel controls — so create/update styling via `data_style_tool` instead (with `variable_as_value` for variable bindings) so it maps to native Webflow controls (see §4).
 - **Element identity & page context:** an element id is `{component, element}` where **`component` IS the page id**. `data_element_tool` actions must run with the **matching top-level `pageId`** — a mismatch returns "Element not found." This is exactly how you target a *duplicated* page's elements (pass that page's id).
 - `data_element_builder` (typed elements, supports `set_style`/`set_image_asset`/children at creation) is the fallback when you need precise control; component instances need `component_builder`.
 - Keep nesting ≤4–5 levels.
@@ -271,7 +272,8 @@ Keep all **desktop visual styling** (colors, padding, link/burger-bar look) as n
 ### 14. Build mechanics & gotchas
 
 - `data_whtml_builder` requires a single root element per action. To insert multiple sibling sections, use multiple actions.
-- `set_style` replaces all classes on an element. If a class does not exist yet, create it with `data_style_tool create_style` or define it in the WHTML CSS param so Webflow creates it.
+- Styles applied via `data_whtml_builder`'s `css` param (or as raw `var()` strings) are stored as Designer "Custom properties", not native style-panel controls — always set styles through `data_style_tool` and bind variables with `variable_as_value`.
+- `set_style` replaces all classes on an element. If a class does not exist yet, create it with `data_style_tool create_style`; do not define it through the WHTML CSS param.
 - `query_elements` style filters are case-insensitive substring matches; filter returned elements by exact class/type before acting.
 - Responsive work is headless: use `data_style_tool update_style` with breakpoint IDs (`main` base, then `medium`, `small`, `tiny`). Desktop-first: set base, override downward.
 - Capture returned element ids from every insert. Re-find later by exact style/type when possible. Element ids are `{component, element}`, where `component` is the page id.
@@ -333,6 +335,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 ## Checklist before declaring done
 
 - [ ] All CSS longhand; correct breakpoints; flexbox-first.
+- [ ] Styles applied via `data_style_tool` (native controls), variables bound with `variable_as_value`, and only truly non-native CSS (`backdrop-filter`, `aspect-ratio`, `repeating-linear-gradient`, etc.) left as custom properties.
 - [ ] Build mode followed: bridge-assisted by default with Designer tab open and foregrounded, or headless-first if the user chose it.
 - [ ] Webflow variables handled according to the selected strategy; repeated colors/type/spacing/radii are mapped or created unless hard-coding was explicitly selected.
 - [ ] Images attached by asset ID (not orphan `<img src>`); 2× source confirmed where crispness matters.
