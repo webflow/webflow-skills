@@ -44,6 +44,15 @@ Webflow MCP has **two kinds of tools with different requirements**:
 7. **Custom code / interactions** last (mobile menu, animated backgrounds, blur).
 8. **Offer review/publish next steps** — default to **no publish**. Only publish to the `.webflow.io` subdomain if the user explicitly asks or confirms after reviewing the build.
 
+### Non-negotiable build gates
+
+Treat these as gates, not suggestions. Before building, explicitly confirm the planned choice for each item; if you cannot satisfy one, stop and explain the tradeoff instead of silently substituting.
+
+- **Bridge gate:** if the user chooses Designer Bridge (the default), provide/request the Designer launch link and wait for the user to open the project with the Designer tab foregrounded before running bridge-dependent steps. Do not skip this setup and start building as if headless were selected.
+- **Vector gate:** logos, icons, and marks must be inline SVG embeds, not PNG/JPG uploads, unless the user explicitly approves raster fallback. If SVG export cleanup is slow, say so and ask before substituting.
+- **Raster quality gate:** hero/product/mockup images must use a 2× source when crispness matters. Verify the asset source/export is 2× or tell the user it is not confirmed.
+- **Dashed accent gate:** dashed lines, dividers, grids, accents, and underlines must use `repeating-linear-gradient`, not `border-style:dashed`, unless the user explicitly accepts browser-default dash rhythm.
+
 ### Speed defaults
 
 - Build in section-sized batches with `data_whtml_builder`; avoid element-by-element construction unless precision requires it.
@@ -298,7 +307,8 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 3. Ask whether to use Designer Bridge during the build or build headless first; explain the bridge is recommended for visual feedback but requires the Designer tab open and foregrounded.
 4. Ask how to handle Webflow variables, whether to use FlowKit naming / existing class patterns / semantic names, and whether to use `px`, `rem`, or `em` units.
 5. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
-6. Set up or map variables according to the selected design-system strategy, build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
+6. Confirm the build gates: Designer link/foreground tab if using bridge, SVG embeds for vector marks, 2× raster sources where needed, and gradient-based dashed accents.
+7. Set up or map variables according to the selected design-system strategy, build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
 
 ### Example 2: Recreate a Figma section in an existing Webflow page
 
@@ -307,8 +317,8 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 1. Extract the section's Figma tokens, assets, and reference code.
 2. Confirm the target Webflow site/page. Designer connection is only needed later for snapshot/visual QA or bridge-gated fallbacks.
 3. Confirm build mode plus variable, naming, and unit strategy before generating new Webflow classes/CSS; default to Designer Bridge, existing variables plus missing variables, FlowKit, and `px` if the user has no preference.
-4. Present a concise preview plan and require explicit confirmation before creating elements.
-5. Insert one section, constrain images with 2× sources where needed, verify structurally headless or visually with bridge snapshots if selected, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
+4. Present a concise preview plan that calls out the non-negotiable build gates, then require explicit confirmation before creating elements.
+5. Insert one section, constrain confirmed 2× images to display size, verify structurally headless or visually with bridge snapshots if selected, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
 
 ## Guidelines
 
@@ -325,8 +335,9 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 - [ ] All CSS longhand; correct breakpoints; flexbox-first.
 - [ ] Build mode followed: bridge-assisted by default with Designer tab open and foregrounded, or headless-first if the user chose it.
 - [ ] Webflow variables handled according to the selected strategy; repeated colors/type/spacing/radii are mapped or created unless hard-coding was explicitly selected.
-- [ ] Images attached by asset ID (not orphan `<img src>`); 2× where crispness matters.
-- [ ] Vector marks are clean inline-SVG embeds (backgrounds stripped).
+- [ ] Images attached by asset ID (not orphan `<img src>`); 2× source confirmed where crispness matters.
+- [ ] Vector marks are clean inline-SVG embeds (backgrounds stripped), or user explicitly approved raster fallback.
+- [ ] Dashed accents/dividers/grids use `repeating-linear-gradient`, not `border-style:dashed`, unless user explicitly approved browser-default dashes.
 - [ ] Fonts uploaded + referenced by exact family name; temp `<head>` link removed.
 - [ ] Runtime-toggled classes have guaranteed CSS (not stripped).
 - [ ] Responsive overrides at medium/small/tiny.
