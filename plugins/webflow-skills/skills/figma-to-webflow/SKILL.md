@@ -31,6 +31,7 @@ and explain the tradeoff instead of silently substituting.
 - **Vector gate:** logos, icons, and marks must be inline SVG embeds, not PNG/JPG uploads, unless the user explicitly approves raster fallback.
 - **Raster quality gate:** hero/product/mockup images must use a confirmed 2x source where crispness matters.
 - **Dashed accent gate:** dashed lines, dividers, grids, accents, and underlines must use `repeating-linear-gradient`, not `border-style:dashed`, unless the user explicitly accepts browser-default dash rhythm.
+- **Navbar gate:** custom navbar mobile behavior must be CSS-only, not JavaScript. Use the checkbox/sibling-selector pattern in `references/navbar.md`.
 - **Publish gate:** do not publish by default. Offer `.webflow.io` publish only after build/review, and only proceed on explicit user confirmation.
 
 ## Tool Surfaces
@@ -62,55 +63,14 @@ and explain the tradeoff instead of silently substituting.
 
 ### Required Prompts
 
-Before creating Webflow variables, classes, or CSS, ask about build mode, design-system strategy, naming, and units.
+Before creating Webflow variables, classes, or CSS, ask these four questions:
 
-**Build-mode prompt:**
+- **Build mode:** Designer Bridge during build (default, better visual QA; requires Designer tab open/foregrounded) or headless first (faster, structural checks only until bridge needed).
+- **Variables/design system:** read existing variables and create missing ones (default), create a new design system from scratch, use existing variables only, or hard-code with no Webflow variables.
+- **Style naming:** FlowKit naming (default; reference `webflow-mcp:flowkit-naming`), existing Webflow design-system naming, or clear semantic kebab-case names.
+- **Units:** `px` (default), `rem`, or `em`. Keep units consistent; only mix when there is a clear reason.
 
-> Do you want me to build headless, or use the Webflow Designer Bridge app during the build?
-
-Offer these choices, with Designer Bridge selected as the default:
-
-1. **Use the Designer Bridge during the build (default)** — better feedback loop and visual confidence. The agent can take snapshots, inspect the canvas/page state, confirm layering/composition earlier, and catch visual issues while building. Requires the Webflow Designer tab to be open, connected, and kept in the foreground; if the tab is backgrounded or idle, bridge tools can disconnect or return `status:false`.
-2. **Build headless first** — fastest and least interruptive. Use `data_*` tools for DOM, styles, variables, fonts, assets, pages, scripts, responsive overrides, and structural verification; ask for the bridge only if visual QA or image processing needs it.
-
-If the user does not choose, default to **use the Designer Bridge during the build**. Share or request the Designer launch link and remind them to keep the tab foregrounded while bridge tools run.
-
-**Design-system prompt:**
-
-> How should I handle Webflow variables for this build?
-
-Offer these choices, with "read existing variables and create missing ones" selected as the recommended default for existing sites:
-
-1. **Read existing variables and create missing ones (recommended)** — inspect current Webflow variables first, map Figma tokens to existing variables when possible, and create only the missing colors, typography, spacing, and radius variables needed for the design.
-2. **Create a new design system from scratch** — create a fresh variable set from the Figma design's colors, typography, spacing, and radii before building sections. Best for blank/new sites or isolated experiments.
-3. **Use existing variables only** — inspect and use only variables that already exist in Webflow. If a Figma token has no match, ask before hard-coding or changing the design.
-4. **Do not use Webflow variables** — hard-code values in the generated styles. Use only when the user explicitly chooses speed or one-off output over maintainability.
-
-If the user does not choose, default to **read existing variables and create missing ones**. For a brand-new/blank site, recommend **create a new design system from scratch** and explain why before proceeding.
-
-**Naming prompt:**
-
-> Do you want to use FlowKit naming conventions for new styles?
-
-Offer these choices, with FlowKit selected as the recommended default:
-
-1. **Yes, use FlowKit naming (recommended)** — follow the `webflow-mcp:flowkit-naming` skill when creating new styles. Use FlowKit patterns such as `fk-[component]`, `fk-[component]-[element]`, utility classes like `fk-section` / `fk-container`, and combo-state classes like `is-active`.
-2. **Use the existing Webflow design system if one exists** — inspect existing classes/styles first, reuse the site's established tokens and naming patterns, and only introduce new names that fit that system.
-3. **Use clear semantic names for this build** — create layout/structure-based kebab-case names that are easy to maintain, without forcing FlowKit if the site does not use it.
-
-If the user does not choose, default to **FlowKit naming**. Never mix naming strategies casually within the same build; if an established site system conflicts with FlowKit, call out the tradeoff and ask before proceeding.
-
-**Unit prompt:**
-
-> Do you want this build to use px, rem, or em units?
-
-Offer these choices, with px selected as the default:
-
-1. **px (default)** — match Figma/Webflow values directly and avoid conversion drift.
-2. **rem** — use scalable root-relative units for typography and spacing where practical.
-3. **em** — use component-relative units where the design intentionally scales with local font size.
-
-If the user does not choose, default to **px**. Keep units consistent within a build; only mix units when there is a clear reason, such as `%` for fluid widths or `em` for icon/text relationships.
+If the user does not choose, use the defaults above. For a blank site, recommend creating a new design system from scratch and explain why.
 
 ### 2. Build Foundations And Sections
 
@@ -139,7 +99,7 @@ If the build includes a navbar, read [Navbar](references/navbar.md) before build
 
 - Ask which breakpoint should collapse to hamburger.
 - Webflow native Navbar cannot be created via API/WHTML. Build a semantic custom nav or ask the user to add the native element in Designer.
-- Put component behavior `<style>`/`<script>` in an HtmlEmbed inside the component root. Use site/page head code only for truly global behavior.
+- Put CSS-only component behavior in an HtmlEmbed inside the component root. Do not use JavaScript for the custom navbar.
 
 ### 5. Responsive And QA
 
@@ -151,40 +111,6 @@ Before responsive/final verification, read [Verification](references/verificatio
 4. Do not trust first snapshots for fonts; warm cache and re-snapshot before changing font implementation.
 5. Do not claim embed behavior, custom code, blur, WebGL, animation, or mobile widths are verified from your side. Ask the user to confirm in preview/published site.
 6. Offer publish/review next steps. Default remains **no publish**.
-
-## Examples
-
-### Example 1: Build a Figma frame into a Webflow page
-
-**User:** "Build this Figma frame in my Webflow site: [figma.com URL]"
-
-1. Use Figma MCP to gather metadata, design context, variables, screenshots, and export URLs for the requested frame.
-2. Use Webflow MCP to call `webflow_guide_tool`, confirm the user/site/page, and inspect existing styles.
-3. Ask whether to use Designer Bridge during the build or build headless first; explain the bridge is recommended for visual feedback but requires the Designer tab open and foregrounded.
-4. Ask how to handle Webflow variables, whether to use FlowKit naming / existing class patterns / semantic names, and whether to use `px`, `rem`, or `em` units.
-5. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
-6. Confirm the build gates: Designer link/foreground tab if using bridge, SVG embeds for vector marks, 2× raster sources where needed, and gradient-based dashed accents.
-7. Read the referenced files at their point of use, set up or map variables, build DOM with `data_whtml_builder`, style with `data_style_tool`, attach assets by Webflow asset ID, verify, then ask whether they want to publish to `.webflow.io`. Default to no.
-
-### Example 2: Recreate a Figma section in an existing Webflow page
-
-**User:** "Recreate this pricing section from Figma on my homepage."
-
-1. Extract the section's Figma tokens, assets, and reference code.
-2. Confirm the target Webflow site/page and ask whether to use the default Designer Bridge flow or build headless first.
-3. Confirm build mode plus variable, naming, and unit strategy before generating new Webflow classes/CSS; default to Designer Bridge, existing variables plus missing variables, FlowKit, and `px` if the user has no preference.
-4. Present a concise preview plan that calls out the non-negotiable build gates, then require explicit confirmation before creating elements.
-5. Insert one section, constrain confirmed 2× images to display size, verify structurally headless or visually with bridge snapshots if selected, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
-
-## Guidelines
-
-- Always use Figma MCP for design extraction and Webflow MCP for Webflow operations; never use direct Webflow API calls.
-- Call `webflow_guide_tool` before other Webflow tools in the workflow.
-- Ask for build mode, Webflow variable, style naming, and CSS unit strategy before creating classes. Default to Designer Bridge, existing variables plus missing variables, FlowKit naming, and `px`; reference `webflow-mcp:flowkit-naming` when FlowKit is selected.
-- Treat mutating Webflow operations as confirmation-gated. Require explicit user approval before creating, updating, publishing, or deleting.
-- Prefer `data_whtml_builder` for DOM/section construction, then `data_style_tool` for all styling and element tools for precise asset binding, embeds, and refinements.
-- Keep CSS Webflow-compatible. Only non-native CSS belongs in Custom properties.
-- Do not publish by default. If the user wants a live review link, publish to the `.webflow.io` subdomain before any custom domains.
 
 ## Checklist before declaring done
 

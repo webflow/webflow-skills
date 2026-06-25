@@ -41,7 +41,7 @@ Make `.nav` or `.nav-inner` `position:relative` so the dropdown anchors to the b
 
 ## Behavior
 
-Keep desktop visual styling as normal Webflow classes. Put responsive/toggle behavior in one component-scoped HtmlEmbed inside the nav root, so it travels if converted to a component.
+Keep desktop visual styling as normal Webflow classes. Put CSS-only responsive/toggle behavior in one component-scoped HtmlEmbed inside the nav root, so it travels if converted to a component. Do **not** use JavaScript for custom navbar behavior.
 
 ```html
 <style>
@@ -59,4 +59,4 @@ Keep desktop visual styling as normal Webflow classes. Put responsive/toggle beh
 </style>
 ```
 
-Pure CSS is zero-JS and publish-safe, but does not set `aria-expanded` or close on outside click. If the client needs those, use a small JS toggle; guarantee the open-state CSS in the same embed because unused combo classes can be stripped from published CSS.
+Pure CSS is zero-JS and publish-safe. It does not set `aria-expanded` or close on outside click; tell the user that tradeoff rather than adding JavaScript.
