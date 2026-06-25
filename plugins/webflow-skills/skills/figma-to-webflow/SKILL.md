@@ -13,15 +13,27 @@ description: >-
 # Figma → Webflow
 
 Translate a Figma design into a live Webflow project: real elements, styles,
-assets, fonts, and (optionally) custom code + interactions. This skill is the
-hard-won playbook — follow the order, and heed the gotchas (each is something
-that silently fails or wastes a publish cycle if you don't know it).
+assets, fonts, and (optionally) custom code + interactions.
 
 ## Instructions
 
-### 0. The single most important thing: two tool surfaces
+Follow this order exactly. When a step says to read a reference file, read it
+before doing that work; those files contain the failure modes for that step.
 
-Webflow MCP has **two kinds of tools with different requirements**:
+## Non-Negotiable Gates
+
+Treat these as build gates, not suggestions. If you cannot satisfy one, stop
+and explain the tradeoff instead of silently substituting.
+
+- **Bridge gate:** Designer Bridge is the default build mode. If selected, provide or request the Designer launch link and wait for the user to open the project with the Designer tab foregrounded before bridge-dependent steps. If the bridge disconnects, keep structural work headless and reconnect before snapshots/canvas inspection.
+- **Native style gate:** apply styles with `data_style_tool`, never with the `data_whtml_builder` `css` param or raw `var()` strings. Otherwise styles land in Custom properties instead of native controls. Bind Webflow variables with `variable_as_value`.
+- **Variables gate:** decide the Webflow variable/design-system strategy before creating styles. Do not hard-code repeated colors/type/spacing/radii unless the user explicitly chooses hard-coded output.
+- **Vector gate:** logos, icons, and marks must be inline SVG embeds, not PNG/JPG uploads, unless the user explicitly approves raster fallback.
+- **Raster quality gate:** hero/product/mockup images must use a confirmed 2x source where crispness matters.
+- **Dashed accent gate:** dashed lines, dividers, grids, accents, and underlines must use `repeating-linear-gradient`, not `border-style:dashed`, unless the user explicitly accepts browser-default dash rhythm.
+- **Publish gate:** do not publish by default. Offer `.webflow.io` publish only after build/review, and only proceed on explicit user confirmation.
+
+## Tool Surfaces
 
 | Surface | Examples | Needs Designer open? |
 |---|---|---|
@@ -33,47 +45,22 @@ Webflow MCP has **two kinds of tools with different requirements**:
 - If Designer is disconnected, continue structural work headlessly with `query_styles`, `get_all_elements`, and `query_elements`; reconnect the bridge for snapshots, canvas inspection, and any still-required bridge-gated image processing fallback.
 - If a bridge tool returns `status:false` or "Unable to connect to Webflow Designer," share the launch link and ask the user to open the Designer **and keep that browser tab in the foreground** — it idles/disconnects when backgrounded. Retry before assuming anything broke.
 
-### 1. Workflow order
+## Workflow
 
-1. **Gather** — Figma structure, tokens, per-section code/colors/assets; Webflow site, pages, existing styles.
-2. **Choose build mode and style preferences** — ask whether to build headless or bridge-assisted, then ask how Webflow variables, new styles, and CSS units should be handled before creating any classes/CSS (see §3).
-3. **Set up foundations** — Webflow variables/design tokens, page wrapper w/ base typography, and fonts.
-4. **Build section by section** via `data_whtml_builder` (capture each returned element id to nest the next piece). Verify structurally after each, and visually if the user chose bridge-assisted mode.
-5. **Attach assets** (images by ID; inline SVGs via embeds).
-6. **Responsive pass** (desktop-first overrides).
-7. **Custom code / interactions** last (mobile menu, animated backgrounds, blur).
-8. **Offer review/publish next steps** — default to **no publish**. Only publish to the `.webflow.io` subdomain if the user explicitly asks or confirms after reviewing the build.
+### 1. Gather And Decide
 
-### Non-negotiable build gates
+1. Use Figma MCP:
+   - `get_metadata` for structure.
+   - `get_design_context` for major frames/sections.
+   - `get_variable_defs` for colors, type, spacing, radii.
+   - Read page/canvas background; do not assume white.
+2. Use Webflow MCP:
+   - `webflow_guide_tool` first.
+   - Confirm target site/page and inspect existing variables/styles.
+3. Ask the required setup prompts below.
+4. Confirm ambiguous design intent before building. If Figma component instances contain repeated placeholder labels, ask for intended copy instead of copying placeholders.
 
-Treat these as gates, not suggestions. Before building, explicitly confirm the planned choice for each item; if you cannot satisfy one, stop and explain the tradeoff instead of silently substituting.
-
-- **Bridge gate:** if the user chooses Designer Bridge (the default), provide/request the Designer launch link and wait for the user to open the project with the Designer tab foregrounded before running bridge-dependent steps. Do not skip this setup and start building as if headless were selected.
-- **Vector gate:** logos, icons, and marks must be inline SVG embeds, not PNG/JPG uploads, unless the user explicitly approves raster fallback. If SVG export cleanup is slow, say so and ask before substituting.
-- **Raster quality gate:** hero/product/mockup images must use a 2× source when crispness matters. Verify the asset source/export is 2× or tell the user it is not confirmed.
-- **Dashed accent gate:** dashed lines, dividers, grids, accents, and underlines must use `repeating-linear-gradient`, not `border-style:dashed`, unless the user explicitly accepts browser-default dash rhythm.
-
-### Speed defaults
-
-- Build in section-sized batches with `data_whtml_builder`; avoid element-by-element construction unless precision requires it.
-- Create variables/classes for common primitives once (containers, typography, spacing, buttons, image-fill, cards, nav) and reuse them aggressively.
-- Snapshot groups/wrappers, not every element. Prefer structural verification with `query_elements` / `query_styles` between visual checks.
-- Export complex layered visuals as 2× composed images instead of rebuilding every layer in Webflow.
-- Gather Figma metadata, variables, and major-section design context up front; avoid repeated per-node Figma calls for small children.
-- If using Designer Bridge, keep the tab foregrounded and batch several headless `data_*` operations between bridge snapshots.
-
-Confirm ambiguous design intent up front (e.g., a button whose label is a repeated component placeholder) rather than guessing. **If the build includes a navbar, ask which breakpoint the mobile menu should collapse at before building it (see §10).**
-
-### 2. Extracting from Figma
-
-- `get_metadata` → node/structure map. `get_design_context` per node → reference code + exact colors + asset download URLs + a screenshot. `get_variable_defs` → design tokens (colors, type scale, spacing, radii). Pull tokens early and treat them as law.
-- Read the page/canvas background color from Figma; do not assume white. Set the real page background on `.page-wrapper`, or white cards/sections can disappear against the wrong background.
-- **Asset URLs from design-context live ~7 days; `get_screenshot` URLs are short-lived** — upload promptly.
-- **Vector assets (logos, icons, marks): use `download_assets` with `defaultFormat: "svg"`** — NOT `get_screenshot`. Screenshot only rasterizes and **never upscales past the node's native size** (so it can't give you 2×, and it bakes in surrounding background).
-  - **Gotcha:** the SVG export wraps the node in its ancestor chain and **bakes in background fills** clipped to the node box (page background rect, card background, a node "backing" rect). Strip the full-bleed background `<rect>`/`<path>` elements that aren't part of the target → clean transparent vector. (Remaining `fill="white"` inside `<defs><clipPath>` are just clip masks — leave them.)
-- **Raster (photos, complex product mockups): can't get 2× from `get_screenshot`.** Use the design-context layer export URLs (often already 2×) or `download_assets` at 2× for a composed parent node; treat layered product mockups as one image instead of reconstructing every layer (see §5, §6).
-
-### 3. Build mode and style preferences
+### Required Prompts
 
 Before creating Webflow variables, classes, or CSS, ask about build mode, design-system strategy, naming, and units.
 
@@ -125,178 +112,45 @@ Offer these choices, with px selected as the default:
 
 If the user does not choose, default to **px**. Keep units consistent within a build; only mix units when there is a clear reason, such as `%` for fluid widths or `em` for icon/text relationships.
 
-### 4. Webflow CSS rules (these bite)
+### 2. Build Foundations And Sections
 
-- **Apply styles via `data_style_tool`, never via the `data_whtml_builder` `css` param or raw `var()` strings.** CSS passed as a raw blob through the WHTML `css` param lands in the Designer's **"Custom properties"** bucket (the arbitrary-custom-CSS panel) instead of mapping onto native Style-panel controls — the build looks non-native and is hard to edit. Use `create_style` / `update_style` to set properties (including responsive overrides), and bind variables natively with `variable_as_value: "<variable-id>"` (the id from `data_variable_tool`) — a raw `var(--collection---token)` string never renders the native variable pill. Only genuinely non-native CSS (`backdrop-filter`, `aspect-ratio`, `repeating-linear-gradient` backgrounds, etc.) should remain in Custom properties; that's expected even in a hand-built site.
-- **Longhand only.** Expand `padding`, `margin`, `border`, `border-radius` (4 corners), `font`, `background`, `transition`, `flex`.
-- **Class selectors only.** No tag/ID/descendant/attribute selectors. `:hover` is the only safe pseudo-class; no `::before`/`::after` (use real elements).
-- **Gaps:** emit `grid-row-gap` / `grid-column-gap` even on flex (Webflow's stored keys) — not `row-gap`/`column-gap`.
-- **Desktop-first breakpoints (Webflow).** Override downward only; WHTML media queries need the `screen and` prefix (e.g., `@media screen and (max-width: 767px)`).
-  - **Desktop (base)** — applies to all devices unless overridden at another breakpoint.
-  - **Tablet** — screens **991px** and below.
-  - **Mobile landscape** — screens **767px** and below.
-  - **Mobile portrait** — screens **479px** and below.
-- **Flexbox-first**; grid only for true 2D.
-- **Forbidden / dropped:** `calc()`, `clamp()`, `min()/max()`, `@keyframes`, `@font-face`, multi-layer `box-shadow`, logical props, vendor prefixes. For animation use IX2 or a custom-code embed.
-- Put inheritable typography (font-family, color, base size/line-height) once on `.page-wrapper`; single font names, no fallback stacks.
-- Variables: follow the selected design-system strategy before building sections. Prefer Webflow variables for repeated colors, typography, spacing, and radii unless the user explicitly chooses hard-coded styles.
-- Naming: follow the selected naming strategy. If using FlowKit, reference `webflow-mcp:flowkit-naming`; otherwise use layout/structure-based, kebab-case names and never page-prefixed names.
-- Units: follow the selected unit preference. Default to `px`; convert to `rem`/`em` only when the user chooses that strategy.
+Before creating variables/classes/styles, read [CSS rules](references/css-rules.md).
 
-### 5. Building elements
+1. Create or map Webflow variables according to the selected strategy.
+2. Create reusable primitives first: page wrapper, containers, typography, spacing, buttons, image-fill, cards, nav.
+3. Use `data_whtml_builder` for DOM/structure only: one root section per action, semantic tags, nesting, text, and class names.
+4. Create styles with `data_style_tool create_style` / `update_style`. Repeat: do **not** use the WHTML `css` param for styling.
+5. Capture returned element ids. Re-find later with `query_elements`, then filter by exact class/type before acting.
+6. Build in section-sized batches. Prefer structural verification with `query_elements` / `query_styles` between visual checks.
 
-- **`data_whtml_builder` is the workhorse for DOM/structure** — pass HTML to build markup, nesting, and semantic tags; referencing class names in the HTML is fine. Build one section per call, set `return_element_info:true`, and use the returned id as the parent for the next insert. Class selectors in the WHTML `css` param do become real Webflow styles, but they get stored as non-native **Custom properties** rather than native style-panel controls — so create/update styling via `data_style_tool` instead (with `variable_as_value` for variable bindings) so it maps to native Webflow controls (see §4).
-- **Element identity & page context:** an element id is `{component, element}` where **`component` IS the page id**. `data_element_tool` actions must run with the **matching top-level `pageId`** — a mismatch returns "Element not found." This is exactly how you target a *duplicated* page's elements (pass that page's id).
-- `data_element_builder` (typed elements, supports `set_style`/`set_image_asset`/children at creation) is the fallback when you need precise control; component instances need `component_builder`.
-- Keep nesting ≤4–5 levels.
+### 3. Attach Assets
 
-### 6. Images & assets
+Before handling images or vectors, read [Assets and SVG](references/assets-and-svg.md).
 
-Use the headless Data API asset path first. Do **not** rely on `asset_tool upload_image_by_url` as the primary path; it is Designer Bridge-gated and may be removed.
+1. Use `data_assets_tool create_asset` for raster assets. Download source bytes locally, compute MD5, POST to presigned S3, then verify nonzero size/variants before placement.
+2. For hero/product/mockup images, confirm 2x source before placement.
+3. Bind images by asset ID with `set_image_asset`; never rely on raw `<img src="...">`.
+4. Inline vector marks as `HtmlEmbed` SVGs and set embed code with `data_element_tool set_settings`.
+5. Upload fonts with `data_fonts_tool`; never add Google Fonts `<link>` tags to head.
 
-- **Download Figma asset bytes locally first.** Use the Figma design-context/export URL promptly, write the file to `/tmp/`, and compute the MD5 hash of the actual bytes.
-- **Create the asset via `data_assets_tool create_asset`.** Pass `site_id`, `file_name`, and `file_hash`, then POST the local file bytes to the returned presigned S3 form.
-  - The presigned **policy is base64 — validate it is pure ASCII** before POSTing (`grep '[^A-Za-z0-9+/=]'`); transcription homoglyphs cause a 403.
-  - Append the file field last in the multipart POST.
-- **Verify processing before placing the image.** Fetch/check the created asset after upload. If it remains `size:0` or has no variants, tell the user the upload succeeded but Webflow has not processed a renderable asset yet.
-- **Bridge-gated fallback:** if processed variants are required and `create_asset` does not process them, raise the issue rather than reverting silently. If a fallback is still available, ask the user to open and foreground Webflow Designer. Do not assume `upload_image_by_url` will remain available.
-- **`whtml <img src="...">` does NOT link to the asset library by URL** ("inserted without a managed asset"). After inserting, `query_elements` for the `Image` and `set_image_asset` by asset ID.
-- Bind images by asset ID with `set_image_asset`, or create the Image with `data_element_builder` and `set_image_asset` in the same step when possible. Apply an image-fill class (`width:100%; height:100%; object-fit:cover; display:block`) inside the image's container/placeholder.
-- **hiDPI/retina:** Webflow's HiDPI checkbox is Designer-UI-only. Equivalent via API: ship a **2× source and let CSS constrain it to its display width** → crisp automatically.
-- Delete orphaned `size:0` assets to keep the library clean.
+### 4. Navbar And Custom Behavior
 
-### 7. SVG, logos, icons → use embeds
+If the build includes a navbar, read [Navbar](references/navbar.md) before building it.
 
-- **An SVG uploaded as an asset and placed via `<img>` can render as a filled blob** when it has gradients/complex fills. **Inline the SVG inside an `HtmlEmbed`** for crisp, transparent, recolorable vectors.
-- **Setting embed code:** create the `HtmlEmbed` (code can't be set at creation), then `data_element_tool set_settings` with key `"code"` and the raw markup as `static_text`.
-- To avoid malformed tool-call JSON, single-quote SVG attributes, optimize before transcribing, collapse whitespace, round path coordinates to ~1 decimal, and do one SVG per call. Around 13 KB is usually reliable; 16–20 KB is risky.
-- Strip Figma SVG export noise: full-page/canvas backing rects, dashed component-boundary rects, off-target paths, and unused `id` attributes. Keep ids referenced by `url(#...)` gradients/clips and leave `fill="white"` inside `<defs><clipPath>` alone.
-- Crop the SVG `viewBox` to the artwork bounds and put `style="height:Npx; width:auto; display:block"` on the root `<svg>` when sizing by height. If the export is too messy, ask the user to paste Figma's cleaner "Copy as SVG" output.
-- Regex gotcha when parsing SVG: `id="X"` contains `d="X"` as a substring. Match `\sd="` with a leading boundary, not bare `d="`.
-- Dark-background variant: duplicate the SVG and swap wordmark `fill` hex to white (leave `fill="url(#…)"` gradient fills alone).
-- **`set_text("")` on a Link wipes its child embeds.** Never clear a link's text after inserting an icon embed (or re-add the embed after).
-- For multiple logos of different proportions, **crop each SVG `viewBox` to its content bounds** so you can size them uniformly in a flex row.
+- Ask which breakpoint should collapse to hamburger.
+- Webflow native Navbar cannot be created via API/WHTML. Build a semantic custom nav or ask the user to add the native element in Designer.
+- Put component behavior `<style>`/`<script>` in an HtmlEmbed inside the component root. Use site/page head code only for truly global behavior.
 
-### 8. Fonts (`data_fonts_tool`)
+### 5. Responsive And QA
 
-- Upload fonts with `data_fonts_tool`: `create_font` (`file_hash` = MD5 of the woff2) → presigned upload → POST the bytes. Source woff2 from the Google Fonts `css2` endpoint (latin subset) with a desktop User-Agent when needed.
-- Never add Google Fonts `<link>` tags to page/site `<head>` after uploading fonts; they create duplicate `@font-face` declarations. Reference fonts by **exact family name** in CSS.
-- First snapshots can show fallback fonts during the cold-cache `font-display: swap` window. Warm the cache with a throwaway/full-page snapshot and re-snapshot before "fixing" fonts. Do not add head links to solve snapshot-only fallback fonts.
-- Variable-font woff2 files can serve multiple weights; registering each weight against the same source file is acceptable.
+Before responsive/final verification, read [Verification](references/verification.md).
 
-### 9. Custom code & interactions
-
-- **Prefer component-scoped HtmlEmbeds for component behavior** (e.g., navbar mobile-toggle CSS/JS) so the behavior travels if the element becomes a Webflow component. Create the embed inside the component root, then set code via `data_element_tool set_settings`.
-- Use `data_scripts_tool set_site_freeform_code` (head/footer) only for genuinely global `<style>`/`<script>`. The *registered-script* apply endpoints (`add_site_script`/`add_page_script`) may 404 depending on the site; freeform code is reliable.
-- **Unused combo classes get stripped from published CSS.** A class you only toggle at runtime via JS (e.g., `.menu.is-open`) has **no matching rule** unless you (a) apply the combo to an element in the Designer, or (b) **guarantee the rule in a head `<style>`**. This silently makes JS toggles do nothing.
-- **HTML embed + `<style>`/`<script>` is the escape hatch** for anything Webflow's panel can't express: parent-state→child selectors, custom mobile-menu toggle, or any CSS/JS Webflow strips or can't model.
-- **Native components (Navbar, etc.) cannot be created via API/whtml** — whtml just produces generic blocks with `w-*` class names (no real component JS/CSS). Either build a custom equivalent (+ a small delegated-click script) or have the user add the native element in the Designer.
-
-### 10. Navbar (reusable recipe)
-
-Webflow's native Navbar component can't be created via the API/whtml (whtml only yields generic blocks), yet most sites need one. Build a **semantic `<nav>` from Webflow custom elements** + a **CSS-only mobile toggle in a code embed** — no JS, no native component.
-
-**Always ask first:** *which breakpoint should the menu collapse to a hamburger?* Then recommend based on the design, and use their answer as `{BP}`:
-- **≤3–4 short links, no/short CTA** → Mobile landscape (**767**) or Mobile portrait (**479**) — they stay readable longer.
-- **5+ links, long labels, or a prominent CTA** → Tablet (**991**) — collapse earlier so the bar never crowds.
-- State your recommendation with the reason, then defer to their choice.
-
-**Structure** — build with custom tags (`set_tag` / `BY_CUSTOM_TAG`) so it's semantic and Designer-editable:
-
-```html
-<nav class="nav">                         ← custom element, tag = nav; position: relative (or sticky/fixed)
-  <div class="nav-inner">                 ← flex row, space-between, max-width container
-    <a class="nav-brand" href="/">…logo…</a>
-    <input type="checkbox" id="nav-toggle" class="nav-cb">   ← custom tag "input", attr type=checkbox
-    <label for="nav-toggle" class="nav-burger">              ← custom tag "label", attr for=nav-toggle
-      <span class="nav-burger-bar"></span> ×3
-    </label>
-    <div class="nav-menu">                 ← links + CTA (real, editable Webflow links)
-      <a class="nav-link" href="#">…</a> …
-      <a class="btn" href="#">CTA</a>
-    </div>
-  </div>
-</nav>
-```
-
-**Critical:** the checkbox must be a **previous sibling** of `.nav-menu` (order: brand → checkbox → burger → menu) so `:checked ~ .nav-menu` resolves. Make `.nav` (or `.nav-inner`) `position: relative` so the dropdown anchors to the bar. Use custom-tag `input`/`label` (not the Form Checkbox element) to avoid Webflow's `.w-checkbox` wrapper, which would break the sibling chain.
-
-**Behavior — one code embed, CSS only** (replace `{BP}` with the chosen breakpoint). This CSS uses `:checked ~` + a media query that Webflow's style panel can't express — which is exactly why it lives in an embed:
-
-```html
-<style>
-  .nav-cb{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }  /* a11y-hidden toggle */
-  .nav-burger{ display:none; }                       /* hidden on desktop */
-  @media screen and (max-width:{BP}px){
-    .nav-burger{ display:flex; flex-direction:column; row-gap:5px; cursor:pointer; }
-    .nav-menu{
-      display:none; position:absolute; top:100%; left:0; right:0;
-      flex-direction:column; align-items:flex-start; row-gap:4px;
-      padding:16px 24px; background:#fff; box-shadow:0 10px 24px rgba(0,0,0,.10);
-    }
-    .nav-cb:checked ~ .nav-menu{ display:flex; }      /* pure-CSS open/close */
-  }
-</style>
-```
-
-Keep all **desktop visual styling** (colors, padding, link/burger-bar look) as normal Webflow classes; the embed holds only the responsive + toggle **behavior**.
-
-**Tradeoffs:** the pure-CSS toggle is zero-JS and publish-safe, but doesn't set `aria-expanded` or close on outside-click. If the client needs those, swap the embed for a small JS toggle (delegated click + class toggle) — but a JS-toggled class needs its open-state rule **guaranteed in custom code** (an unused combo class is stripped from published CSS — see §9). Optionally animate the bars to an "X" via `.nav-cb:checked ~ .nav-burger` rules inside the same embed.
-
-### 11. Isolating experiments / "branching"
-
-- **Page-branching API may be unavailable** (`create_branch`/`list_branches` → 404). Substitute: **`create_page` with `duplicateOf`** to clone the page as an experiment "branch" (gets its own page id; target its elements with that `pageId`). Revert main by deleting the experimental elements.
-- For reversible enhancements, **layer the new thing over a static fallback** (e.g., an animated canvas over the static gradient image) rather than replacing it.
-
-### 12. Verification & its hard limits
-
-- `element_snapshot_tool`: Designer-foreground only; **desktop viewport only (no responsive/mobile simulation)**; **does not execute embeds / WebGL / `backdrop-filter`** (those render only on the published/preview site).
-- Isolated-section snapshots do not include sibling overlays (e.g., page-level grids/backgrounds). Verify overlays/layering with a full-page composite snapshot of the top-level wrapper.
-- Transparent regions render as **black** in isolated snapshots; on the page they show the page background. `position:fixed` elements can render unreliably in composites; verify clearance on preview/live.
-- First snapshot of a session can show fallback fonts; warm the cache and re-snapshot before changing font implementation.
-- You **cannot fetch `*.webflow.io`** (robots-blocked) or run JS on it. So:
-  - If the user chooses to publish to the subdomain, ask them to confirm anything you can't see in the Designer — embed behavior, custom-code, mobile/responsive widths. Never claim an embed is verified from your side.
-
-### 13. Layout patterns worth reusing
-
-- **Background grid lines:** `repeating-linear-gradient` for dashes (control dash/gap precisely — a CSS dashed *border* can't). Give each line element a **real width (≥1px)** so Webflow doesn't flag it as an empty/clickable zero-width element. Place at `z-index:-1` inside a stacking-context wrapper so it sits behind content but above the page background.
-- Use `repeating-linear-gradient`, not `border-style:dashed`, for dashed accents/dividers/underlines so dash length, gap, opacity, and direction match the design rhythm.
-- Decorative overlays must sit behind content. Make `.page-wrapper` a stacking context (`position:relative; z-index:0`) and place overlays at `z-index:-1`; opaque cards then hide the overlay while gutters show it.
-- Never use a fixed overlay width wider than the viewport. Prefer `left:0; right:0; width:auto; max-width:<design-width>; margin-left:auto; margin-right:auto`.
-- Replicate interior grid lines too, not just outer edges; check Figma for distributed columns (e.g., 25/50/75%).
-- **Perceived weight ≠ literal alpha:** lines *behind* content read lighter than identical lines *in front* (occlusion). Match the perceived weight when pairing them.
-- **Section dividers:** use a thin absolutely-positioned gradient-line element to match a dashed grid's rhythm, not a dashed `border`.
-- **Fixed vs sticky nav:** `fixed` lets the first section sit *under* the bar (useful when the nav is translucent/overlays content); then add top-padding to that section to clear the bar. `sticky` reserves space (content starts below the bar).
-- **Replacing an `<img>` with an embed loses the img's classes/margins** — reapply spacing on the embed.
-
-### 14. Build mechanics & gotchas
-
-- `data_whtml_builder` requires a single root element per action. To insert multiple sibling sections, use multiple actions.
-- Styles applied via `data_whtml_builder`'s `css` param (or as raw `var()` strings) are stored as Designer "Custom properties", not native style-panel controls — always set styles through `data_style_tool` and bind variables with `variable_as_value`.
-- `set_style` replaces all classes on an element. If a class does not exist yet, create it with `data_style_tool create_style`; do not define it through the WHTML CSS param.
-- `query_elements` style filters are case-insensitive substring matches; filter returned elements by exact class/type before acting.
-- Responsive work is headless: use `data_style_tool update_style` with breakpoint IDs (`main` base, then `medium`, `small`, `tiny`). Desktop-first: set base, override downward.
-- Capture returned element ids from every insert. Re-find later by exact style/type when possible. Element ids are `{component, element}`, where `component` is the page id.
-- Combo classes (`["base","modifier"]`) can be ambiguous. When in doubt, prefer one standalone class with full styling.
-- Figma component instances often carry repeated placeholder labels (e.g., identical button text). Confirm intended labels with the user instead of copying placeholders verbatim.
-- Suppress Designer-only `.wf-empty` affordances on decorative empty elements by giving normal DivBlocks a dimension-giving style in the active breakpoint (explicit zero padding works). For custom-tag empty elements, add a child or use a normal DivBlock instead.
-
-### 15. Reference: local-file upload (presigned S3)
-
-```bash
-# 1) Download/export the image locally and compute MD5 of the bytes.
-# 2) create_asset returns uploadUrl + uploadDetails (presigned form) + hostedUrl
-# 3) POST the bytes (field order: form fields first, file LAST):
-curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
-  -F "key=$KEY" -F "acl=public-read" -F "Content-Type=image/png" \
-  -F "cache-control=max-age=31536000" -F "success_action_status=201" \
-  -F "X-Amz-Algorithm=..." -F "X-Amz-Credential=..." -F "X-Amz-Date=..." \
-  -F "X-Amz-Signature=$SIG" -F "policy=$POLICY" -F "bucket=..." \
-  -F "file=@/path/to/image.png"
-# 4) Verify the asset has nonzero size / variants before using its asset ID.
-```
-
-> Validate `$POLICY` is pure base64 ASCII before sending: `printf '%s' "$POLICY" | grep -q '[^A-Za-z0-9+/=]' && echo "ABORT: non-ASCII in policy"`.
+1. Use `data_style_tool update_style` with breakpoint ids (`main`, `medium`, `small`, `tiny`). Desktop-first: set base, override downward.
+2. If Designer Bridge is selected, snapshot groups/wrappers rather than every element. Keep the Designer tab foregrounded.
+3. Verify overlays/layering with a full-page composite, not isolated-section snapshots.
+4. Do not trust first snapshots for fonts; warm cache and re-snapshot before changing font implementation.
+5. Do not claim embed behavior, custom code, blur, WebGL, animation, or mobile widths are verified from your side. Ask the user to confirm in preview/published site.
+6. Offer publish/review next steps. Default remains **no publish**.
 
 ## Examples
 
@@ -310,14 +164,14 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 4. Ask how to handle Webflow variables, whether to use FlowKit naming / existing class patterns / semantic names, and whether to use `px`, `rem`, or `em` units.
 5. Ask about ambiguous design intent and navbar collapse breakpoint if relevant.
 6. Confirm the build gates: Designer link/foreground tab if using bridge, SVG embeds for vector marks, 2× raster sources where needed, and gradient-based dashed accents.
-7. Set up or map variables according to the selected design-system strategy, build foundations and sections via `data_whtml_builder`, attach assets by Webflow asset ID, verify each section, then ask whether they want to publish to the `.webflow.io` subdomain. Default to no.
+7. Read the referenced files at their point of use, set up or map variables, build DOM with `data_whtml_builder`, style with `data_style_tool`, attach assets by Webflow asset ID, verify, then ask whether they want to publish to `.webflow.io`. Default to no.
 
 ### Example 2: Recreate a Figma section in an existing Webflow page
 
 **User:** "Recreate this pricing section from Figma on my homepage."
 
 1. Extract the section's Figma tokens, assets, and reference code.
-2. Confirm the target Webflow site/page. Designer connection is only needed later for snapshot/visual QA or bridge-gated fallbacks.
+2. Confirm the target Webflow site/page and ask whether to use the default Designer Bridge flow or build headless first.
 3. Confirm build mode plus variable, naming, and unit strategy before generating new Webflow classes/CSS; default to Designer Bridge, existing variables plus missing variables, FlowKit, and `px` if the user has no preference.
 4. Present a concise preview plan that calls out the non-negotiable build gates, then require explicit confirmation before creating elements.
 5. Insert one section, constrain confirmed 2× images to display size, verify structurally headless or visually with bridge snapshots if selected, and ask the user to confirm any embed or responsive behavior that cannot be self-verified.
@@ -328,12 +182,13 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$UPLOAD_URL" \
 - Call `webflow_guide_tool` before other Webflow tools in the workflow.
 - Ask for build mode, Webflow variable, style naming, and CSS unit strategy before creating classes. Default to Designer Bridge, existing variables plus missing variables, FlowKit naming, and `px`; reference `webflow-mcp:flowkit-naming` when FlowKit is selected.
 - Treat mutating Webflow operations as confirmation-gated. Require explicit user approval before creating, updating, publishing, or deleting.
-- Prefer `data_whtml_builder` for section construction, then use element tools for precise asset binding, embeds, and refinements.
-- Keep CSS Webflow-compatible: longhand properties, class selectors, desktop-first breakpoints, flexbox-first layout, and custom code for unsupported behavior.
+- Prefer `data_whtml_builder` for DOM/section construction, then `data_style_tool` for all styling and element tools for precise asset binding, embeds, and refinements.
+- Keep CSS Webflow-compatible. Only non-native CSS belongs in Custom properties.
 - Do not publish by default. If the user wants a live review link, publish to the `.webflow.io` subdomain before any custom domains.
 
 ## Checklist before declaring done
 
+- [ ] Required reference files were read at their point of use.
 - [ ] All CSS longhand; correct breakpoints; flexbox-first.
 - [ ] Styles applied via `data_style_tool` (native controls), variables bound with `variable_as_value`, and only truly non-native CSS (`backdrop-filter`, `aspect-ratio`, `repeating-linear-gradient`, etc.) left as custom properties.
 - [ ] Build mode followed: bridge-assisted by default with Designer tab open and foregrounded, or headless-first if the user chose it.
