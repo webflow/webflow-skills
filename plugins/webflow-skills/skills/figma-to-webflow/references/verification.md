@@ -11,6 +11,7 @@ Read this before responsive work, visual QA, snapshots, or publish/review.
   - `tiny`: 479px and below
 - Desktop-first: set base, then override downward.
 - Use structural verification between visual checks: `query_elements`, `query_styles`, exact class/type filtering.
+- Structural verification is not enough to call a build done. It can prove elements/classes exist, but not that the rendered layout is correct.
 
 ## Designer Bridge And Snapshots
 
@@ -32,6 +33,14 @@ Read this before responsive work, visual QA, snapshots, or publish/review.
 - Page branching APIs may be unavailable (`create_branch` / `list_branches` can 404). Substitute `create_page` with `duplicateOf` to clone a page as an experiment.
 - For reversible enhancements, layer the new thing over a static fallback rather than replacing it.
 - Figma component instances often carry repeated default labels. Confirm intended labels with the user.
+- Before saying a capability "can't" be done, test the relevant MCP tool path. If you cannot test, say it is untested and be precise about whether the limitation is Webflow itself, the MCP API, or the current tool surface.
+- Avoid broad tag/global style tests on real pages. If testing a risky capability, use an isolated duplicate page or disposable element and revert immediately.
+- After WHTML insertion, verify that expected classes survived and resolve to existing Webflow styles. Missing styles can leave rendered content unstyled even when the DOM exists.
+
+## Done Criteria
+
+- Do not call the build done until rendered output is visually checked with Designer Bridge, preview, or explicit user confirmation.
+- If visual verification is blocked, report exactly what is unverified and ask the user to check it.
 
 ## Publish
 

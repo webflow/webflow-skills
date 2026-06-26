@@ -27,11 +27,15 @@ and explain the tradeoff instead of silently substituting.
 
 - **Bridge gate:** Designer Bridge is the default build mode. If selected, provide or request the Designer launch link and wait for the user to open the project with the Designer tab foregrounded before bridge-dependent steps. If the bridge disconnects, keep structural work headless and reconnect before snapshots/canvas inspection.
 - **Native style gate:** apply styles with `data_style_tool`, never with the `data_whtml_builder` `css` param or raw `var()` strings. Otherwise styles land in Custom properties instead of native controls. Bind Webflow variables with `variable_as_value`.
+- **Visible element gate:** build with real Designer-visible elements and native classes. Do not use embed `<style>` blocks, `::before` / `::after`, or other hidden constructs for normal layout/decorative elements.
+- **Class existence gate:** create every class with `data_style_tool create_style` before using it in WHTML/element class lists. Webflow can silently drop class names that do not exist yet.
 - **Variables gate:** decide the Webflow variable/design-system strategy before creating styles. Do not hard-code repeated colors/type/spacing/radii unless the user explicitly chooses hard-coded output.
 - **Vector gate:** logos, icons, and marks must be inline SVG embeds, not PNG/JPG uploads, unless the user explicitly approves raster fallback.
 - **Raster quality gate:** hero/product/mockup images must use a confirmed 2x source where crispness matters.
 - **Dashed accent gate:** dashed lines, dividers, grids, accents, and underlines must use `repeating-linear-gradient`, not `border-style:dashed`, unless the user explicitly accepts browser-default dash rhythm.
 - **Navbar gate:** custom navbar mobile behavior must be CSS-only, not JavaScript. Use the checkbox/sibling-selector pattern in `references/navbar.md`.
+- **Verification gate:** never call a build done until you have verified rendered output. If visual verification is blocked, say what is unverified and ask the user to check it.
+- **Capability gate:** do not assert that Webflow or MCP "can't" do something until you have tested the relevant tool path or clearly label it as untested.
 - **Publish gate:** do not publish by default. Offer `.webflow.io` publish only after build/review, and only proceed on explicit user confirmation.
 
 ## Tool Surfaces
@@ -78,10 +82,11 @@ Before creating variables/classes/styles, read [CSS rules](references/css-rules.
 
 1. Create or map Webflow variables according to the selected strategy.
 2. Create reusable primitives first: page wrapper, containers, typography, spacing, buttons, image-fill, cards, nav.
-3. Use `data_whtml_builder` for DOM/structure only: one root section per action, semantic tags, nesting, text, and class names.
-4. Create styles with `data_style_tool create_style` / `update_style`. Repeat: do **not** use the WHTML `css` param for styling.
-5. Capture returned element ids. Re-find later with `query_elements`, then filter by exact class/type before acting.
-6. Build in section-sized batches. Prefer structural verification with `query_elements` / `query_styles` between visual checks.
+3. Create needed classes with `data_style_tool create_style` before referencing them in WHTML/element class lists.
+4. Use `data_whtml_builder` for DOM/structure only: one root section per action, semantic tags, nesting, text, and existing class names.
+5. Style with `data_style_tool update_style`. Repeat: do **not** use the WHTML `css` param or embed `<style>` blocks for normal styling.
+6. Capture returned element ids. Re-find later with `query_elements`, then filter by exact class/type before acting.
+7. Build in section-sized batches. Prefer structural verification with `query_elements` / `query_styles` between visual checks.
 
 ### 3. Attach Assets
 
@@ -109,14 +114,17 @@ Before responsive/final verification, read [Verification](references/verificatio
 2. If Designer Bridge is selected, snapshot groups/wrappers rather than every element. Keep the Designer tab foregrounded.
 3. Verify overlays/layering with a full-page composite, not isolated-section snapshots.
 4. Do not trust first snapshots for fonts; warm cache and re-snapshot before changing font implementation.
-5. Do not claim embed behavior, custom code, blur, WebGL, animation, or mobile widths are verified from your side. Ask the user to confirm in preview/published site.
-6. Offer publish/review next steps. Default remains **no publish**.
+5. Test tool capabilities before asserting limitations. If you cannot test, say "untested" and describe the uncertainty.
+6. Do not claim embed behavior, custom code, blur, WebGL, animation, or mobile widths are verified from your side. Ask the user to confirm in preview/published site.
+7. Offer publish/review next steps. Default remains **no publish**.
 
 ## Checklist before declaring done
 
 - [ ] Required reference files were read at their point of use.
 - [ ] All CSS longhand; correct breakpoints; flexbox-first.
 - [ ] Styles applied via `data_style_tool` (native controls), variables bound with `variable_as_value`, and only truly non-native CSS (`backdrop-filter`, `aspect-ratio`, `repeating-linear-gradient`, etc.) left as custom properties.
+- [ ] All class names used in WHTML/element class lists exist as Webflow styles; none were silently dropped.
+- [ ] No embed `<style>` blocks or `::before` / `::after` pseudo-elements used for normal layout/decorative elements.
 - [ ] Build mode followed: bridge-assisted by default with Designer tab open and foregrounded, or headless-first if the user chose it.
 - [ ] Webflow variables handled according to the selected strategy; repeated colors/type/spacing/radii are mapped or created unless hard-coding was explicitly selected.
 - [ ] Images attached by asset ID (not orphan `<img src>`); 2× source confirmed where crispness matters.
@@ -125,4 +133,6 @@ Before responsive/final verification, read [Verification](references/verificatio
 - [ ] Fonts uploaded + referenced by exact family name; temp `<head>` link removed.
 - [ ] Runtime-toggled classes have guaranteed CSS (not stripped).
 - [ ] Responsive overrides at medium/small/tiny.
+- [ ] Rendered output verified visually, or unverified items clearly reported to the user.
+- [ ] No untested capability limitation was stated as fact.
 - [ ] If published to subdomain, user asked to confirm anything you can't self-verify (embeds, WebGL, blur, mobile).

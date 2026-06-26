@@ -7,6 +7,8 @@ Read this before creating Webflow variables, classes, styles, or responsive over
 - Apply styles with `data_style_tool`, never with the `data_whtml_builder` `css` param. WHTML CSS lands in Designer **Custom properties**, so the result is hard to edit and does not map to native Style-panel controls.
 - Bind Webflow variables with `variable_as_value: "<variable-id>"` from `data_variable_tool`. Do not use raw `var(--collection---token)` strings; they do not render the native variable pill.
 - Only truly non-native CSS belongs in Custom properties: `backdrop-filter`, `aspect-ratio`, `repeating-linear-gradient` backgrounds, parent-state selectors, custom mobile-toggle selectors, and similar CSS Webflow cannot model.
+- Do not use embed `<style>` blocks for normal layout, typography, spacing, backgrounds, dividers, grids, cards, or section styling. That hides styling from the Designer style panel.
+- Do not use `::before` or `::after`. Pseudo-elements are invisible in the Navigator and unselectable in Designer. Build decorative lines, grids, badges, and backgrounds as real elements with native classes.
 
 ## Webflow-Compatible CSS
 
@@ -34,6 +36,7 @@ Read this before creating Webflow variables, classes, styles, or responsive over
 - Use `data_whtml_builder` for DOM/structure only: one root element per action, markup, semantic tags, text, nesting, and class names.
 - To insert multiple sibling sections, use multiple WHTML actions.
 - If a class does not exist, create it with `data_style_tool create_style`; do not define it through WHTML CSS.
+- Create classes before referencing them in WHTML or element class lists. If a custom class exists only as a string in WHTML and no Webflow style exists yet, Webflow can silently drop it, leaving unstyled full-width text or broken layout.
 - `set_style` replaces all classes on an element. Include all intended classes when applying it.
 - `query_elements` style filters are case-insensitive substring matches. Filter results by exact class/type before acting.
 - Capture returned element ids from every insert. Re-find later by exact style/type when possible.
