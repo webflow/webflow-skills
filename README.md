@@ -82,6 +82,7 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-mcp:custom-code-management | Manage tracking scripts and custom code safely |
 | webflow-mcp:flowkit-naming | Apply Webflow's official FlowKit CSS naming conventions |
 | webflow-mcp:designer-tools | Build and manage page structure, elements, components, and styles in Webflow Designer |
+| webflow-mcp:review-comments | Review open comment threads on a Webflow site and triage each one |
 
 ### Webflow CLI Skills
 
