@@ -1,6 +1,6 @@
 {
   "name": "webflow-skills",
   "description": "Production-ready skills for managing Webflow CMS content, auditing site health, optimizing assets, building Designer pages and components, creating Code Components, running CLI workflows, and safely publishing changes",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "skills": "./skills/"
 }
