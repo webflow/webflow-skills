@@ -106,6 +106,14 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-code-component:pre-deploy-check | Pre-deployment validation for bundle size, dependencies, SSR compatibility |
 | webflow-code-component:troubleshoot-deploy | Debug deployment failures with root cause analysis and fixes |
 
+### Webflow University Skills
+
+Guided, educational skills from [Webflow University](https://university.webflow.com) that teach MCP workflows hands-on.
+
+| Skill | Description |
+|-------|-------------|
+| webflow-university:mcp-getting-started | Guided onboarding for your first Webflow MCP workflow — checks your connection, helps you pick a real task, coaches your prompt, and runs it with you |
+
 ## Resources
 
 - [Webflow MCP Documentation](https://developers.webflow.com/mcp)
