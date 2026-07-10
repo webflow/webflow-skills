@@ -113,32 +113,6 @@ Guided, educational skills from [Webflow University](https://university.webflow.
 |-------|-------------|
 | webflow-university:mcp-getting-started | Guided onboarding for your first Webflow MCP workflow — checks your connection, helps you pick a real task, coaches your prompt, and runs it with you |
 
-#### Getting Webflow University skills
-
-Webflow University skills are distributed the same way [Figma distributes its MCP skills](https://help.figma.com/hc/en-us/articles/39166810751895-Figma-skills-for-MCP): grab a raw file link that always resolves to the latest version, or install with the [`npx skills`](https://skills.sh) CLI. They ship in the `webflow-skills` plugin too, so the marketplace and Cursor install methods above also include them.
-
-**Raw file link (always latest)**
-
-These links point at the `main` branch, so they always resolve to the newest published version of the skill. Copy the link, or download the file, and upload it to your agent (in Claude, use the **Customize** menu):
-
-| Skill | Raw link |
-|-------|----------|
-| webflow-university:mcp-getting-started | https://raw.githubusercontent.com/webflow/webflow-skills/main/plugins/webflow-skills/skills/wfu-mcp-getting-started/SKILL.md |
-
-**npx skills**
-
-Install a single Webflow University skill straight from GitHub:
-
-```
-npx skills add https://github.com/webflow/webflow-skills/tree/main/plugins/webflow-skills/skills/wfu-mcp-getting-started
-```
-
-Or install every skill in the repo (Webflow University skills included):
-
-```
-npx skills add https://github.com/webflow/webflow-skills
-```
-
 ## Resources
 
 - [Webflow MCP Documentation](https://developers.webflow.com/mcp)

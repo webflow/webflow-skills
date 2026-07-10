@@ -8,7 +8,7 @@ One plugin family lives under `plugins/`:
 
 - **webflow-skills/** — CMS operations, site/asset/link audits, Designer page/component tools, safe publish, FlowKit naming, React code component workflows, CLI wrappers for Cloud, DevLink, and designer extensions, and Webflow University guided onboarding skills
 
-Skills are grouped in the README under Webflow MCP, Webflow CLI, Webflow Code Component, and Webflow University sections. Webflow University skills (e.g. `webflow-university:mcp-getting-started`) are educational, guided-activity skills also distributed via raw `raw.githubusercontent.com/.../main/...` links (always latest) and `npx skills add`, mirroring Figma's distribution model.
+Skills are grouped in the README under Webflow MCP, Webflow CLI, Webflow Code Component, and Webflow University sections. Webflow University skills (e.g. `webflow-university:mcp-getting-started`) are educational, guided-activity skills.
 
 Key config files:
 
