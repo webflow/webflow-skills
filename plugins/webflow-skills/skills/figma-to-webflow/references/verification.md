@@ -18,7 +18,7 @@ Read this before responsive work, visual QA, snapshots, or publish/review.
 - `element_snapshot_tool` requires Designer tab open and foregrounded.
 - Snapshots are desktop viewport only. They do not simulate responsive/mobile.
 - Snapshots do not execute embeds, WebGL, `backdrop-filter`, or custom code behavior.
-- If a snapshot or `designer_tool` returns `status:false`, the bridge is likely disconnected, backgrounded, idle, or cold. Ask the user to foreground the Designer tab and retry.
+- If a snapshot or `designer_tool` returns `status:false`, the bridge is likely disconnected, backgrounded, idle, or cold. Provide the Designer launch link (opens Designer with the MCP Bridge App), ask the user to open it and keep that tab foregrounded, then retry.
 - Large composites can fail transiently when bridge is cold or page is very tall; retry before assuming the build is broken.
 
 ## Snapshot Traps

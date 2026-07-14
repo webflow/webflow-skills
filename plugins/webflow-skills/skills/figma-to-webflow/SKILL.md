@@ -25,7 +25,7 @@ before doing that work; those files contain the failure modes for that step.
 Treat these as build gates, not suggestions. If you cannot satisfy one, stop
 and explain the tradeoff instead of silently substituting.
 
-- **Bridge gate:** Designer Bridge is the default build mode. If selected, provide or request the Designer launch link and wait for the user to open the project with the Designer tab foregrounded before bridge-dependent steps. If the bridge disconnects, keep structural work headless and reconnect before snapshots/canvas inspection.
+- **Bridge gate:** Designer Bridge is the default build mode. If selected, provide the Designer launch link (opens Designer with the MCP Bridge App) and wait for the user to open it with that tab foregrounded before bridge-dependent steps. If the bridge disconnects, keep structural work headless and reconnect before snapshots/canvas inspection.
 - **Native style gate:** apply styles with `data_style_tool`, never with the `data_whtml_builder` `css` param or raw `var()` strings. Otherwise styles land in Custom properties instead of native controls. Bind Webflow variables with `variable_as_value`.
 - **Visible element gate:** build with real Designer-visible elements and native classes. Do not use embed `<style>` blocks, `::before` / `::after`, or other hidden constructs for normal layout/decorative elements.
 - **Class existence gate:** create every class with `data_style_tool create_style` before using it in WHTML/element class lists. Webflow can silently drop class names that do not exist yet.
@@ -48,7 +48,7 @@ and explain the tradeoff instead of silently substituting.
 - Call `webflow_guide_tool` once before other Webflow tools. Confirm auth/site with `whoami` + `get_site`.
 - Prefer bridge-assisted builds by default for better visual feedback, while still using `data_*` tools for DOM, classes/styles, text, semantic tags, responsive overrides, fonts, scripts, pages, and asset records.
 - If Designer is disconnected, continue structural work headlessly with `query_styles`, `get_all_elements`, and `query_elements`; reconnect the bridge for snapshots, canvas inspection, and any still-required bridge-gated image processing fallback.
-- If a bridge tool returns `status:false` or "Unable to connect to Webflow Designer," share the launch link and ask the user to open the Designer **and keep that browser tab in the foreground** — it idles/disconnects when backgrounded. Retry before assuming anything broke.
+- If a bridge tool returns `status:false` or "Unable to connect to Webflow Designer," provide the Designer launch link (opens Designer with the MCP Bridge App) and ask the user to open it **and keep that browser tab in the foreground** — it idles/disconnects when backgrounded. Retry before assuming anything broke.
 
 ## Workflow
 
