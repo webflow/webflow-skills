@@ -1,6 +1,6 @@
 ---
 name: webflow-cli:cloud
-description: Manage full-stack Webflow Cloud apps from the CLI. Initialize, build, and deploy apps (site-attached or standalone project apps), and manage existing apps — list/get apps, view domains and live URLs, inspect environments and deployments, read build and runtime logs, and manage environment variables. Use when creating, deploying, inspecting, or operating Webflow Cloud apps, listing apps, checking deployment status, reading logs, managing env vars, or setting up CI/CD pipelines.
+description: Manage full-stack Webflow Cloud apps from the CLI. Initialize, build, and deploy apps (site-attached or project apps), and manage existing apps — list/get apps, view domains and live URLs, inspect environments and deployments, read build and runtime logs, and manage environment variables. Use when creating, deploying, inspecting, or operating Webflow Cloud apps, listing apps, checking deployment status, reading logs, managing env vars, or setting up CI/CD pipelines.
 ---
 
 # Webflow Cloud
@@ -99,7 +99,7 @@ After the branch decision, also ask **site-attached vs app** (only relevant befo
 | User says... | Mode | Outcome |
 |---|---|---|
 | "deploy to my Webflow site `<name>`", "site-attached", references an existing site | **Site-attached** | App is bound to an existing Webflow site; site URL hosts the app at the chosen mount path. Requires `--site-id`. |
-| "project app", "standalone", "just an app", "no site", or no existing site mentioned | **Project app** | First deploy provisions a brand-new Webflow site (`<app-name>-<hash>.webflow.io`). |
+| "project app", "just an app", "no site", or no existing site mentioned | **Project app** | First deploy provisions a brand-new Webflow site (`<app-name>-<hash>.webflow.io`). |
 
 If the user is ambiguous on either question, **ask**. Do not default.
 
@@ -724,7 +724,7 @@ webflow apps delete app_abc123 --yes --json
 
 Any other value in `cloud.framework` causes `apps deploy` to exit with code 1.
 
-> **Scaffolds are fetched from GitHub at init time.** The CLI downloads scaffold tarballs from `Webflow-Examples/hello-world-{astro,nextjs}*`, each pinned to the `vN` branch the CLI's code expects per scaffold (currently Astro on `v2`, Next.js on `v1`). `apps init` therefore requires network access to `github.com`. Old CLI installs keep working because the registry pins a `vN` branch per scaffold-contract version (branches are only bumped on a breaking scaffold-contract change, not every CLI major). Astro 7 scaffolding is `@next`-only via a `betaRef` (the `astro7` branch) until it reaches GA — stable builds keep scaffolding Astro 6 from `v2`.
+> **Scaffolds are fetched from GitHub at init time.** The CLI downloads scaffold tarballs from `Webflow-Examples/hello-world-{astro,nextjs}*`, each pinned to a versioned (`vN`) branch that the installed CLI expects. `apps init` therefore requires network access to `github.com`. Old CLI installs keep working because each release stays pinned to a compatible scaffold branch.
 
 ### Global flags
 
