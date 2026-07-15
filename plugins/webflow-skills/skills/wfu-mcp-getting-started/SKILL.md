@@ -15,11 +15,11 @@ When invoked, run the full guided activity below. Do not summarize or skip steps
 
 ## How to invoke this skill
 
-Type `/` in a new Claude chat window and select **WFU MCP Getting Started** from the menu.
+If using Claude, type `/` in a new chat window and select **WFU MCP Getting Started** from the menu. If using Cursor or Windsurf, reference this file via your rules directory using your agent's preferred method for loading instructions.
 
 ---
 
-## Skill instructions (for Claude)
+## Skill instructions
 
 ### Tone and personality guidelines
 
@@ -46,7 +46,7 @@ Open with this message, formatted exactly as shown:
 
 This is your hands-on introduction to the Webflow MCP: a Webflow University guided activity designed to take you from setup to your first real MCP workflow.
 
-If you're seeing this message, you've already successfully uploaded this skill to Claude. That's step one, and you nailed it.
+If you're seeing this message, you've already successfully loaded this skill. That's step one, and you nailed it.
 
 Here's what we're going to do together:
 
@@ -106,7 +106,11 @@ Ready to move on? Tell me when you're set.
 
 ## 🔌 Let's get you connected to Webflow
 
-No Webflow connection detected yet: no worries, it only takes a few minutes. Here's exactly what to do:
+No Webflow connection detected yet: no worries, it only takes a few minutes.
+
+> 💡 **Using Cursor?** Follow the setup instructions at [developers.webflow.com/mcp/installing/cursor](https://developers.webflow.com/mcp/installing/cursor). **Using Windsurf?** Add the Webflow MCP server to your configuration file and authorize via OAuth — see [developers.webflow.com/mcp/reference/getting-started](https://developers.webflow.com/mcp/reference/getting-started) for details. Then come back and say **"I'm connected"** and we'll verify it together.
+
+**If you're using Claude,** here's exactly what to do:
 
 **Step 1:** In Claude, find the **Customize** menu (often in the left sidebar or within your profile). Choose **Customize Claude**.
 
@@ -338,7 +342,7 @@ You just ran a real Webflow MCP workflow. Not a demo, not a recording: yours, on
 
 Here's what you practiced today:
 
-- ✅ Connecting Claude to Webflow via the MCP connector
+- ✅ Connecting to Webflow via the MCP
 - ✅ Writing a prompt using context, action, constraints, and approval
 - ✅ Running a real MCP task and reviewing the output
 - ✅ Acting on a finding
@@ -367,8 +371,8 @@ This skill is a Webflow University resource designed to be distributed as a `.md
 
 It works best when participants have:
 
-- A Claude account with connector support (Claude Pro or an equivalent paid plan is recommended; check your plan if you are not sure whether connectors are available to you)
-- The Webflow connector authorized on a test or clone site
+- An AI agent with Webflow MCP support (for Claude, a Pro or Team plan is required; check your agent's documentation for equivalent requirements)
+- The Webflow MCP authorized on a test or clone site
 - A basic familiarity with Webflow: this skill is educational but not a Webflow intro course
 
-You do not need to have completed the course before using this skill. Upload it to Claude and follow the prompts.
+You do not need to have completed the course before using this skill. Load it into your agent and follow the prompts.
