@@ -1,6 +1,7 @@
 ---
 name: webflow-mcp:link-checker
 description: Find and fix broken or insecure links across an entire site, including CMS content, to improve SEO and user experience. Audits HTTP/HTTPS issues and validates all internal and external links.
+mcp-version: 2.0.1
 ---
 
 # Link Checker
@@ -15,7 +16,7 @@ Audit and fix broken or insecure links across your Webflow site to improve SEO a
 - Use Webflow MCP's `data_sites_tool` with action `get_site` to retrieve site details
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to get all pages
 - Use Webflow MCP's `data_pages_tool` with action `get_page_content` to extract links from static pages
-- Use Webflow MCP's `data_pages_tool` with action `update_static_content` to fix links on static pages (requires Designer)
+- Use Webflow MCP's `data_pages_tool` with action `update_static_content` to fix links on static pages
 - Use Webflow MCP's `data_cms_tool` with action `get_collection_list` to get all CMS collections
 - Use Webflow MCP's `data_cms_tool` with action `get_collection_details` to get collection schemas
 - Use Webflow MCP's `data_cms_tool` with action `list_collection_items` to get CMS items with links
@@ -23,7 +24,7 @@ Audit and fix broken or insecure links across your Webflow site to improve SEO a
 - Use Webflow MCP's `data_cms_tool` with action `publish_collection_items` to publish fixed CMS items
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **Designer connection required** for static page link fixes
+- No Designer connection is required — both static page and CMS link fixes go through `data_` tools
 
 ## Instructions
 
@@ -101,7 +102,6 @@ Audit and fix broken or insecure links across your Webflow site to improve SEO a
 
 ### Phase 5: Execution & Confirmation
 15. **Apply fixes to static pages**: Use Webflow MCP's `data_pages_tool` with action `update_static_content`
-    - Requires Designer connection
     - Update link URLs in nodes
     - Process in batches of 20 links
 16. **Apply fixes to CMS content**: Use Webflow MCP's `data_cms_tool` with action `update_collection_items`
@@ -715,7 +715,6 @@ Needs manual review:
 **Static Page Updates:**
 ```
 Requirements:
-- Designer connection required
 - Use data_pages_tool with action update_static_content
 - Update nodes array with new URLs
 - Process in batches of 20 links per page
@@ -773,8 +772,8 @@ If any fixes failed:
 
 [1] Failed to update
     Location: Contact page
-    Reason: Designer connection lost
-    Action: Reconnect Designer and retry
+    Reason: Page content changed since last read (conflict)
+    Action: Re-fetch the page and retry
 
 [2] URL still broken
     Location: Blog post "Guide"

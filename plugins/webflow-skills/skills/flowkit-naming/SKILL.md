@@ -1,6 +1,7 @@
 ---
 name: webflow-mcp:flowkit-naming
-description: Apply Flowkit CSS naming system in Webflow. Use when creating classes, auditing existing naming, or building new components following Flowkit conventions. Flowkit is Webflow's official CSS framework with utility-first approach.
+description: Apply Flowkit CSS naming system in Webflow. Use when creating classes, auditing existing naming, or building new components following Flowkit conventions. Flowkit is Webflow's official CSS framework with utility-first approach. Designer connection only needed to navigate/select pages and elements; class analysis and style creation run without it.
+mcp-version: 2.0.1
 ---
 
 # Flowkit Naming System
@@ -12,13 +13,13 @@ Apply FlowKit CSS naming conventions in Webflow projects using Webflow Designer 
 **ALWAYS use Webflow MCP tools for all operations:**
 - Use Webflow MCP's `webflow_guide_tool` to get best practices before starting
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
-- Use Webflow MCP's `de_page_tool` to get current page and switch pages
-- Use Webflow MCP's `element_tool` to select elements and inspect current classes
-- Use Webflow MCP's `style_tool` to create and update FlowKit-compliant styles
-- Use Webflow MCP's `de_learn_more_about_styles` to understand supported style properties
+- Use Webflow MCP's `designer_tool` to get current page, switch pages, or select elements
+- Use Webflow MCP's `data_element_tool` to inspect current classes and apply new ones
+- Use Webflow MCP's `data_style_tool` to create and update FlowKit-compliant styles
+- Use Webflow MCP's `webflow_guide_tool` to understand supported style properties
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **Designer connection required**: User must be connected to Webflow Designer for this skill to work
+- **Designer connection only required for `designer_tool` actions**: getting/switching the current page and selecting elements. Inspecting classes, creating styles, and applying classes (`data_element_tool`, `data_style_tool`) run without a Designer session.
 
 ## Instructions
 
@@ -28,12 +29,12 @@ Apply FlowKit CSS naming conventions in Webflow projects using Webflow Designer 
    - Auditing existing class names
    - Building complete page sections
    - Refactoring non-FlowKit classes to FlowKit
-2. **Connect to Designer**: Confirm user has Webflow Designer open and connected
-3. **Get current page**: Use Webflow MCP's `de_page_tool` to identify current working page
+2. **Connect to Designer**: Confirm user has Webflow Designer open and connected (needed to identify the current page)
+3. **Get current page**: Use Webflow MCP's `designer_tool` to identify current working page
 4. **Ask for scope**: Clarify which elements or sections to work with
 
 ### Phase 2: Analysis (if auditing existing)
-5. **Get all elements**: Use Webflow MCP's `element_tool` to retrieve current page elements
+5. **Get all elements**: Use Webflow MCP's `data_element_tool` to retrieve current page elements
 6. **Extract classes**: Identify all class names currently applied
 7. **Categorize issues**:
    - Missing `fk-` prefix
@@ -56,8 +57,8 @@ Apply FlowKit CSS naming conventions in Webflow projects using Webflow Designer 
 12. **Show preview**: Display hierarchical structure with suggested classes
 
 ### Phase 4: Application (if user confirms)
-13. **Create styles**: Use Webflow MCP's `style_tool` to create new FlowKit-compliant class styles
-14. **Update elements**: Use Webflow MCP's `element_tool` to apply classes to elements
+13. **Create styles**: Use Webflow MCP's `data_style_tool` to create new FlowKit-compliant class styles
+14. **Update elements**: Use Webflow MCP's `data_element_tool` to apply classes to elements
 15. **Process in batches**: If many elements, process in groups of 10-15
 16. **Show progress**: Display which elements are being updated
 
@@ -792,7 +793,7 @@ If user has v1 FlowKit classes:
 - Create base component classes first
 - Then create element classes
 - Finally create utility classes
-- Use `style_tool` in batches of 10-15 classes
+- Use `data_style_tool` in batches of 10-15 classes
 
 **Element Updates:**
 - Process elements in groups of 10-15
@@ -800,8 +801,8 @@ If user has v1 FlowKit classes:
 - If >50 elements, ask user to confirm batch size
 
 **Designer Connection:**
-- Always verify Designer connection before starting
-- If connection lost, pause and ask user to reconnect
+- Verify Designer connection before getting/switching pages or selecting elements (`designer_tool`)
+- If connection lost mid-batch, pause and ask user to reconnect before the next `designer_tool` action
 - Save progress between batches
 
 ### Phase 10: Error Handling
@@ -810,7 +811,7 @@ If user has v1 FlowKit classes:
 
 **1. Designer Not Connected:**
 ```
-❌ Error: Cannot create classes - Designer not connected
+❌ Error: Cannot get/switch page or select elements - Designer not connected
 
 Solution:
 1. Open Webflow Designer

@@ -1,6 +1,7 @@
 ---
 name: webflow-mcp:accessibility-audit
-description: Run comprehensive accessibility audit (WCAG 2.1) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Requires Webflow Designer connection. Excludes image alt text (covered by asset-audit skill).
+description: Run comprehensive accessibility audit (WCAG 2.1) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Designer connection only needed to switch pages; element analysis and fixes run without it. Excludes image alt text (covered by asset-audit skill).
+mcp-version: 2.0.1
 ---
 
 # Accessibility Audit
@@ -14,12 +15,13 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify available sites
 - Use Webflow MCP's `data_sites_tool` with action `get_site` to retrieve site details
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to get all pages
-- Use Webflow MCP's `element_tool` with action `get_all_elements` to get detailed element information (requires Designer)
-- Use Webflow MCP's `element_tool` with action `add_or_update_attribute` to fix accessibility issues (requires Designer)
+- Use Webflow MCP's `designer_tool` with action `switch_page` to navigate to the page being audited
+- Use Webflow MCP's `data_element_tool` with action `get_all_elements` to get detailed element information
+- Use Webflow MCP's `data_element_tool` with action `set_attributes` to fix accessibility issues
 - Use Webflow MCP's `element_snapshot_tool` to get visual previews of elements
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **Designer connection required** - This skill needs Designer to access element attributes and styles
+- **Designer connection only required to switch pages** - element extraction and attribute fixes (`data_element_tool`) run without a Designer session; only `designer_tool`'s `switch_page` action needs Designer open and connected
 
 ## Instructions
 
@@ -35,11 +37,11 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
    - Specific categories (forms, buttons, navigation, etc.)
 
 ### Phase 2: Element Extraction & Analysis
-4. **Ensure Designer is connected**: Before proceeding, verify Webflow Designer is open and connected
+4. **Ensure Designer is connected**: Before switching pages, verify Webflow Designer is open and connected
    - If not connected, instruct user to open Designer and connect
-   - This is required to access element attributes and styles
-5. **Switch to target page**: Use `de_page_tool` with action `switch_page` to navigate to the page being audited
-6. **Extract all elements**: Use `element_tool` with action `get_all_elements` for detailed analysis
+   - This is only required for the page-switch step below; element extraction and fixes don't need it
+5. **Switch to target page**: Use `designer_tool` with action `switch_page` to navigate to the page being audited
+6. **Extract all elements**: Use `data_element_tool` with action `get_all_elements` for detailed analysis
    - Set `include_style_properties: true` to check focus styles
    - Set `include_all_breakpoint_styles: false` to minimize data
 7. **Parse element data**: Identify interactive and content elements:
@@ -205,7 +207,7 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     - Resources for learning more
 
 ### Phase 6: Fix Suggestions & Approval (Optional)
-24. **Offer to fix issues automatically**: Designer is already connected, so offer auto-fixes
+24. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
 25. **Show preview of fixes**:
     ```
     Which issues would you like to fix?
@@ -228,7 +230,7 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     Type numbers to skip (e.g., "3"), "all" for all, "none" to cancel
     ```
 
-26. **Apply approved fixes**: Use `element_tool` with action `add_or_update_attribute`
+26. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
     - Process in batches
     - Show progress for large fix sets
     - Report success/failure for each
@@ -433,7 +435,7 @@ Quick Wins (Easy + High Impact):
 3. Test with keyboard navigation (Tab, Enter, Space keys)
 4. Consider testing with screen reader (NVDA/JAWS/VoiceOver)
 
-Would you like me to help fix these issues? (requires Designer connection)
+Would you like me to help fix these issues?
 ```
 
 ### Example 2: Multi-Page Audit
@@ -546,7 +548,7 @@ RECOMMENDATIONS
 Would you like:
 1. Detailed report for specific page
 2. Export findings to file (Markdown/JSON/CSV)
-3. Help fixing site-wide issues (requires Designer)
+3. Help fixing site-wide issues
 ```
 
 ### Example 3: Critical Issues Only
@@ -606,7 +608,7 @@ Found: 4 critical issues
 
 Would you like me to:
 1. Run full audit (includes serious and moderate issues)
-2. Fix these 4 critical issues now (requires Designer)
+2. Fix these 4 critical issues now
 3. Export this report (Markdown/JSON/CSV)
 ```
 
@@ -626,7 +628,7 @@ Would you like me to:
 
 ### Error Handling
 - If page cannot be accessed, explain clearly
-- If Designer not connected, list limitations
+- If Designer not connected when switching pages, instruct user to open and connect it
 - If element cannot be modified, suggest manual fix
 - Separate automated fixes from manual review items
 
