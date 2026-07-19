@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:designer-tools
-description: Build and manage pages, elements, components, and styles in Webflow Designer. Use when adding sections, creating layouts, building elements, inspecting or updating components, viewing what's inside a component, restructuring pages, creating new pages, previewing page structure, styling elements, or managing component properties. Nearly everything runs headlessly against an explicit page ID — no Designer connection needed. Designer is only required to read/switch the page currently open on canvas, interactively select an element, create page folders, or open a component's canvas view.
+description: Build and manage pages, elements, components, and styles in Webflow Designer. Use when adding sections, creating layouts, building elements, inspecting or updating components, viewing what's inside a component, restructuring pages, creating new pages, previewing page structure, styling elements, or managing component properties. Building, styling, and inspecting run headlessly against an explicit page ID — no Designer connection needed. Designer is required for `designer_tool` actions (reading/switching the page open on canvas, interactively selecting an element, creating page folders, opening a component's canvas view) and for `element_snapshot_tool` visual previews.
 mcp-version: 2.0.1
 ---
 
@@ -18,7 +18,7 @@ Build, inspect, and manage page elements and components in the Webflow Designer.
 - Use Webflow MCP's `data_element_tool` with action `get_all_elements` or `query_elements` to retrieve or filter page elements — headless, pass the page's ID directly
 - Use Webflow MCP's `data_element_builder` to create new elements — headless, pass the page's ID and a parent element ID
 - Use Webflow MCP's `data_element_tool` with action `set_attributes`, `set_text`, `set_style`, or `set_link` to modify elements — headless
-- Use Webflow MCP's `element_snapshot_tool` to get visual previews of elements before and after changes
+- Use Webflow MCP's `element_snapshot_tool` to get visual previews of elements before and after changes — this is a Designer tool and requires a Designer connection
 - Use Webflow MCP's `data_style_tool` to create and update styles on elements — headless
 - Use Webflow MCP's `webflow_guide_tool` to check supported style properties
 - Use Webflow MCP's `data_component_tool` with action `get_all_components` or `query_components` to list site components — headless
@@ -30,7 +30,7 @@ Build, inspect, and manage page elements and components in the Webflow Designer.
 - Use Webflow MCP's `designer_tool` only for actions that need a live canvas: `get_current_page`/`switch_page` (what's open in Designer right now), `select_element`/`get_selected_element` (interactive canvas selection), `create_page_folder` (page folders are Designer-only, unlike page creation itself), and `open_component_view` (viewing a component's canvas)
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **Designer connection is only required for `designer_tool` actions.** Everything else — building, styling, inspecting, and updating elements, components, props, and variants — runs headlessly against an explicit page ID from `data_pages_tool`'s `list_pages`.
+- **Designer connection is required for `designer_tool` actions and for `element_snapshot_tool`.** Building, styling, inspecting, and updating elements, components, props, and variants (the `data_` tools) runs headlessly against an explicit page ID from `data_pages_tool`'s `list_pages` — but the before/after visual snapshots this skill relies on for safe mutation need Designer open and connected. If Designer isn't available, skip the snapshot steps and rely on `query_elements` output to describe changes instead.
 
 ## Instructions
 
@@ -46,13 +46,13 @@ Build, inspect, and manage page elements and components in the Webflow Designer.
 
 ### Phase 2: Inspection (read-only operations)
 6. **List page elements**: Use `data_element_tool` with `get_all_elements` (or `query_elements` to filter by type/text/attribute) to retrieve page structure, passing the page ID from Phase 1. Present a summary of sections, elements, and nesting.
-7. **Preview elements**: Use `element_snapshot_tool` to get visual previews of specific sections
+7. **Preview elements**: Use `element_snapshot_tool` to get visual previews of specific sections — requires Designer
 8. **List components**: Use `data_component_tool` with action `get_all_components` or `query_components` to list all site components
 9. **Inspect a component**: Use `data_component_tool` with action `get_component` for metadata (props, variants), or `data_element_tool` with `scope_component_id` set to the component's ID to inspect its internal elements
 
 ### Phase 3: Planning (before any mutation)
 Before creating, updating, or deleting anything:
-10. **Snapshot current state**: Use `element_snapshot_tool` to capture the area being changed
+10. **Snapshot current state**: Use `element_snapshot_tool` to capture the area being changed — requires Designer; if unavailable, describe the current state from `query_elements` output instead
 11. **Present the plan**: Describe exactly what will be created, modified, or deleted
 12. **Request explicit confirmation**: Ask the user before proceeding:
     - "Would you like me to proceed with these changes?"
@@ -69,7 +69,7 @@ Before creating, updating, or deleting anything:
 18. **Create pages**: Use `data_pages_tool` with action `create_page`. To create a page **folder**, use `designer_tool` with action `create_page_folder` — this specific action requires a Designer connection
 
 ### Phase 5: Verification
-19. **Snapshot the result**: Use `element_snapshot_tool` to capture the new state
+19. **Snapshot the result**: Use `element_snapshot_tool` to capture the new state — requires Designer; if unavailable, summarize the change from the tool response instead
 20. **Report what changed**: Summarize the changes made
 
 ## Examples
@@ -140,7 +140,8 @@ Before creating, updating, or deleting anything:
 - **`webflow_guide_tool` always first** — before any other MCP tool in every workflow
 - **Snapshot before and after** — use `element_snapshot_tool` before mutations and after to show results
 - **Never silently mutate** — every write operation requires explicit user confirmation
-- **Headless by default** — get the page ID once via `data_pages_tool`'s `list_pages`, then pass it directly to `data_element_tool`, `data_element_builder`, and `data_style_tool`. Reach for `designer_tool` only when the task specifically needs the live canvas (current-page detection, interactive selection, page folders, component canvas view).
+- **Headless for building and editing** — get the page ID once via `data_pages_tool`'s `list_pages`, then pass it directly to `data_element_tool`, `data_element_builder`, and `data_style_tool`. Reach for `designer_tool` only when the task specifically needs the live canvas (current-page detection, interactive selection, page folders, component canvas view).
+- **Visual snapshots need Designer** — `element_snapshot_tool` is a Designer tool; if Designer isn't connected, fall back to describing changes from `query_elements`/tool response data instead of skipping the before/after check entirely.
 - **Batch changes need itemized preview** — if modifying multiple elements, list each change
 - Prefer Webflow's native layout tools (Grid, Flexbox) over manual positioning
 - Components shared across pages should be updated via `data_element_tool` scoped to the component (changes propagate to all instances)

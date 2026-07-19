@@ -17,10 +17,10 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to get all pages and their page IDs
 - Use Webflow MCP's `data_element_tool` with action `get_all_elements` (passing the page ID directly) to get detailed element information
 - Use Webflow MCP's `data_element_tool` with action `set_attributes` to fix accessibility issues
-- Use Webflow MCP's `element_snapshot_tool` to get visual previews of elements
+- Use Webflow MCP's `element_snapshot_tool` to get visual previews of elements — this is a Designer tool and requires a Designer connection if used
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **No Designer connection is required.** `data_element_tool` operates headlessly on any page ID from `list_pages` — there's no need to switch the Designer canvas to the page being audited.
+- **No Designer connection is required for the audit or fixes.** `data_element_tool` operates headlessly on any page ID from `list_pages`. Designer is only needed if you choose to use `element_snapshot_tool` for optional visual previews.
 
 ## Instructions
 
