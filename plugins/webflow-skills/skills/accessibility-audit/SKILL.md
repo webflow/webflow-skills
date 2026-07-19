@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:accessibility-audit
-description: Run comprehensive accessibility audit (WCAG 2.1) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Designer connection only needed to switch pages; element analysis and fixes run without it. Excludes image alt text (covered by asset-audit skill).
+description: Run comprehensive accessibility audit (WCAG 2.1) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID — no Designer connection required. Excludes image alt text (covered by asset-audit skill).
 mcp-version: 2.0.1
 ---
 
@@ -14,14 +14,13 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 - Use Webflow MCP's `webflow_guide_tool` to get best practices before starting
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify available sites
 - Use Webflow MCP's `data_sites_tool` with action `get_site` to retrieve site details
-- Use Webflow MCP's `data_pages_tool` with action `list_pages` to get all pages
-- Use Webflow MCP's `designer_tool` with action `switch_page` to navigate to the page being audited
-- Use Webflow MCP's `data_element_tool` with action `get_all_elements` to get detailed element information
+- Use Webflow MCP's `data_pages_tool` with action `list_pages` to get all pages and their page IDs
+- Use Webflow MCP's `data_element_tool` with action `get_all_elements` (passing the page ID directly) to get detailed element information
 - Use Webflow MCP's `data_element_tool` with action `set_attributes` to fix accessibility issues
 - Use Webflow MCP's `element_snapshot_tool` to get visual previews of elements
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **Designer connection only required to switch pages** - element extraction and attribute fixes (`data_element_tool`) run without a Designer session; only `designer_tool`'s `switch_page` action needs Designer open and connected
+- **No Designer connection is required.** `data_element_tool` operates headlessly on any page ID from `list_pages` — there's no need to switch the Designer canvas to the page being audited.
 
 ## Instructions
 
@@ -37,21 +36,17 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
    - Specific categories (forms, buttons, navigation, etc.)
 
 ### Phase 2: Element Extraction & Analysis
-4. **Ensure Designer is connected**: Before switching pages, verify Webflow Designer is open and connected
-   - If not connected, instruct user to open Designer and connect
-   - This is only required for the page-switch step below; element extraction and fixes don't need it
-5. **Switch to target page**: Use `designer_tool` with action `switch_page` to navigate to the page being audited
-6. **Extract all elements**: Use `data_element_tool` with action `get_all_elements` for detailed analysis
+4. **Extract all elements**: Use `data_element_tool` with action `get_all_elements`, passing the target page's ID from Phase 1, for detailed analysis — no Designer connection needed
    - Set `include_style_properties: true` to check focus styles
    - Set `include_all_breakpoint_styles: false` to minimize data
-7. **Parse element data**: Identify interactive and content elements:
+5. **Parse element data**: Identify interactive and content elements:
    - Buttons (Button, LinkBlock with button role)
    - Links (TextLink, Link, LinkBlock)
    - Form inputs (Input, Select, Textarea)
    - Headings (Heading elements with levels)
    - Interactive divs/spans (check for onClick or interactive roles)
    - Images (Image elements) - **SKIP for this audit**
-8. **Extract attributes for each element**:
+6. **Extract attributes for each element**:
    - ARIA attributes (aria-label, aria-describedby, role, tabIndex)
    - DOM attributes (id, domId, href, type, placeholder)
    - Text content
@@ -61,89 +56,89 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 ### Phase 3: Accessibility Checks
 
 #### Critical Issues (Must Fix - WCAG Level A)
-9. **Icon-only buttons without labels** (WCAG 4.1.2)
+7. **Icon-only buttons without labels** (WCAG 4.1.2)
    - Find: Button elements with no text content
    - Check: Missing `aria-label` or `aria-labelledby`
    - Impact: Screen readers cannot identify button purpose
    - Fix: Add `aria-label` attribute with descriptive text
 
-10. **Form inputs without labels** (WCAG 1.3.1)
+8. **Form inputs without labels** (WCAG 1.3.1)
     - Find: Input, Select, Textarea elements
     - Check: Missing associated label or `aria-label`
     - Impact: Users don't know what input is for
     - Fix: Add `aria-label` or associate with `<label>` using `id`
 
-11. **Non-semantic click handlers** (WCAG 2.1.1)
+9. **Non-semantic click handlers** (WCAG 2.1.1)
     - Find: Div or Span elements (identified by element type)
     - Check: Interactive behavior without proper role/keyboard support
     - Impact: Not keyboard accessible, screen readers miss interactivity
     - Fix: Add `role="button"`, `tabIndex="0"`, suggest using real `<button>`
 
-12. **Links without destination** (WCAG 2.1.1)
+10. **Links without destination** (WCAG 2.1.1)
     - Find: Link elements with no `href` attribute
     - Check: Links that only use onClick without href
     - Impact: Not keyboard accessible, breaks browser features
     - Fix: Add proper `href` or convert to button
 
 #### Serious Issues (Should Fix - WCAG Level AA)
-13. **Focus outline removed without replacement** (WCAG 2.4.7)
+11. **Focus outline removed without replacement** (WCAG 2.4.7)
     - Find: Elements with `outline: none` style
     - Check: No visible alternative focus indicator
     - Impact: Keyboard users can't see focus
     - Fix: Add visible focus style (border, box-shadow, background change)
 
-14. **Missing keyboard handlers** (WCAG 2.1.1)
+12. **Missing keyboard handlers** (WCAG 2.1.1)
     - Find: Elements with onClick handlers
     - Check: Missing onKeyDown for Enter/Space keys
     - Impact: Not usable with keyboard alone
     - Fix: Add keyboard event handlers
 
-15. **Touch target too small** (WCAG 2.5.5)
+13. **Touch target too small** (WCAG 2.5.5)
     - Find: Clickable elements (buttons, links)
     - Check: Width or height < 44px
     - Impact: Hard to tap on mobile devices
     - Fix: Increase padding or min-width/min-height to 44px
 
 #### Moderate Issues (Consider Fixing)
-16. **Heading hierarchy problems** (WCAG 1.3.1)
+14. **Heading hierarchy problems** (WCAG 1.3.1)
     - Find: Heading elements (h1-h6)
     - Check: Skipped levels (h1 → h3, skipping h2)
     - Impact: Confusing document structure
     - Fix: Use proper sequential heading levels
 
-17. **Positive tabIndex** (WCAG 2.4.3)
+15. **Positive tabIndex** (WCAG 2.4.3)
     - Find: Elements with tabIndex > 0
     - Check: Disrupts natural tab order
     - Impact: Confusing keyboard navigation
     - Fix: Use tabIndex="0" or "-1" only, let natural DOM order work
 
-18. **Role without required attributes** (WCAG 4.1.2)
+16. **Role without required attributes** (WCAG 4.1.2)
     - Find: Elements with ARIA roles
     - Check: Missing required ARIA attributes (e.g., role="button" without tabIndex)
     - Impact: Incomplete accessibility semantics
     - Fix: Add required attributes for role
 
 ### Phase 4: Issue Categorization & Scoring
-19. **Categorize all findings**:
+17. **Categorize all findings**:
     - Critical: Must fix (blocks access)
     - Serious: Should fix (significantly impacts usability)
     - Moderate: Consider fixing (improves experience)
 
-20. **Calculate accessibility score** (0-100):
+18. **Calculate accessibility score** (0-100):
     - Start at 100
     - Critical issue: -10 points each
     - Serious issue: -5 points each
     - Moderate issue: -2 points each
     - Minimum score: 0
 
-21. **Generate severity summary**:
+19. **Generate severity summary**:
     - Total issues found
     - Breakdown by severity
     - Most common issue types
     - Pages/sections most affected
 
 ### Phase 5: Report Generation
-22. **Create detailed report** with specific format:
+20. **Create detailed report** with specific format:
     ```
     ═══════════════════════════════════════════════════
     ACCESSIBILITY AUDIT: [Page Name]
@@ -200,15 +195,15 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     ═══════════════════════════════════════════════════
     ```
 
-23. **Provide actionable insights**:
+21. **Provide actionable insights**:
     - Prioritized fix list (critical first)
     - Quick wins (easy fixes with big impact)
     - Design pattern recommendations
     - Resources for learning more
 
 ### Phase 6: Fix Suggestions & Approval (Optional)
-24. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
-25. **Show preview of fixes**:
+22. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
+23. **Show preview of fixes**:
     ```
     Which issues would you like to fix?
 
@@ -230,23 +225,23 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     Type numbers to skip (e.g., "3"), "all" for all, "none" to cancel
     ```
 
-26. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
+24. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
     - Process in batches
     - Show progress for large fix sets
     - Report success/failure for each
 
-27. **Generate post-fix report**:
+25. **Generate post-fix report**:
     - Issues fixed: X
     - Issues remaining: Y
     - New accessibility score: XX/100 (improved from YY/100)
 
 ### Phase 7: Export & Resources (Optional)
-28. **Offer export formats**:
+26. **Offer export formats**:
     - Markdown (readable documentation)
     - JSON (machine-readable for tracking)
     - CSV (spreadsheet for team review)
 
-29. **Provide resources**:
+27. **Provide resources**:
     - WCAG 2.1 quick reference links
     - Webflow accessibility best practices
     - Recommended testing tools (browser extensions, screen readers)
@@ -628,7 +623,6 @@ Would you like me to:
 
 ### Error Handling
 - If page cannot be accessed, explain clearly
-- If Designer not connected when switching pages, instruct user to open and connect it
 - If element cannot be modified, suggest manual fix
 - Separate automated fixes from manual review items
 
