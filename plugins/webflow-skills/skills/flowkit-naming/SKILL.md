@@ -1,6 +1,7 @@
 ---
 name: webflow-mcp:flowkit-naming
-description: Apply Flowkit CSS naming system in Webflow. Use when creating classes, auditing existing naming, or building new components following Flowkit conventions. Flowkit is Webflow's official CSS framework with utility-first approach.
+description: Apply Flowkit CSS naming system in Webflow. Use when creating classes, auditing existing naming, or building new components following Flowkit conventions. Flowkit is Webflow's official CSS framework with utility-first approach. Runs headlessly against a page ID — no Designer connection required, except for the optional live-canvas conveniences (current page, interactive element selection).
+mcp-version: 2.0.1
 ---
 
 # Flowkit Naming System
@@ -12,13 +13,14 @@ Apply FlowKit CSS naming conventions in Webflow projects using Webflow Designer 
 **ALWAYS use Webflow MCP tools for all operations:**
 - Use Webflow MCP's `webflow_guide_tool` to get best practices before starting
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
-- Use Webflow MCP's `de_page_tool` to get current page and switch pages
-- Use Webflow MCP's `element_tool` to select elements and inspect current classes
-- Use Webflow MCP's `style_tool` to create and update FlowKit-compliant styles
-- Use Webflow MCP's `de_learn_more_about_styles` to understand supported style properties
+- Use Webflow MCP's `data_pages_tool` with action `list_pages` to find the target page by name or slug — headless, no Designer needed
+- Use Webflow MCP's `data_element_tool` to inspect current classes and apply new ones — headless, pass the page's ID directly
+- Use Webflow MCP's `data_style_tool` to create and update FlowKit-compliant styles — headless
+- Use Webflow MCP's `webflow_guide_tool` to understand supported style properties
+- Use Webflow MCP's `designer_tool` only if the user wants to work with whatever page is currently open in Designer, or wants to interactively select an element on the canvas
 - DO NOT use any other tools or methods for Webflow operations
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **Designer connection required**: User must be connected to Webflow Designer for this skill to work
+- **No Designer connection is required for the core workflow.** Getting the page, inspecting classes, creating styles, and applying classes all run headlessly against an explicit page ID. Designer is only needed for the optional `designer_tool` conveniences above.
 
 ## Instructions
 
@@ -28,44 +30,43 @@ Apply FlowKit CSS naming conventions in Webflow projects using Webflow Designer 
    - Auditing existing class names
    - Building complete page sections
    - Refactoring non-FlowKit classes to FlowKit
-2. **Connect to Designer**: Confirm user has Webflow Designer open and connected
-3. **Get current page**: Use Webflow MCP's `de_page_tool` to identify current working page
-4. **Ask for scope**: Clarify which elements or sections to work with
+2. **Get target page**: Use Webflow MCP's `data_pages_tool` with action `list_pages` to find the page by name or slug — no Designer connection needed. If the user wants to work with whatever page they currently have open in Designer, use `designer_tool` with action `get_current_page` instead.
+3. **Ask for scope**: Clarify which elements or sections to work with
 
 ### Phase 2: Analysis (if auditing existing)
-5. **Get all elements**: Use Webflow MCP's `element_tool` to retrieve current page elements
-6. **Extract classes**: Identify all class names currently applied
-7. **Categorize issues**:
+4. **Get all elements**: Use Webflow MCP's `data_element_tool` to retrieve elements from the target page
+5. **Extract classes**: Identify all class names currently applied
+6. **Categorize issues**:
    - Missing `fk-` prefix
    - Incorrect case (uppercase/mixed case)
    - Wrong separators (underscores instead of hyphens)
    - Non-semantic naming
    - Inconsistent component structure
-8. **Generate audit report**: Show current vs suggested FlowKit-compliant names
+7. **Generate audit report**: Show current vs suggested FlowKit-compliant names
 
 ### Phase 3: Suggestion Generation
-9. **Apply FlowKit patterns**: Generate class names following FlowKit v2 conventions
-10. **Structure by type**:
+8. **Apply FlowKit patterns**: Generate class names following FlowKit v2 conventions
+9. **Structure by type**:
     - Component wrappers: `fk-[component]`
     - Child elements: `fk-[component]-[element]`
     - State modifiers: combo classes with `is-[state]`
     - Layout utilities: `fk-flex`, `fk-grid`, `fk-stack`
     - Spacing utilities: `fk-space-[size]`, `fk-py-[size]`, `fk-px-[size]`
     - Typography utilities: `fk-text-[style]`
-11. **Validate suggestions**: Ensure all suggestions follow FlowKit conventions
-12. **Show preview**: Display hierarchical structure with suggested classes
+10. **Validate suggestions**: Ensure all suggestions follow FlowKit conventions
+11. **Show preview**: Display hierarchical structure with suggested classes
 
 ### Phase 4: Application (if user confirms)
-13. **Create styles**: Use Webflow MCP's `style_tool` to create new FlowKit-compliant class styles
-14. **Update elements**: Use Webflow MCP's `element_tool` to apply classes to elements
-15. **Process in batches**: If many elements, process in groups of 10-15
-16. **Show progress**: Display which elements are being updated
+12. **Create styles**: Use Webflow MCP's `data_style_tool` to create new FlowKit-compliant class styles
+13. **Update elements**: Use Webflow MCP's `data_element_tool` to apply classes to elements
+14. **Process in batches**: If many elements, process in groups of 10-15
+15. **Show progress**: Display which elements are being updated
 
 ### Phase 5: Verification & Reporting
-17. **Verify application**: Check that classes were applied correctly
-18. **Generate report**: Show what was created/updated
-19. **Provide documentation**: Explain the FlowKit structure used
-20. **Suggest next steps**: Recommend additional FlowKit patterns to implement
+16. **Verify application**: Check that classes were applied correctly
+17. **Generate report**: Show what was created/updated
+18. **Provide documentation**: Explain the FlowKit structure used
+19. **Suggest next steps**: Recommend additional FlowKit patterns to implement
 
 ## FlowKit Naming Reference
 
@@ -792,31 +793,33 @@ If user has v1 FlowKit classes:
 - Create base component classes first
 - Then create element classes
 - Finally create utility classes
-- Use `style_tool` in batches of 10-15 classes
+- Use `data_style_tool` in batches of 10-15 classes
 
 **Element Updates:**
 - Process elements in groups of 10-15
 - Show progress for large batches
 - If >50 elements, ask user to confirm batch size
 
-**Designer Connection:**
-- Always verify Designer connection before starting
-- If connection lost, pause and ask user to reconnect
+**Designer Connection (only if using the optional `designer_tool` convenience):**
+- Class inspection, style creation, and element updates (`data_element_tool`, `data_style_tool`) never need Designer — this only applies if the user asked to work with the page currently open in Designer, or to interactively select elements
+- If connection lost mid-batch, pause and ask user to reconnect before the next `designer_tool` action
 - Save progress between batches
 
 ### Phase 10: Error Handling
 
 **Common Errors:**
 
-**1. Designer Not Connected:**
+**1. Designer Not Connected (only relevant when using `designer_tool`):**
 ```
-❌ Error: Cannot create classes - Designer not connected
+❌ Error: Cannot get current page or select elements - Designer not connected
 
 Solution:
 1. Open Webflow Designer
 2. Open the target site
 3. Connect to Designer in Claude Code
 4. Retry operation
+
+(Not needed for the default headless workflow — use `data_pages_tool` with `list_pages` instead.)
 ```
 
 **2. Class Already Exists:**
@@ -892,9 +895,8 @@ If too many utility classes on single element:
 Before considering FlowKit implementation complete:
 
 **Setup:**
-- [ ] Webflow Designer connected
 - [ ] Target site identified
-- [ ] Current page confirmed
+- [ ] Target page found (via `data_pages_tool` list_pages, or `designer_tool` if using the current open page)
 - [ ] Scope defined with user
 
 **Component Structure:**

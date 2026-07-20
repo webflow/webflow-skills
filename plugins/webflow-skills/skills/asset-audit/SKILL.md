@@ -1,6 +1,7 @@
 ---
 name: webflow-mcp:asset-audit
 description: Analyze assets on a Webflow site for SEO optimization. Identifies assets missing alt text and assets with non-SEO-friendly names, then generates and applies improvements.
+mcp-version: 2.0.1
 ---
 
 # Asset Audit
@@ -10,8 +11,8 @@ Analyze assets on a Webflow site for SEO optimization.
 ## Important Note
 
 **ALWAYS use Webflow MCP tools for all operations:**
-- Use Webflow MCP's `asset_tool` for fetching and updating assets
-- Use Webflow MCP's `get_image_preview` for analyzing image content
+- Use Webflow MCP's `data_assets_tool` for fetching and updating assets
+- Use Webflow MCP's `get_asset_preview` (with the asset's `asset_id`) for analyzing image content
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` for listing available sites
 - Use Webflow MCP's `webflow_guide_tool` to get best practices before starting
 - DO NOT use any other tools or methods for Webflow operations
@@ -21,7 +22,7 @@ Analyze assets on a Webflow site for SEO optimization.
 
 ### Phase 1: Site Selection & Asset Discovery
 1. **Get site**: Identify the target site. If user does not provide site ID, ask for it.
-2. **Fetch all assets**: Use Webflow MCP's `asset_tool` to get all assets from the site
+2. **Fetch all assets**: Use Webflow MCP's `data_assets_tool` to get all assets from the site (each asset record includes its `asset_id`, needed for previews)
    - For sites with 50+ assets, process in batches of 20
    - Show progress: "Processing assets 1-20 of 150..."
 3. **Detect patterns**: Analyze asset naming for common patterns:
@@ -50,8 +51,8 @@ Analyze assets on a Webflow site for SEO optimization.
    - Apply naming pattern/template
 
 ### Phase 3: Analysis & Suggestion Generation
-7. **Analyze assets**: Use Webflow MCP's `get_image_preview` tool to analyze the assets that need updates
-   - **Error handling**: If Webflow MCP's `get_image_preview` fails, use fallback:
+7. **Analyze assets**: Use Webflow MCP's `get_asset_preview` tool, passing each asset's `asset_id` (from Phase 1), to analyze the assets that need updates
+   - **Error handling**: If Webflow MCP's `get_asset_preview` fails, use fallback:
      - Extract description from existing filename
      - Use generic placeholder with warning
      - Continue with other assets
@@ -94,7 +95,7 @@ Analyze assets on a Webflow site for SEO optimization.
     - Original alt text
     - Timestamp
     - Assets modified
-13. **Apply updates**: Use Webflow MCP's `asset_tool` to update approved assets only
+13. **Apply updates**: Use Webflow MCP's `data_assets_tool` to update approved assets only
     - Show progress for batch updates
     - Handle partial failures gracefully
     - Report successes and failures separately
@@ -316,7 +317,7 @@ Type "undo" to revert these 2 changes
 - Sites with 50+ assets: Process in batches of 20
 - Show progress: "Processing batch 1 of 5 (assets 1-20)..."
 - Allow user to process specific batches
-- Timeout protection: If Webflow MCP's `get_image_preview` takes > 30s, skip to next batch
+- Timeout protection: If Webflow MCP's `get_asset_preview` takes > 30s, skip to next batch
 
 **Pattern Detection:**
 Detect and report these patterns:
@@ -327,7 +328,7 @@ Detect and report these patterns:
 - Suggest bulk rename when 3+ assets match a pattern
 
 **Error Handling:**
-- If Webflow MCP's `get_image_preview` fails:
+- If Webflow MCP's `get_asset_preview` fails:
   1. Log the error (don't show to user)
   2. Use fallback: Extract description from filename
   3. Mark with ⚠️ warning: "Generated from filename (image preview failed)"
@@ -393,7 +394,7 @@ Before any update, store in memory:
 
 ### General Best Practices
 
-- Always use Webflow MCP's `get_image_preview` to understand image content
+- Always use Webflow MCP's `get_asset_preview` (with `asset_id`, not a URL) to understand image content
 - Generate specific, descriptive suggestions (not generic)
 - Validate all suggestions before presenting to user
 - Handle partial operations gracefully
