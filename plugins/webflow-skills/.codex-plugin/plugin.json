@@ -24,6 +24,8 @@
     "designer-tools",
     "components",
     "code-components",
+    "figma",
+    "figma-to-webflow",
     "cli",
     "devlink",
     "webflow-cloud",
@@ -48,6 +50,7 @@
       "Find and fix broken links on my site",
       "Prepare a safe publish checklist",
       "Inspect the current Designer page structure",
+      "Build this Figma design in Webflow",
       "Create a new Webflow Code Component",
       "Deploy a Webflow Cloud app"
     ],
