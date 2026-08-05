@@ -1,12 +1,12 @@
 ---
 name: webflow-mcp:accessibility-audit
-description: Run comprehensive accessibility audit (WCAG 2.1) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID — no Designer connection required. Excludes image alt text (covered by asset-audit skill).
+description: Run comprehensive accessibility audit (WCAG 2.2) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID — no Designer connection required. Excludes image alt text (covered by asset-audit skill).
 mcp-version: 2.0.1
 ---
 
 # Accessibility Audit
 
-Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue detection and actionable fixes.
+Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue detection and actionable fixes.
 
 ## Important Note
 
@@ -93,52 +93,58 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     - Impact: Not usable with keyboard alone
     - Fix: Add keyboard event handlers
 
-13. **Touch target too small** (WCAG 2.5.5)
-    - Find: Clickable elements (buttons, links)
-    - Check: Width or height < 44px
-    - Impact: Hard to tap on mobile devices
-    - Fix: Increase padding or min-width/min-height to 44px
+13. **Touch target too small** (WCAG 2.5.8 Target Size Minimum, new in 2.2)
+    - Find: Clickable elements (buttons, links) that aren't inline text and have no exception (e.g., not part of a sentence)
+    - Check: Width or height < 24px (fails the Level AA minimum)
+    - Impact: Hard to tap accurately, especially for users with motor impairments
+    - Fix: Increase padding or min-width/min-height to at least 24px; 44px is recommended (WCAG 2.5.5 Target Size Enhanced, Level AAA) for comfortable tap targets
+
+14. **Focus not obscured by sticky content** (WCAG 2.4.11, new in 2.2)
+    - Find: Focusable elements near sticky/fixed headers, footers, or cookie banners
+    - Check: Whether a focused element could be entirely hidden behind `position: fixed`/`sticky` content with a higher stacking order
+    - Impact: Keyboard users can lose track of where focus is
+    - Fix: Add scroll-margin/padding so focused elements clear sticky content, or lower the sticky element's z-index; flag ambiguous cases for manual verification with `element_snapshot_tool` (Designer required)
 
 #### Moderate Issues (Consider Fixing)
-14. **Heading hierarchy problems** (WCAG 1.3.1)
+15. **Heading hierarchy problems** (WCAG 1.3.1)
     - Find: Heading elements (h1-h6)
     - Check: Skipped levels (h1 → h3, skipping h2)
     - Impact: Confusing document structure
     - Fix: Use proper sequential heading levels
 
-15. **Positive tabIndex** (WCAG 2.4.3)
+16. **Positive tabIndex** (WCAG 2.4.3)
     - Find: Elements with tabIndex > 0
     - Check: Disrupts natural tab order
     - Impact: Confusing keyboard navigation
     - Fix: Use tabIndex="0" or "-1" only, let natural DOM order work
 
-16. **Role without required attributes** (WCAG 4.1.2)
+17. **Role without required attributes** (WCAG 4.1.2)
     - Find: Elements with ARIA roles
     - Check: Missing required ARIA attributes (e.g., role="button" without tabIndex)
     - Impact: Incomplete accessibility semantics
     - Fix: Add required attributes for role
 
 ### Phase 4: Issue Categorization & Scoring
-17. **Categorize all findings**:
+18. **Categorize all findings**:
     - Critical: Must fix (blocks access)
     - Serious: Should fix (significantly impacts usability)
     - Moderate: Consider fixing (improves experience)
 
-18. **Calculate accessibility score** (0-100):
+19. **Calculate accessibility score** (0-100):
     - Start at 100
     - Critical issue: -10 points each
     - Serious issue: -5 points each
     - Moderate issue: -2 points each
     - Minimum score: 0
 
-19. **Generate severity summary**:
+20. **Generate severity summary**:
     - Total issues found
     - Breakdown by severity
     - Most common issue types
     - Pages/sections most affected
 
 ### Phase 5: Report Generation
-20. **Create detailed report** with specific format:
+21. **Create detailed report** with specific format:
     ```
     ═══════════════════════════════════════════════════
     ACCESSIBILITY AUDIT: [Page Name]
@@ -195,15 +201,15 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     ═══════════════════════════════════════════════════
     ```
 
-21. **Provide actionable insights**:
+22. **Provide actionable insights**:
     - Prioritized fix list (critical first)
     - Quick wins (easy fixes with big impact)
     - Design pattern recommendations
     - Resources for learning more
 
 ### Phase 6: Fix Suggestions & Approval (Optional)
-22. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
-23. **Show preview of fixes**:
+23. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
+24. **Show preview of fixes**:
     ```
     Which issues would you like to fix?
 
@@ -225,24 +231,24 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     Type numbers to skip (e.g., "3"), "all" for all, "none" to cancel
     ```
 
-24. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
+25. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
     - Process in batches
     - Show progress for large fix sets
     - Report success/failure for each
 
-25. **Generate post-fix report**:
+26. **Generate post-fix report**:
     - Issues fixed: X
     - Issues remaining: Y
     - New accessibility score: XX/100 (improved from YY/100)
 
 ### Phase 7: Export & Resources (Optional)
-26. **Offer export formats**:
+27. **Offer export formats**:
     - Markdown (readable documentation)
     - JSON (machine-readable for tracking)
     - CSV (spreadsheet for team review)
 
-27. **Provide resources**:
-    - WCAG 2.1 quick reference links
+28. **Provide resources**:
+    - WCAG 2.2 quick reference links
     - Webflow accessibility best practices
     - Recommended testing tools (browser extensions, screen readers)
 
@@ -264,6 +270,10 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 ❌ Animation/motion preferences
 ❌ Screen reader testing (needs manual verification)
 ❌ Content readability (language level, clarity)
+❌ Dragging Movements alternatives (WCAG 2.5.7 — needs interaction testing beyond static attributes)
+❌ Consistent Help placement across pages (WCAG 3.2.6 — requires site-wide navigation analysis)
+❌ Redundant Entry in multi-step forms (WCAG 3.3.7 — requires flow-level form analysis)
+❌ Accessible Authentication methods (WCAG 3.3.8 — requires reviewing the login/auth flow itself)
 
 ### Limitations
 - Cannot detect visual-only issues (color contrast, small text)
@@ -381,12 +391,12 @@ SERIOUS (5 issues)
   WCAG: 2.4.7 Focus Visible
 
 [A11Y] Element: Button "Subscribe"
-  Issue: Touch target too small (30px × 36px)
+  Issue: Touch target too small (20px × 22px)
   Location: Footer newsletter form
   Element ID: {component: "footer-01", element: "submit-btn"}
   Current: Small button
-  Fix: Increase padding or set min-height: 44px
-  WCAG: 2.5.5 Target Size
+  Fix: Increase padding or set min-height: 24px (44px recommended)
+  WCAG: 2.5.8 Target Size (Minimum)
 
 [continues with 3 more serious issues...]
 
@@ -664,8 +674,8 @@ Would you like me to:
 
 ## Resources to Include
 
-### WCAG 2.1 Quick Reference
-- https://www.w3.org/WAI/WCAG21/quickref/
+### WCAG 2.2 Quick Reference
+- https://www.w3.org/WAI/WCAG22/quickref/
 
 ### Webflow Accessibility Resources
 - Webflow University: Accessibility best practices
