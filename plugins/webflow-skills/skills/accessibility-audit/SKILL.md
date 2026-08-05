@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:accessibility-audit
-description: Run comprehensive accessibility audit (WCAG 2.2) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID — no Designer connection required. Excludes image alt text (covered by asset-audit skill).
+description: Run comprehensive accessibility audit (WCAG 2.2) on Webflow pages. Checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID, no Designer connection required. Excludes image alt text (covered by asset-audit skill).
 mcp-version: 2.0.1
 ---
 
@@ -325,7 +325,7 @@ Which page would you like to audit? (1 for Home)
 What level of audit would you like?
 
 1. Full audit (all WCAG checks) - Recommended
-2. Critical issues only (Level A compliance)
+2. Critical issues only (Level A conformance)
 3. Specific categories (buttons, forms, navigation)
 
 Your choice: (1/2/3)
