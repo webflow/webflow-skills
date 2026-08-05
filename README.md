@@ -1,6 +1,6 @@
 # Webflow Skills
 
-A collection of [Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) for working with Webflow sites through the Webflow MCP server. Manage CMS content, audit site health, optimize assets, build in Webflow Designer, create Code Components, run Webflow CLI workflows, and safely publish changes.
+A collection of [Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) for working with Webflow sites and workflows. Manage CMS content, audit site health, optimize assets, build in Webflow Designer, create Code Components, run Webflow CLI workflows, safely publish changes, write product content, and coordinate internal project work.
 
 ## Installing
 
@@ -113,6 +113,15 @@ Guided, educational skills from [Webflow University](https://university.webflow.
 | Skill | Description |
 |-------|-------------|
 | webflow-university:mcp-getting-started | Guided onboarding for your first Webflow MCP workflow — checks your connection, helps you pick a real task, coaches your prompt, and runs it with you |
+
+### Webflow Workflow Skills
+
+| Skill | Description |
+|-------|-------------|
+| webflow-workflow:webflow-content-design | Write or review Webflow product UX copy and content design |
+| webflow-workflow:sybg-guide | Create Since You've Been Gone announcement guides with Knock |
+| webflow-workflow:status-update | Generate project, team, or sprint status updates from GitHub, Slack, and Jira |
+| webflow-workflow:dx-team-lookup | Look up Webflow team membership from the DX data warehouse |
 
 ## Resources
 
