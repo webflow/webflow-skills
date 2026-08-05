@@ -32,7 +32,7 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
    - Let user select which page(s) to audit
 3. **Confirm audit scope**: Ask user what to check:
    - Full audit (all accessibility checks)
-   - Critical issues only (WCAG Level A)
+   - Critical issues only (Success Criterion Level A)
    - Specific categories (forms, buttons, navigation, etc.)
 
 ### Phase 2: Element Extraction & Analysis
@@ -56,69 +56,69 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
 ### Phase 3: Accessibility Checks
 
 #### Critical Issues (Must Fix - WCAG Level A)
-7. **Icon-only buttons without labels** (WCAG 4.1.2)
+7. **Icon-only buttons without labels** (Success Criterion 4.1.2)
    - Find: Button elements with no text content
    - Check: Missing `aria-label` or `aria-labelledby`
    - Impact: Screen readers cannot identify button purpose
    - Fix: Add `aria-label` attribute with descriptive text
 
-8. **Form inputs without labels** (WCAG 1.3.1)
+8. **Form inputs without labels** (Success Criterion 1.3.1)
     - Find: Input, Select, Textarea elements
     - Check: Missing associated label or `aria-label`
     - Impact: Users don't know what input is for
     - Fix: Add `aria-label` or associate with `<label>` using `id`
 
-9. **Non-semantic click handlers** (WCAG 2.1.1)
+9. **Non-semantic click handlers** (Success Criterion 2.1.1)
     - Find: Div or Span elements (identified by element type)
     - Check: Interactive behavior without proper role/keyboard support
     - Impact: Not keyboard accessible, screen readers miss interactivity
     - Fix: Add `role="button"`, `tabIndex="0"`, suggest using real `<button>`
 
-10. **Links without destination** (WCAG 2.1.1)
+10. **Links without destination** (Success Criterion 2.1.1)
     - Find: Link elements with no `href` attribute
     - Check: Links that only use onClick without href
     - Impact: Not keyboard accessible, breaks browser features
     - Fix: Add proper `href` or convert to button
 
 #### Serious Issues (Should Fix - WCAG Level AA)
-11. **Focus outline removed without replacement** (WCAG 2.4.7)
+11. **Focus outline removed without replacement** (Success Criterion 2.4.7)
     - Find: Elements with `outline: none` style
     - Check: No visible alternative focus indicator
     - Impact: Keyboard users can't see focus
     - Fix: Add visible focus style (border, box-shadow, background change)
 
-12. **Missing keyboard handlers** (WCAG 2.1.1)
+12. **Missing keyboard handlers** (Success Criterion 2.1.1)
     - Find: Elements with onClick handlers
     - Check: Missing onKeyDown for Enter/Space keys
     - Impact: Not usable with keyboard alone
     - Fix: Add keyboard event handlers
 
-13. **Touch target too small** (WCAG 2.5.8 Target Size Minimum, new in 2.2)
+13. **Touch target too small** (Success Criterion 2.5.8 Target Size Minimum, new in 2.2)
     - Find: Clickable elements (buttons, links) that aren't inline text and have no exception (e.g., not part of a sentence)
     - Check: Width or height < 24px (fails the Level AA minimum)
     - Impact: Hard to tap accurately, especially for users with motor impairments
-    - Fix: Increase padding or min-width/min-height to at least 24px; 44px is recommended (WCAG 2.5.5 Target Size Enhanced, Level AAA) for comfortable tap targets
+    - Fix: Increase padding or min-width/min-height to at least 24px; 44px is recommended (Success Criterion 2.5.5 Target Size Enhanced, Level AAA) for comfortable tap targets
 
-14. **Focus not obscured by sticky content** (WCAG 2.4.11, new in 2.2)
+14. **Focus not obscured by sticky content** (Success Criterion 2.4.11, new in 2.2)
     - Find: Focusable elements near sticky/fixed headers, footers, or cookie banners
     - Check: Whether a focused element could be entirely hidden behind `position: fixed`/`sticky` content with a higher stacking order
     - Impact: Keyboard users can lose track of where focus is
     - Fix: Add scroll-margin/padding so focused elements clear sticky content, or lower the sticky element's z-index; flag ambiguous cases for manual verification with `element_snapshot_tool` (Designer required)
 
 #### Moderate Issues (Consider Fixing)
-15. **Heading hierarchy problems** (WCAG 1.3.1)
+15. **Heading hierarchy problems** (Success Criterion 1.3.1)
     - Find: Heading elements (h1-h6)
     - Check: Skipped levels (h1 → h3, skipping h2)
     - Impact: Confusing document structure
     - Fix: Use proper sequential heading levels
 
-16. **Positive tabIndex** (WCAG 2.4.3)
+16. **Positive tabIndex** (Success Criterion 2.4.3)
     - Find: Elements with tabIndex > 0
     - Check: Disrupts natural tab order
     - Impact: Confusing keyboard navigation
     - Fix: Use tabIndex="0" or "-1" only, let natural DOM order work
 
-17. **Role without required attributes** (WCAG 4.1.2)
+17. **Role without required attributes** (Success Criterion 4.1.2)
     - Find: Elements with ARIA roles
     - Check: Missing required ARIA attributes (e.g., role="button" without tabIndex)
     - Impact: Incomplete accessibility semantics
@@ -270,10 +270,10 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
 ❌ Animation/motion preferences
 ❌ Screen reader testing (needs manual verification)
 ❌ Content readability (language level, clarity)
-❌ Dragging Movements alternatives (WCAG 2.5.7 — needs interaction testing beyond static attributes)
-❌ Consistent Help placement across pages (WCAG 3.2.6 — requires site-wide navigation analysis)
-❌ Redundant Entry in multi-step forms (WCAG 3.3.7 — requires flow-level form analysis)
-❌ Accessible Authentication methods (WCAG 3.3.8 — requires reviewing the login/auth flow itself)
+❌ Dragging Movements alternatives (Success Criterion 2.5.7 — needs interaction testing beyond static attributes)
+❌ Consistent Help placement across pages (Success Criterion 3.2.6 — requires site-wide navigation analysis)
+❌ Redundant Entry in multi-step forms (Success Criterion 3.3.7 — requires flow-level form analysis)
+❌ Accessible Authentication methods (Success Criterion 3.3.8 — requires reviewing the login/auth flow itself)
 
 ### Limitations
 - Cannot detect visual-only issues (color contrast, small text)
