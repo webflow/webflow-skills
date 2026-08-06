@@ -22,6 +22,20 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
 - **No Designer connection is required for the audit or fixes.** `data_element_tool` operates headlessly on any page ID from `list_pages`. Designer is only needed if you choose to use `element_snapshot_tool` for optional visual previews.
 
+## Scope & Testing Framework
+
+**This skill scans for detectable accessibility issues only.** It runs checks based on element attributes and structure. Before starting any audit, tell the user plainly that this is an automated first pass, not a substitute for hands-on testing, and that a clean report doesn't mean a page is fully accessible.
+
+Webflow's guidance on [accessibility testing](https://webflow.com/webflow-way/design-systems/accessibility) lays out three levels of rigor. Share this framework with the user in the disclosure and again at the end of the report, so they know where this skill fits and what to do next:
+
+| Level | What it covers |
+|-------|-----------------|
+| **Good** | Using automated or manual accessibility testing tools to uncover machine-detectable errors. This skill's automated checks live at this tier: a useful first pass, not a full audit. |
+| **Better** | Testing with real assistive technology: screen readers (NVDA, JAWS, Narrator, VoiceOver, Talkback), voice input tools (Dragon, Microsoft Voice Access), browser zoom/font-size controls, OS accessibility settings, screen magnifiers, and keyboard-only navigation. Emulation platforms like Assistiv Labs help cover more browser + assistive-tech combinations. |
+| **Best** | Testing with actual disabled users: the gold standard. Platforms like Fable can help connect with people to test with. |
+
+Recommend the user progress toward Better and Best testing for anything beyond a quick spot check, especially before major launches.
+
 ## Instructions
 
 ### Phase 1: Site & Page Selection
@@ -30,7 +44,7 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
    - If user provides page ID, use it directly
    - Otherwise, use `data_pages_tool` with action `list_pages` to show available pages
    - Let user select which page(s) to audit
-3. **Confirm audit scope**: Ask user what to check:
+3. **Disclose scope, then confirm audit scope**: Tell the user this scan only detects issues visible in element attributes and structure (see Scope & Testing Framework above). It's the "Good" tier of testing, not a substitute for assistive-tech or user testing. Then ask what to check:
    - Full audit (all accessibility checks)
    - Critical issues only (Success Criterion Level A)
    - Specific categories (forms, buttons, navigation, etc.)
@@ -206,6 +220,7 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
     - Quick wins (easy fixes with big impact)
     - Design pattern recommendations
     - Resources for learning more
+    - A recap of the Good/Better/Best testing framework, noting this scan covers "Good" and recommending Better (assistive-tech testing) and Best (testing with disabled users) as next steps
 
 ### Phase 6: Fix Suggestions & Approval (Optional)
 23. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
@@ -274,6 +289,7 @@ Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue
 ❌ Consistent Help placement across pages (Success Criterion 3.2.6 — requires site-wide navigation analysis)
 ❌ Redundant Entry in multi-step forms (Success Criterion 3.3.7 — requires flow-level form analysis)
 ❌ Accessible Authentication methods (Success Criterion 3.3.8 — requires reviewing the login/auth flow itself)
+❌ Assistive technology or real-user testing (the "Better" and "Best" tiers — see Scope & Testing Framework)
 
 ### Limitations
 - Cannot detect visual-only issues (color contrast, small text)
@@ -293,6 +309,8 @@ Run an accessibility audit on my homepage
 **Step 1: Site & Page Selection**
 ```
 🔍 Accessibility Audit: Page Selection
+
+Heads up: this scan only detects issues visible in element attributes and structure — Webflow's "Good" tier of accessibility testing. It's a solid first pass, but it doesn't replace testing with assistive technology ("Better") or with disabled users ("Best"). I'll recap that framework at the end of the report.
 
 I'll help you audit your homepage for accessibility issues.
 
@@ -439,6 +457,8 @@ Quick Wins (Easy + High Impact):
 2. Add visible focus styles for keyboard users
 3. Test with keyboard navigation (Tab, Enter, Space keys)
 4. Consider testing with screen reader (NVDA/JAWS/VoiceOver)
+
+📐 Where this fits: this automated scan covers the "Good" tier of Webflow's Good/Better/Best testing framework. For "Better," test with assistive tech (screen readers, voice input, keyboard-only nav). For "Best," test directly with disabled users (e.g. via Fable). See https://webflow.com/webflow-way/design-systems/accessibility for details.
 
 Would you like me to help fix these issues?
 ```
@@ -671,6 +691,7 @@ Would you like me to:
 - Provide specific, actionable fixes
 - Encourage testing with real assistive technology
 - Emphasize that automated checks are just the start
+- Disclose upfront that this skill only detects issues visible in element attributes/structure, and close out reports with the Good/Better/Best testing framework recap
 
 ## Resources to Include
 
@@ -681,6 +702,7 @@ Would you like me to:
 - Webflow University: Accessibility best practices
 - Using semantic HTML in Webflow
 - Adding ARIA attributes in Webflow
+- Webflow's Good/Better/Best accessibility testing framework: https://webflow.com/webflow-way/design-systems/accessibility
 
 ### Testing Tools
 - Keyboard: Tab, Shift+Tab, Enter, Space, Arrows
