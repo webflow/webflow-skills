@@ -683,9 +683,12 @@ Would you like me to:
 - Adding ARIA attributes in Webflow
 
 ### Testing Tools
-- Keyboard: Tab, Shift+Tab, Enter, Space
-- Screen readers: NVDA (Windows), JAWS, VoiceOver (Mac/iOS)
-- Browser extensions: axe DevTools, WAVE, Lighthouse
+- Keyboard: Tab, Shift+Tab, Enter, Space, Arrows
+- Screen readers: NVDA, JAWS, Narrator (Windows), VoiceOver (Mac/iOS), Talkback (Android)
+- Voice input tools: Dragon, Microsoft Voice Access
+- Browser extensions: axe DevTools, Accessibility Insights, WAVE, Lighthouse
+- Browser zoom and font size controls
+- Operating system accessibility settings: font sizing, Contrast Themes, transparency preferences
 
 ### Common Fixes
 - Button labels: Always include visible text or aria-label
