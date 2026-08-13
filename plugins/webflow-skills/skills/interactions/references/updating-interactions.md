@@ -41,17 +41,17 @@ migration the panel never asks for — and the write may now be refused.
 
 Pass these through untouched:
 
-| Shape                                                                        | Status on `dev`                     | Detail                                                   |
-| ---------------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------- |
-| Legacy string `splitText`                                                    | `[LEGACY-OK-ON-UPDATE]`             | [`actions-and-properties.md`](actions-and-properties.md) |
-| Non-animatable `wf:class.class` / `wf:transform.display` on a non-Set action | `[LEGACY-OK-ON-UPDATE]`             | [`actions-and-properties.md`](actions-and-properties.md) |
-| Duplicate `conditionalPlayback` types                                        | `[LEGACY-OK-ON-UPDATE]`             | [`conditional-playback.md`](conditional-playback.md)     |
-| Hover `pluginConfig.type: 'mouseover'`                                       | `[PENDING]` — DES-7448 not on `dev` | [`trigger-hover.md`](trigger-hover.md)                   |
-| `assignedTimelineRole`                                                       | `[PENDING]` — DES-7448 not on `dev` | [`timelines-and-groups.md`](timelines-and-groups.md)     |
+| Shape                                                                        | Status on `dev`                                 | Detail                                                   |
+| ---------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------- |
+| Non-animatable `wf:class.class` / `wf:transform.display` on a non-Set action | `[LEGACY-OK-ON-UPDATE]`                         | [`actions-and-properties.md`](actions-and-properties.md) |
+| Duplicate `conditionalPlayback` types                                        | `[LEGACY-OK-ON-UPDATE]`                         | [`conditional-playback.md`](conditional-playback.md)     |
+| Legacy string `splitText`                                                    | `[PENDING]` accepted today, DES-7448 may reject | [`actions-and-properties.md`](actions-and-properties.md) |
+| Hover `pluginConfig.type: 'mouseover'`                                       | `[PENDING]` accepted today, DES-7448 rejects    | [`trigger-hover.md`](trigger-hover.md)                   |
+| `assignedTimelineRole`                                                       | `[PENDING]` accepted today, DES-7448 rejects    | [`timelines-and-groups.md`](timelines-and-groups.md)     |
 
-The first three are enforced today. The last two describe behavior that lands with
-DES-7448 — but the safe action is identical either way: pass the stored value
-through untouched.
+The first two are enforced today. The last three are accepted on `dev` and become
+rejections when DES-7448 lands. The safe action is the same in every row: pass the
+stored value through untouched.
 
 The mechanism differs slightly per guard — some check a baseline copy of the
 stored value and only reject a _changed_ legacy shape. The safe behavior is the

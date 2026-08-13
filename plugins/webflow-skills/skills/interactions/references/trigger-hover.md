@@ -29,7 +29,11 @@ Prefer the new model. Guard: `findHoverConfigModelError`
 
 `[REJECTED]` `eventMode` without a boolean `multiTimeline`.
 
-`[REJECTED]` `multiTimeline: true` without both enter and leave roles.
+`[REJECTED]` A timeline with no role, or a role outside the registered set, once
+`multiTimeline: true` is set. Note the guard checks the timelines you send, not the
+full set: a single `mouseEnter` timeline is accepted, so an enter-only hover is
+legal and you do not need to invent a second timeline to satisfy validation.
+Guard: `findTimelineRoleError`
 
 ## Accept — single timeline
 
@@ -64,8 +68,9 @@ Prefer the new model. Guard: `findHoverConfigModelError`
 }
 ```
 
-Roles are exactly `'mouseEnter'` and `'mouseLeave'`, and must be unique across
-timelines. Guard: `findTimelineRoleError`
+Roles are exactly `'mouseEnter'` and `'mouseLeave'`, and each must be unique across
+timelines. Both are shown here because a hover in and out is the common request,
+not because the guard demands the pair. Guard: `findTimelineRoleError`
 
 ## Legacy pass-through
 

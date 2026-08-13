@@ -53,9 +53,11 @@ Guard once landed: `findOffIntervalMetadataError` · fragment:
 ticket, same status.
 Guard once landed: `findIntervalMetadataTriggerError`
 
-`[PANEL-TRAP]` `distance` is clamped by the panel to 1–10000 and rounded, but the
-write path has no numeric bound. A value outside that range is stored and then
-silently rewritten the next time the user edits the field.
+`[REJECTED]` A `distance` that is fractional, or outside 1 to 10000. Bounded in
+`triggerMetadata`'s schema as `z.number().finite().int().min(1).max(10000)`, so
+this fails schema validation before any guard runs. The bound exists to keep a
+malicious payload from persisting `Infinity` or `NaN` into storage; the runtime
+caps fires per update regardless.
 
 ## Rejected
 

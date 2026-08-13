@@ -54,7 +54,6 @@ If a fragment below does not match your error exactly, check the other family:
 | `random-array must have between`                                                      | Random set size                                          | [limits](limits-and-budgets.md)      |
 | `is not a start time the Designer can author`                                         | GSAP operator or bad ms string in `timing.position`      | [actions](actions-and-properties.md) |
 | `must match` (splitText mask)                                                         | Mask does not equal type                                 | [actions](actions-and-properties.md) |
-| `must be an object {type}`                                                            | Legacy string splitText on create                        | [actions](actions-and-properties.md) |
 | `cannot be set on a scroll-scrub interaction`                                         | `timing.repeat` / `yoyo` under scrub                     | [scroll](trigger-scroll.md)          |
 | `distance and axes are only authored on interval`                                     | Off-interval metadata — `[PENDING]`, DES-7448            | [mouse-move](trigger-mouse-move.md)  |
 | `must not set assignedTimelineRole`                                                   | Panel writes `assignedGroupId` — `[PENDING]`, DES-7448   | [timelines](timelines-and-groups.md) |

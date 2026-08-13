@@ -117,11 +117,14 @@ the panel writes are `{type}` or `{type, mask}` with the two equal.
 `[REJECTED]` A mask that does not match the type, or `mask: 'none'`.
 Guard: `findActionSplitTextError` · fragment: `must match`
 
-`[LEGACY-OK-ON-UPDATE]` The legacy string form (`splitText: 'chars'`) is still read
-for migration but the panel no longer writes it. A new or altered string is
-refused; an unchanged stored one passes through, because rejecting it would force
-a migration the panel never asks for.
-Fragment: `must be an object {type}`
+`[PENDING]` The legacy string form (`splitText: 'chars'`) is **accepted today**, on
+create as well as update. `findActionSplitTextError` skips any non-object value,
+and the docblock states that whether to reject it on write is a separate decision.
+Rejecting it is part of DES-7448 and has not landed.
+
+The panel no longer writes the string form, so prefer the object form. Do not
+expect an error if you send a string, and do not rewrite a stored string during a
+read-then-write.
 
 ## Panel traps
 

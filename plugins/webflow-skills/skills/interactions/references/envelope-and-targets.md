@@ -99,6 +99,16 @@ Guard: `findAnyElementFilterError`
 
 `[REJECTED]` `firstMatchOnly: true` together with `relationship: 'none'`.
 
+`[REJECTED]` A `DirectScope` or `SelectorScope` wrapper on a Designer-authored
+`wf:` target, whether or not a filter is active. The Scope dropdown is unreachable
+in the native Designer, because create always stamps a none-filter 3-tuple and the
+panel hides Scope for any stamped target. Narrow to a matching set with Filter
+instead.
+Guard: `validateTargetValue` · fragment: `does not support Scope`
+
+A malformed scope wrapper reports separately as
+`target scope must be a valid DirectScope or SelectorScope`.
+
 ## The stamped filterContext
 
 When a caller omits `filterContext` on an element-scoped target, the host stamps

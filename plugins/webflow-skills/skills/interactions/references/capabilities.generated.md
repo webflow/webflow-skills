@@ -23,23 +23,25 @@ every caller; the guards take no flag or session parameter. This table
 cannot say *why* a row is unauthorable — some are gated pending GA and some
 have no Designer schema at all. See `references/gated-capabilities.md`.
 
-"Target required" answers whether a target must be present, not whether one
-is permitted. Some triggers must actively omit it — see the trigger
-reference for that trigger.
+The Target column is probed against the write path rather than read from a
+single constant, because the policy is spread across several guards.
+`required, specific key` means a target is required but only one key is legal
+(the trigger reference names it). `see reference` means another guard fired
+first, so the target rule could not be isolated.
 
-| Trigger | Authorable | controlType | Standalone | Target required | Timeline roles | Allowed `control` |
+| Trigger | Authorable | controlType | Standalone | Target | Timeline roles | Allowed `control` |
 | --- | --- | --- | --- | --- | --- | --- |
-| `wf:blur` | **no** | `standard` | no | yes | — | n/a — not authorable |
-| `wf:change` | **no** | `standard` | no | yes | — | n/a — not authorable |
-| `wf:click` | yes | `standard` | no | yes | — | each: `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`<br>restricted occurrence: `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop` |
-| `wf:custom` | yes | `standard` | no | no | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
-| `wf:dropdown` | **no** | `standard` | yes | no | `close`, `open` | n/a — not authorable |
-| `wf:focus` | **no** | `standard` | no | yes | — | n/a — not authorable |
-| `wf:hover` | yes | `standard` | no | yes | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
-| `wf:load` | yes | `load` | no | no | — | `none`, `play` |
-| `wf:mouse-move` | yes | `continuous` | yes | no | `interval`, `mouseX`, `mouseY` | n/a — playback fields rejected |
-| `wf:navbar` | **no** | `standard` | yes | no | `close`, `open` | n/a — not authorable |
-| `wf:scroll` | yes | `scroll` | yes | no | — | n/a — playback fields rejected |
+| `wf:blur` | **no** | `standard` | no | **required** | — | n/a — not authorable |
+| `wf:change` | **no** | `standard` | no | **required** | — | n/a — not authorable |
+| `wf:click` | yes | `standard` | no | **required** | — | each: `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`<br>restricted occurrence: `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop` |
+| `wf:custom` | yes | `standard` | no | required, specific key | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
+| `wf:dropdown` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
+| `wf:focus` | **no** | `standard` | no | **required** | — | n/a — not authorable |
+| `wf:hover` | yes | `standard` | no | **required** | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
+| `wf:load` | yes | `load` | no | **must omit** | — | `none`, `play` |
+| `wf:mouse-move` | yes | `continuous` | yes | optional | `interval`, `mouseX`, `mouseY` | n/a — playback fields rejected |
+| `wf:navbar` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
+| `wf:scroll` | yes | `scroll` | yes | **required** | — | n/a — playback fields rejected |
 
 Playback fields (`control`, `delay`, `jump`, `speed`) are rejected on control types `continuous`, `scroll`. Navbar and dropdown also hide the playback editor in the panel, but they
 still carry `control: "play"` and are *not* covered by that rejection —
@@ -98,4 +100,16 @@ Note: `STANDARD_TRIGGER_ALLOWED_CONTROLS` is the opt-in complete set, not the
 panel's default dropdown. `reverseFlipEase` is accepted by the write path but
 the panel filters it out of the default options as a guard against stale-CDN
 GSAP versions, so prefer not to author it.
+
+## Numeric bounds
+
+| Field | Bound |
+| --- | --- |
+| `timeline.canvasDuration` | at most 12 seconds |
+| `ix3-random-array` values | 2 to 12 entries |
+
+Per-interaction count caps (timelines, actions, triggers, targets) are
+applied at the page-automation tool boundary rather than in this schema, so
+they are not exported and cannot be rendered here. See
+`references/limits-and-budgets.md`.
 

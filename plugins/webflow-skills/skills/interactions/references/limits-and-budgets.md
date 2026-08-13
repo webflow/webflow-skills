@@ -42,7 +42,8 @@ is hydrated, so stored records over a cap still load.
 | Triggers per interaction  | 20                            | guardrail                                                 |
 | Targets per action        | 20                            | guardrail                                                 |
 
-The timeline cap counts **user-managed groups**; orphan groups are legal.
+The timeline cap is a flat count of the `timelines` array. It does not read
+`groupId`, so an ungrouped timeline still counts toward it.
 
 Some triggers cap lower still — a standalone trigger allows exactly one, and load
 allows at most one per interaction.

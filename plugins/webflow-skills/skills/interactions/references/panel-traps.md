@@ -26,11 +26,16 @@ _incomplete_ rather than _wrong_.
 
 ## Timeline settings
 
-| Field                                                            | Panel behavior                                                                                                                              | Guard that stops short                                                                                                                                                        |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `timeline.settings.control` on a grouped or role-routed timeline | Control dropdown hidden when the timeline has a `groupId`, the trigger carries group control, or while reusing. The runtime still reads it. | The playback guards (`findTriggerJumpError`, `findTriggerSpeedError`, `findUneditablePlaybackFieldError`) are all **trigger-level**. Nothing validates `timeline.settings.*`. |
-| Any `timeline.settings.*` on a continuous, non-interval timeline | The settings popover does not render at all.                                                                                                | Same — trigger-level only.                                                                                                                                                    |
-| `assignedGroupId` on a load, scroll, or continuous trigger       | The assign UI lists standard triggers only; the runtime ignores the assignment.                                                             | No guard covers `assignedGroupId`. The DES-7448 rejection in progress targets the separate legacy `assignedTimelineRole` field.                                               |
+| Field                                                                             | Panel behavior                                                                                                                                                           | Guard that stops short                                                                                                                                                        |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings.control` on a **role-routed** timeline whose Control dropdown is hidden | Hidden while reusing when the trigger offers one control or none. `getEffectivePlaybackConfig` reads role-routed timelines from settings alone, so the value dispatches. | The playback guards (`findTriggerJumpError`, `findTriggerSpeedError`, `findUneditablePlaybackFieldError`) are all **trigger-level**. Nothing validates `timeline.settings.*`. |
+| Any `timeline.settings.*` on a continuous, non-interval timeline                  | The settings popover does not render, but `buildSubTimeline` still passes settings into the GSAP defaults, so the value is live.                                         | Same, trigger-level only.                                                                                                                                                     |
+| `assignedGroupId` on a load, scroll, or continuous trigger                        | The assign UI lists standard triggers only; the runtime ignores the assignment.                                                                                          | No guard covers `assignedGroupId`. The DES-7448 rejection in progress targets the separate legacy `assignedTimelineRole` field.                                               |
+
+`settings.control` on a **grouped** timeline is deliberately absent from this
+table. A standard trigger routed to a group takes `control` from the trigger, so
+a stored value there has no effect. See
+[`timelines-and-groups.md`](timelines-and-groups.md).
 
 ## Action timing
 
@@ -52,17 +57,28 @@ _incomplete_ rather than _wrong_.
 
 ## Trigger and target
 
-| Field                                                                        | Panel behavior                                                                                                              | Guard that stops short                                                                                                                                                      |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scroll page-target start offset greater than the end offset                  | The panel silently drops the change — no error shown.                                                                       | No scroll position-ordering guard exists.                                                                                                                                   |
-| `triggerMetadata.distance` outside 1–10000 on a mouse-move interval timeline | The panel clamps and rounds on the next edit.                                                                               | No interval-metadata guard exists on `dev` at all. The DES-7448 work in progress checks role and trigger presence, not numeric bounds, so this stays a trap after it lands. |
-| `velocityInfluence` on a non-interval timeline                               | Toggle hidden; the property picker is restricted and the animation-type selector is hidden, so the user cannot turn it off. | No `velocityInfluence` guard exists.                                                                                                                                        |
-| Target scope while a filter is active                                        | The Scope selector is hidden when the target definition has filtering.                                                      | `validateTargetValue` validates scope **shape**, not scope-versus-filter exclusivity.                                                                                       |
+| Field                                                       | Panel behavior                                                                                                              | Guard that stops short                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Scroll page-target start offset greater than the end offset | The panel silently drops the change, with no error shown.                                                                   | No scroll position-ordering guard exists. |
+| `velocityInfluence` on a non-interval timeline              | Toggle hidden; the property picker is restricted and the animation-type selector is hidden, so the user cannot turn it off. | No `velocityInfluence` guard exists.      |
 
 ## Not traps — common misreadings
 
-Two things look like traps and are not. Getting these wrong produces rejected
-writes.
+These look like traps and are not. Treating them as traps produces payloads the
+API refuses.
+
+**`triggerMetadata.distance` outside 1 to 10000, or fractional.** The panel
+clamps and rounds, which resembles a trap, but `triggerMetadata`'s schema bounds
+it as `z.number().finite().int().min(1).max(10000)`. An out-of-range or
+fractional value is rejected at schema validation and never reaches the panel.
+See [`trigger-mouse-move.md`](trigger-mouse-move.md).
+
+**Target scope on a Designer-authored `wf:` target.** The Scope selector is
+hidden when the target has filtering, which resembles a trap. But
+`validateTargetValue` refuses `DirectScope` and `SelectorScope` on these targets
+outright, whether or not a filter is active: the Designer narrows targets through
+Filter, so Scope is not authorable through the API at all. See
+[`envelope-and-targets.md`](envelope-and-targets.md).
 
 **Navbar and dropdown playback fields.** The panel hides the playback editor for
 them, which resembles the scroll and continuous case. But they still carry
