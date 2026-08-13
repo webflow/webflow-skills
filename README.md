@@ -83,7 +83,7 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-mcp:flowkit-naming | Apply Webflow's official FlowKit CSS naming conventions |
 | webflow-mcp:designer-tools | Build and manage page structure, elements, components, and styles in Webflow Designer |
 | webflow-mcp:figma-to-webflow | Build pages, sections, components, or full sites from Figma designs using Figma MCP and Webflow MCP |
-| webflow-mcp:cloud-apps | Inspect and operate existing Webflow Cloud apps, environments, deployments, variables, domains, and logs |
+| webflow-mcp:cloud-apps | Monitor and troubleshoot existing Webflow Cloud apps, deployments, configuration, domains, and runtime behavior |
 
 ### Webflow CLI Skills
 

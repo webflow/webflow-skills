@@ -1,39 +1,42 @@
 ---
 name: webflow-mcp:cloud-apps
-description: Inspect and operate existing Webflow Cloud apps through Webflow MCP. Use when listing Cloud apps, checking app metadata or domains, inspecting environments or environment-variable names, reviewing deployments, diagnosing build or runtime failures, triggering or re-running GitHub deployments, updating app metadata, deleting environment variables, or removing apps. Do not use for design/CSS variables, creating Cloud apps, CLI-driven builds or deployments from local source, or creating/updating environment-variable values.
+description: Monitor and troubleshoot existing Webflow Cloud apps through Webflow MCP. Use when identifying apps or environments, checking domains or deployed versions, reviewing deployment health and history, diagnosing build, deploy, or runtime failures, verifying environment-variable keys, or previewing a retry, rollback, or GitHub branch deployment. Do not use for design/CSS variables, creating Cloud apps, deploying local source, or creating/updating environment-variable values.
 ---
 
 # Webflow Cloud Apps
 
-Inspect and manage existing Webflow Cloud apps with `data_apps_tool`. Use the
-Webflow CLI skill for project creation, building local source and deploying it
-to Webflow Cloud, and environment-variable writes that this tool does not
-support.
+Use `data_apps_tool` to answer operational questions about existing Webflow
+Cloud apps. Start from the user's outcome, gather only the evidence needed, and
+distinguish observations from conclusions.
+
+Use the `webflow-cli:cloud` skill when the task requires creating an app,
+building or deploying local source, or creating or updating environment
+variables. Client-side build output is not sent to Webflow and cannot be
+recovered through MCP.
 
 ## Instructions
 
-### Phase 1: Establish scope
+### 1. Establish scope
 
 1. Call `webflow_guide_tool` before any other Webflow MCP tool.
-2. Use only Webflow MCP tools for Webflow operations. Do not call Webflow APIs
+2. Use only Webflow MCP tools for Webflow operations. Never call Webflow APIs
    directly.
 3. Include the required `context` parameter in every tool call. Write 15-25
    words in third-person perspective.
-4. Confirm that the request concerns a Webflow Cloud app:
-   - Use `data_apps_tool` for existing Cloud apps, environments, deployments,
-     logs, domains, and environment-variable metadata.
+4. Route by the capability the task requires:
+   - Use `data_apps_tool` to inspect existing apps, environments, domains,
+     deployment records, available server-side logs, and variable metadata.
    - Use `data_variable_tool` for Designer color, size, font, and CSS variables.
-   - Use the `webflow-cli:cloud` skill to create an app, build or deploy local
-     source, or create/update an environment variable.
-5. If `data_apps_tool` is unavailable, report that the Cloud Apps MCP capability
-   is not enabled. Do not bypass it with a direct API request.
+   - Use `webflow-cli:cloud` for app creation, local builds and deployments, or
+     creating and updating environment-variable values.
+5. If `data_apps_tool` is unavailable, report that the Cloud Apps MCP
+   capability is not enabled. Do not bypass it with a direct API request.
 
 Never ask the user to paste an environment-variable value or secret into chat.
-When a value must be created or changed, direct the user to the installed
-Webflow CLI's built-in help and require a hidden prompt, stdin, or protected
-file. Do not guess a CLI command.
+For a create or update, route to the installed Webflow CLI's built-in help and
+require a hidden prompt, stdin, or protected file. Do not guess a CLI command.
 
-### Phase 2: Resolve identifiers
+### 2. Resolve the target
 
 Discover identifiers in this order:
 
@@ -44,137 +47,154 @@ list_deployments(app_id, env_id) -> deployment_id
 ```
 
 Use an identifier supplied by the user only after verifying it through the
-corresponding get or list action. If a list action returns `nextCursor`, pass it
-back as `cursor` until `nextCursor` is null. One page is not proof that a
-resource is absent.
+corresponding get or list action. Use exact filters when available. If a list
+action returns `nextCursor`, pass it back as `cursor` until `nextCursor` is null
+whenever absence or completeness matters.
 
-If multiple resources match, present identifying metadata and require the user
-to choose before any mutation. Auto-select only when exactly one unambiguous
-resource matches.
+If multiple resources match, present distinguishing metadata and require the
+user to select one before any mutation. Auto-select only when one resource is
+unambiguous.
 
-### Phase 3: Route the request
+### 3. Follow the matching user story
 
-| Intent | Action sequence |
-|---|---|
-| Find apps | `list_apps` |
-| Inspect one app | `get_app` |
-| Find live custom hostnames | `get_app_domains` |
-| Rename or describe an app | `get_app` -> confirm -> `update_app` -> `get_app` |
-| Remove an app | `delete_app` dry run -> confirm -> `delete_app` with `dry_run: false` |
-| Find environments | `list_environments` |
-| Inspect variable names | `list_variables` |
-| Delete one variable | `delete_variable` dry run -> confirm -> `delete_variable` with `dry_run: false` |
-| Review deployment history | `list_deployments` -> `get_deployment` |
-| Deploy the connected branch HEAD | `trigger_deployment` dry run -> confirm -> execute -> poll |
-| Retry or roll back an exact commit | Select deployment -> `redeploy` dry run -> confirm -> execute -> poll |
-| Diagnose a build or deploy failure | `get_deployment` -> `get_build_logs` |
-| Diagnose the running app | `get_runtime_logs` |
+#### Which app and environment am I looking at?
 
-The action's live schema is authoritative for arguments and response fields. Do
-not invent fields from this table.
+1. Use `list_apps` to find the app and `get_app` for its metadata.
+2. Use `list_environments` to report the branch, mount, deploy URL, and latest
+   deployment status exposed by the live response.
+3. Use `get_app_domains` when the user asks where the app is reachable.
+4. Explain that custom-domain results exclude the default `*.webflow.io`
+   hostname. Domains for an app attached to a regular Webflow site may belong
+   to the parent site and be shared by sibling apps.
 
-### Phase 4: Execute read-only workflows
+#### What is deployed, and is it healthy?
 
-For app inspection:
+1. Use `list_environments` for the environment's latest deployment status.
+2. Use `list_deployments`, newest first, then `get_deployment` for the selected
+   deployment's detailed timeline and version metadata.
+3. Treat `starting`, `building`, and `deploying` as active states. Report any
+   other status exactly rather than guessing its meaning.
+4. A failed phase sets `buildFailedAt` or `deployFailedAt` while its matching
+   finished timestamp remains null. A null finished timestamp by itself does
+   not prove the phase is still running.
+5. Report what is observable: selected app and environment, deployment status,
+   version or commit metadata if returned, phase timestamps, and evidence gaps.
 
-1. Locate the app with `list_apps`.
-2. Use `get_app` for app metadata or `get_app_domains` for custom hostnames.
-3. Explain that `get_app_domains` excludes the default `*.webflow.io` hostname.
-   For an app attached to a regular Webflow site, returned domains belong to the
-   parent site and may be shared by sibling apps.
+#### Why did the deployment fail?
 
-For environment variables:
+1. Fetch the deployment with `get_deployment` and identify the failed phase
+   from its status and timestamps.
+2. Call `get_build_logs` only when `logsAvailable` is true. Start with a narrow
+   `since` window or `q` filter, then broaden only if needed.
+3. Page until `nextCursor` is null when a complete result is required.
+4. Treat `logsAvailable` as a retention and retrieval signal, not proof that
+   every phase produced log entries.
+5. Treat an empty result as "no matching retrievable server-side logs," not as
+   proof that the build succeeded or produced no errors.
+6. Build output produced on a user's machine is outside MCP. Mention this only
+   when the user says the deployment was built with the CLI; direct them to the
+   originating CLI output for local build failures.
+7. Report the failed phase, relevant timestamps, the smallest useful evidence,
+   the inferred cause, and any uncertainty. Do not merely restate raw logs.
 
-1. Locate the environment with `list_environments`.
-2. Call `list_variables`.
-3. Report keys and metadata. Secret entries have `isSecret: true` and no value;
-   never imply that a missing secret value is an error.
+#### Why is the running app failing?
 
-For deployment inspection:
+1. Resolve the exact environment and call `get_runtime_logs`.
+2. Narrow by `since` and `q` before retrieving a broad window. Page completely
+   when the conclusion depends on absence.
+3. Runtime logs are retained for approximately one hour on the base plan. An
+   empty result outside the retained window is expected.
+4. Correlate runtime evidence with the latest deployment record when useful,
+   but do not claim causation from timing alone.
+5. Report the observed error pattern, affected interval, likely cause, evidence,
+   and limitations.
 
-1. Use `list_environments` for the environment and its
-   `latestDeploymentStatus`.
-2. Use `list_deployments`, which returns newest first.
-3. Use `get_deployment` for the selected deployment's full timeline.
-4. Treat `starting`, `building`, and `deploying` as active states. Report any
-   other value rather than guessing what it means.
-5. A failed phase sets `buildFailedAt` or `deployFailedAt` while its matching
-   finished timestamp remains null. A null finished timestamp alone does not
-   prove that the phase is still running.
+#### Is required configuration present?
 
-For logs:
+1. Resolve the environment and call `list_variables`.
+2. Report keys and metadata only. Secret entries have `isSecret: true` and no
+   value; a missing secret value is expected.
+3. If a key is absent, exhaust pagination before concluding it is missing.
+4. If the value must be created or changed, stop the MCP workflow and route to
+   `webflow-cli:cloud` without requesting the value in chat.
 
-1. Prefer a deployment whose `logsAvailable` value is true before calling
-   `get_build_logs`.
-2. Use `since` and `q` to narrow results before retrieving broad log windows.
-3. Page until `nextCursor` is null when completeness matters.
-4. Treat build-phase and runtime logs as raw, potentially sensitive customer
-   output. Inspect lines for tokens, credentials, cookies, authorization
-   headers, and presigned URLs before quoting or saving them.
-5. Explain that runtime logs are retained for approximately one hour on the
-   base plan. An empty result for an older window is valid.
+#### Can this deployment be retried, rolled back, or rebuilt from branch HEAD?
 
-### Phase 5: Preview and execute mutations
+Use the mutation's default dry run as the capability check. Do not infer
+eligibility from missing logs, app metadata, or deployment metadata.
 
-Require the user to explicitly type `confirm` after showing the exact target and
-effect. A prior request to inspect, diagnose, or preview does not authorize a
-mutation.
+For a new deployment from the connected branch:
+
+1. Resolve the environment and call `trigger_deployment` with its default dry
+   run.
+2. If preview rejects the target as unsupported, make no mutation and route the
+   user to a fresh CLI deployment.
+3. If preview succeeds, show the returned branch and explain that execution
+   deploys its latest commit, not local files.
+4. Require the user to type `confirm`.
+5. Generate one stable `idempotency_key`, execute with `dry_run: false`, and
+   reuse that key for every retry.
+6. The action returns no deployment ID. Poll `list_deployments`, identify the
+   new record, and use `get_deployment` until it leaves an active state or the
+   bounded monitoring period ends.
+
+For a retry or rollback:
+
+1. Select the exact prior deployment and call `redeploy` with its default dry
+   run.
+2. If preview rejects the target as unsupported, make no mutation and route the
+   user to a fresh CLI deployment.
+3. If preview succeeds, show the returned commit hash and message. Explain that
+   this creates a fresh build at that commit.
+4. Require `confirm`, execute with `dry_run: false` and a stable
+   `idempotency_key`, then poll as described above.
+
+### 4. Apply shared evidence and safety rules
+
+- Treat build, deploy, and runtime logs as potentially sensitive customer
+  output. Inspect for tokens, credentials, cookies, authorization headers, and
+  presigned URLs before quoting or saving them.
+- Quote only the minimum log evidence needed. Redact sensitive values and URLs.
+- Never conclude that a paginated resource is absent after one page.
+- Never translate an empty list into a tool failure.
+- The live action schema is authoritative for arguments and response fields.
+  Never fabricate IDs, fields, statuses, branches, commits, or live URLs.
+- A request to inspect, diagnose, or preview does not authorize a mutation.
+- Require an itemized preview and the exact word `confirm` before every
+  mutation.
+- Reconcile an uncertain mutation through observable state before retrying it.
+
+### 5. Handle explicit administrative requests
+
+These operations are supported but are not the skill's primary workflow.
 
 For `update_app`:
 
 1. Fetch the current app with `get_app`.
-2. Show the exact name and description change. Explain that this cannot change
-   source configuration or deployments.
-3. Require confirmation, call `update_app`, then verify with `get_app`.
+2. Show the exact name or description change and require `confirm`.
+3. Call `update_app`, then verify with `get_app`.
 4. Pass `description: null` to clear a description. Do not use an empty string.
 
 For `delete_variable`:
 
-1. Call `delete_variable` with the default dry run. The preview confirms whether
-   the exact key exists and returns no value.
-2. If `exists` is false, report that no variable was deleted. Do not request
-   confirmation or call the destructive operation.
-3. If the preview cannot confirm existence, stop and report the error. Do not
-   treat an incomplete paginated read as a missing key.
-4. If `exists` is true, show the app, environment, and key, then warn that the
-   action permanently deletes the variable.
-5. Require confirmation, then call `delete_variable` with `dry_run: false`
-   exactly once. Treat its successful `deleted: true` response as success even
-   when the backend body has no readable message.
-
-For `trigger_deployment`:
-
-1. Call it with the default dry run and show the connected branch.
-2. Explain that execution deploys the branch's latest commit, not local files.
-3. Require confirmation.
-4. Generate one stable `idempotency_key` before the first call with
-   `dry_run: false`. Reuse the same key for every retry.
-5. The action returns no deployment ID. Poll `list_deployments`, identify the
-   new record, and use `get_deployment` until it leaves an active state or the
-   bounded monitoring period ends.
-
-For `redeploy`:
-
-1. Select the previous deployment and call `redeploy` with the default dry run.
-2. Show its exact commit hash and message. Explain that this creates a fresh
-   build at that commit.
-3. Require confirmation.
-4. Execute with `dry_run: false` and a stable `idempotency_key`, then poll as
-   described for `trigger_deployment`.
+1. Preview with the default dry run.
+2. If `exists` is false, report that nothing was deleted and stop.
+3. If `exists` is true, show the app, environment, and key; warn that deletion
+   is permanent and require `confirm`.
+4. Call once with `dry_run: false`. Treat `deleted: true` as success even if the
+   backend message is absent.
 
 For `delete_app`:
 
-1. Call it with the default dry run.
-2. Report the returned `deletionMode`:
-   - `archive`: reversible archival of the Cloud app.
-   - `hard_delete`: permanent deletion of the attached app's project and
-     environments.
-3. Require confirmation after the mode-specific warning.
-4. Call with `dry_run: false` exactly once. A successful `deleted: true`
-   response remains success even when the backend body has no readable message.
-   Do not infer failure from an unavailable post-delete resource.
+1. Preview with the default dry run and report `deletionMode`.
+2. Explain that `archive` unpublishes the app and removes it from the dashboard,
+   while `hard_delete` permanently deletes the app and all its environments and
+   cannot be undone.
+3. Require `confirm`, then call once with `dry_run: false`.
+4. Treat `deleted: true` as success even when the resource cannot be fetched
+   afterward.
 
-### Phase 6: Handle errors
+### 6. Handle errors and report
 
 - `401` or `403`: report the authentication or permission problem; do not
   retry.
@@ -182,91 +202,66 @@ For `delete_app`:
   silently switch targets.
 - `429`: honor the backoff signal before a bounded retry.
 - `5xx` on a read: retry a bounded number of times.
-- `5xx` on a mutation: treat the outcome as uncertain. Reconcile with list/get
-  actions before considering a retry.
-- A successful mutation response with sparse or unreadable backend content is
-  not a failure. Do not retry a deletion; poll deployment records when a deploy
-  action cannot report its final status.
+- `5xx` on a mutation: treat the outcome as uncertain and reconcile it before
+  considering a retry.
 - Rejected cursor: restart that listing without the cursor and page again.
 - `GITHUB_APP_NOT_INSTALLED`: provide the returned `installUrl`, require the
-  user to reconnect GitHub, then retry only after reconnection.
+  user to reconnect GitHub, and retry only after reconnection.
+- An unsupported deployment preview is a capability boundary, not a reason to
+  bypass MCP with a direct API call.
 
-An empty list is a valid success. Do not translate it into a tool failure.
-
-### Phase 7: Report
-
-State:
-
-- The app and environment selected
-- The actions performed
-- The deployment status or mutation outcome
-- Any pagination, retention, permission, or uncertainty limitation
-- The next required user action only when the workflow cannot continue
-
-Do not expose sensitive log content or environment-variable values.
+Final reports must state the selected app and environment, evidence inspected,
+observed status, inferred cause when supported, confidence or limitations, any
+remediation performed, and the next required user action only when blocked.
 
 ## Examples
 
-### Inspect a failed deployment
+### Diagnose a failed deployment
 
 **User:** "Why did the latest production deployment fail?"
 
-1. Call `webflow_guide_tool`.
-2. Resolve the app with `list_apps`.
-3. Resolve production with `list_environments`.
-4. Fetch the latest record with `list_deployments`, then `get_deployment`.
-5. If logs are available, call `get_build_logs` with a narrow error query.
-6. Redact sensitive values and report the failed phase, relevant timestamps,
-   concise root cause, and evidence.
-
-### Trigger a deployment
-
-**User:** "Deploy the latest commit for production."
-
 1. Resolve the app and production environment.
-2. Call `trigger_deployment` as a dry run.
-3. Report the exact connected branch and request `confirm`.
-4. After confirmation, execute with a stable idempotency key.
-5. Poll the deployment list and report the resulting status.
+2. Fetch the latest deployment and inspect its status and timeline.
+3. If `logsAvailable` is true, retrieve narrowly filtered build/deploy logs.
+4. Redact sensitive content and report the failed phase, evidence, likely root
+   cause, and limitations.
+5. If the logs are empty, report that no matching server-side logs are
+   retrievable; do not call that evidence of success.
 
-### Set a secret
+### Diagnose a known CLI build failure
 
-**User:** "Set `DATABASE_URL` in production."
+**User:** "I deployed with the CLI and the build failed. What went wrong?"
 
-Do not request the value and do not call `data_apps_tool`. State that MCP cannot
-create or update environment variables. Route the task to
-`webflow-cli:cloud`, using the installed CLI's help and a secret-safe input
-method.
+Explain that the client-side build output is not sent to Webflow. Inspect the
+deployment record and any available server-side deployment evidence, then use
+the originating CLI output for the local build failure. Do not infer the local
+failure from empty MCP logs.
 
-### Delete an environment variable
+### Retry a failed deployment
 
-**User:** "Delete `OLD_FEATURE_FLAG` from staging."
+**User:** "Retry the failed production deployment."
 
-1. Resolve the app and staging environment.
-2. Call `delete_variable` with its default dry run.
-3. If the preview confirms the key exists, disclose the exact target and stop
-   until the user types `confirm`.
-4. Call `delete_variable` with `dry_run: false` once, then report the result.
+1. Resolve the exact failed deployment.
+2. Preview `redeploy` with its default dry run.
+3. If supported, show the exact commit and require `confirm` before executing.
+4. If unsupported, make no mutation and route to a fresh CLI deployment.
+5. After execution, poll and report the new deployment's status.
 
-### Delete an app
+### Check or set configuration
 
-**User:** "Delete my staging Cloud app."
+**User:** "Is `DATABASE_URL` configured in production?"
 
-1. Resolve the exact app.
-2. Call `delete_app` as a dry run.
-3. Explain whether the operation archives or permanently deletes it.
-4. Stop until the user types `confirm`.
-5. Execute once and report the returned outcome.
+List variable metadata and report whether the key exists without exposing a
+value. If the user then asks to set it, route to `webflow-cli:cloud` and keep the
+value outside chat.
 
 ## Guidelines
 
-- Call `webflow_guide_tool` first.
-- Prefer MCP over CLI for supported operations on existing Cloud apps.
-- Use CLI only for app creation, building local source and deploying it to
-  Webflow Cloud, and environment-variable creation or updates.
+- Start from the user's operational question, not the action inventory.
+- Prefer observable evidence over assumptions about how an app was built.
+- Use mutation previews and returned errors as capability checks.
+- Use CLI for app creation, local builds and deployments, and variable writes.
 - Never use `data_apps_tool` for Designer variables.
-- Never mutate without an itemized preview and explicit `confirm`.
-- Never retry an uncertain mutation before reconciling observable state.
 - Never expose secrets from variables, logs, errors, or URLs.
-- Never conclude that a paginated resource is absent after one page.
-- Never fabricate IDs, deployment status, action arguments, or live URLs.
+- Never mutate without an exact preview and explicit `confirm`.
+- Never retry an uncertain mutation before reconciling observable state.
