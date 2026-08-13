@@ -269,7 +269,7 @@ Mouse-move is **standalone**. Target `wf:viewport` (`value: ""`) is recommended.
 - **`conditionalPlayback`** is an **array** of `{ type, behavior }` (and breakpoint form), not `{reducedMotion:"skip"}`. Example: `[{ "type": "prefers-reduced-motion", "behavior": "dont-animate" }]`.
 - **Load** omits trigger `target` and `pluginConfig`.
 - **Scroll** and **mouse-move** omit playback `control` / `delay` / `jump` / `speed`.
-- **Navbar / dropdown** need both `open` and `close` roles.
+- **Navbar / dropdown are not authorable through this API today.** They are flag-gated and rejected on create for every caller. Tell the user the trigger is unavailable rather than attempting a write.
 - **No GSAP position operators** (`+=`, `<`, `>`) in `timing.position`. Use a finite number (seconds) or `'500ms'`.
 - On reject: read the error, call `guide` again, do not invent fields.
 
