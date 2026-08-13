@@ -1,7 +1,7 @@
 {
   "name": "webflow-skills",
-  "version": "1.0.7",
-  "description": "Production-ready skills for managing Webflow CMS content, auditing site health, optimizing assets, building Designer pages and components, creating Code Components, running CLI workflows, and safely publishing changes.",
+  "version": "1.0.8",
+  "description": "Production-ready skills for managing Webflow CMS content, operating Webflow Cloud apps, auditing site health, optimizing assets, building Designer pages and components, creating Code Components, running CLI workflows, and safely publishing changes.",
   "author": {
     "name": "Webflow",
     "email": "developers@webflow.com",
@@ -29,6 +29,8 @@
     "cli",
     "devlink",
     "webflow-cloud",
+    "cloud-apps",
+    "deployments",
     "designer-extensions",
     "page-structure",
     "flowkit"
@@ -37,8 +39,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Webflow Skills",
-    "shortDescription": "Manage CMS, Designer, Code Components, and CLI workflows",
-    "longDescription": "Use Webflow Skills in Codex to manage CMS content, audit site health, optimize assets, check links, apply FlowKit naming, manage custom code, build and inspect Designer pages and components, create and deploy Code Components, run Webflow CLI workflows, and prepare safe publishing workflows with Webflow MCP.",
+    "shortDescription": "Manage CMS, Cloud apps, Designer, components, and CLI workflows",
+    "longDescription": "Use Webflow Skills in Codex to manage CMS content, inspect and operate Webflow Cloud apps, audit site health, optimize assets, check links, apply FlowKit naming, manage custom code, build and inspect Designer pages and components, create and deploy Code Components, run Webflow CLI workflows, and prepare safe publishing workflows with Webflow MCP.",
     "developerName": "Webflow",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
@@ -52,7 +54,8 @@
       "Inspect the current Designer page structure",
       "Build this Figma design in Webflow",
       "Create a new Webflow Code Component",
-      "Deploy a Webflow Cloud app"
+      "Deploy a Webflow Cloud app",
+      "Inspect the latest deployment for my Webflow Cloud app"
     ],
     "brandColor": "#146EF5",
     "composerIcon": "./assets/logo.svg",
