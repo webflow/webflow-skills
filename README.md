@@ -82,6 +82,7 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-mcp:custom-code-management | Manage tracking scripts and custom code safely |
 | webflow-mcp:flowkit-naming | Apply Webflow's official FlowKit CSS naming conventions |
 | webflow-mcp:designer-tools | Build and manage page structure, elements, components, and styles in Webflow Designer |
+| webflow-mcp:interactions | Create and edit IX3 interactions (click/hover/scroll/…) via MCP |
 | webflow-mcp:figma-to-webflow | Build pages, sections, components, or full sites from Figma designs using Figma MCP and Webflow MCP |
 
 ### Webflow CLI Skills
