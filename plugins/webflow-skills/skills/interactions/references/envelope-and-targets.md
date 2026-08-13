@@ -1,0 +1,128 @@
+<!-- Published from the Webflow monorepo: packages/systems/ix3/schema/agent-pack/references/envelope-and-targets.md
+     Do not edit here. Edit the source and re-publish. -->
+
+# Envelope, IDs, and targets
+
+Read this alongside the file for whichever trigger you are building.
+
+## Create envelope
+
+```js
+{
+  pageId,          // [REQUIRED] current page id
+  name,            // [REQUIRED] non-empty
+  scope,           // optional; defaults to { type: 'site' }
+  triggers,        // [REQUIRED] array
+  timelines,       // [REQUIRED] array
+  // timelineDefaults    optional
+  // conditionalPlayback optional — see conditional-playback.md
+}
+```
+
+Through MCP, `siteId` and `pageId` are **top-level tool arguments**, not fields
+inside the create action. The tool strips them before dispatch and supplies
+`pageId` from the execution context.
+
+## IDs
+
+| Field         | Rule                                                                    |
+| ------------- | ----------------------------------------------------------------------- |
+| Timeline `id` | `[OMIT]` on create — the host mints it. Never reuse a live timeline id. |
+| Action `id`   | `[REQUIRED]` on every action. A fresh unique string per action.         |
+| Trigger `id`  | `[OMIT]` — the field does not exist.                                    |
+
+`[REJECTED]` A missing action id fails schema validation before the guards run.
+Fragment: `actions.0.id: Required`
+
+## Scope
+
+```js
+{ type: 'site' }                                              // default
+{ type: 'pages', value: ['PAGE_OID', ...] }                   // >= 1 existing page id
+{ type: 'component', componentId: 'COMP_UUID' }               // all variants
+{ type: 'component', componentId: 'COMP_UUID', variants: [...] }
+```
+
+Component and variant existence is checked by the host, not by the pure guards,
+so a bad id fails at the responder rather than in schema validation.
+
+## Target shape
+
+Targets are object format on the create/update wire:
+
+```js
+{ extensionKey, value, filterContext? }
+```
+
+A nested `filterBy` is always a **2-tuple**, never an object:
+
+```js
+filterBy: ['wf:class', [STYLE_BLOCK_ID]];
+```
+
+`value` is `[REQUIRED]` even for target types that carry no value — send `''`.
+
+`[REJECTED]` Omitting it.
+Guard: `findTargetValuePresenceError` (via the target walk) · fragment:
+`target.value is required`
+
+## Which target keys are legal where
+
+The full matrix is generated — see
+[`capabilities.generated.md`](capabilities.generated.md) → Targets.
+The rules behind it:
+
+`[REJECTED]` `wf:id` in any context. Guard: `findDisallowedTargetKeyError` ·
+fragment: `is not offered by the Designer (shouldShow: false in all contexts)`
+
+`[REJECTED]` Action-only keys (`wf:trigger-only`, `wf:trigger-only-parent`,
+`wf:any-element`) used as a trigger target, or as a Filter-by on a trigger-side
+target. They bind against no trigger element and never fire.
+Fragment: `is only valid on timeline actions`
+
+`[REJECTED]` `wf:trigger-only-parent` as a base target type. It is Filter-by only.
+
+`[REJECTED]` A key the Filter-by picker does not offer, used inside `filterBy`.
+Guard: `findDisallowedTargetKeyError` with `asFilterBy` · fragment:
+`is not offered by the Designer's Filter-by picker`
+
+`[REJECTED]` An active `filterContext` on `wf:trigger-only` or `wf:inst` — the
+Designer hides the Filter UI for those base types.
+Fragment: `does not support Filter; the Designer hides Filter UI for this target type`
+
+A **stamped** `filterContext` with `relationship: 'none'` is accepted on those
+keys. Only a filter with a real relationship is refused. This distinction matters
+on read-then-write flows, where the stored value already carries the stamp.
+
+`[REJECTED]` `wf:any-element` with `filterContext.relationship === 'none'`.
+Guard: `findAnyElementFilterError`
+
+`[REJECTED]` `firstMatchOnly: true` together with `relationship: 'none'`.
+
+## The stamped filterContext
+
+When a caller omits `filterContext` on an element-scoped target, the host stamps
+the Designer's placeholder:
+
+```js
+{ relationship: 'none', filterBy: ['wf:class', []], firstMatchOnly: false }
+```
+
+Prefer omitting it and letting the host stamp, rather than composing it yourself.
+
+## Class targets
+
+Style-block UUIDs from `webflow.createStyle` / `getStyleByName` are preferred over
+class-name slugs — they round-trip through the panel reliably. Class name strings
+are accepted.
+
+## Value shapes per target type
+
+`validateTargetValue` enforces a per-key value shape shared with the DE
+responders. It rejects, for example, a string where an id array is expected.
+Fragment varies by key; the message names the expected shape.
+
+## Size
+
+Every target value, filter value, and condition value shares one interaction-wide
+byte and node budget. See [`limits-and-budgets.md`](limits-and-budgets.md).

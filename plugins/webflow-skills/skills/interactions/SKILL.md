@@ -43,10 +43,38 @@ These tools are **not on stable MCP**.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
 4. **Confirm the gate**: beta MCP + `ff-ix3-interaction-apis` + Bridge connected. If `data_interactions_tool` is unregistered, stop and tell the user (stable MCP, flag off, or post-#117284 WFS built lane).
 
-### Phase 2: Guide
+### Phase 2: Read the contract for what you are building
 
-5. Call `data_interactions_tool` action `guide` (same top-level `siteId` + `pageId`) **or** read `webflow://guides/interactions`
-6. If neither exists yet, use **Guidelines** below. Do not invent `+=` / `<` / `>` timing.position strings or `{reducedMotion:"skip"}`
+5. **Read the reference file for your trigger, plus `references/envelope-and-targets.md`.** That pair is enough to author any single-trigger interaction. See the Reference map below. Do this before your first write on anything beyond the five inline examples in this file.
+6. Optionally also call `data_interactions_tool` action `guide`, or read `webflow://guides/interactions`, when those exist — they serve the same content.
+7. Do not invent `+=` / `<` / `>` `timing.position` strings or `{reducedMotion:"skip"}`.
+
+#### Reference map
+
+| User asks for | Read |
+| --- | --- |
+| Click | [references/trigger-click.md](references/trigger-click.md) |
+| Hover, mouse enter/leave | [references/trigger-hover.md](references/trigger-hover.md) |
+| Page load | [references/trigger-load.md](references/trigger-load.md) |
+| Scroll, scrub, parallax | [references/trigger-scroll.md](references/trigger-scroll.md) |
+| Mouse move, cursor follow | [references/trigger-mouse-move.md](references/trigger-mouse-move.md) |
+| Custom JS event | [references/trigger-custom.md](references/trigger-custom.md) |
+| Navbar, dropdown, conditions, Rive, variables | [references/gated-capabilities.md](references/gated-capabilities.md) |
+| Envelope, IDs, scope, targets, filters | [references/envelope-and-targets.md](references/envelope-and-targets.md) |
+| Properties, values, `tt`, timing, splitText | [references/actions-and-properties.md](references/actions-and-properties.md) |
+| Roles, groups, percent canvas | [references/timelines-and-groups.md](references/timelines-and-groups.md) |
+| Reduced motion, breakpoint playback | [references/conditional-playback.md](references/conditional-playback.md) |
+| Editing an existing interaction | [references/updating-interactions.md](references/updating-interactions.md) |
+| Size and count limits | [references/limits-and-budgets.md](references/limits-and-budgets.md) |
+| A write succeeded but the user cannot edit it | [references/panel-traps.md](references/panel-traps.md) |
+| Decoding a rejection message | [references/rejects-index.md](references/rejects-index.md) |
+| Which triggers and properties exist at all | [references/capabilities.generated.md](references/capabilities.generated.md) |
+
+Start at [references/index.md](references/index.md) if you are unsure. It also
+explains the enforcement tags — in particular `[PANEL-TRAP]`, which means the
+write will succeed but leave the user with something they cannot edit in the
+Designer, and `[LEGACY-OK-ON-UPDATE]`, which means you must pass a stored value
+through untouched rather than "fixing" it.
 
 ### Phase 3: Plan (before any write)
 
