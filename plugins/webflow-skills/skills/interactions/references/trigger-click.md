@@ -46,7 +46,11 @@ Guard: `findTriggerControlAllowedError`
 
 ## Rejected
 
-`[REJECTED]` No target. Guard: `findTriggerTargetContextError`
+`[REJECTED]` No target. Enforced by the missing-target branch in
+`findTriggerInvariantError`, which checks `TRIGGER_REQUIRES_TARGET_KEYS` when a
+trigger arrives with no target at all. `findTriggerTargetContextError` is a
+different check: it only inspects targets that are already present.
+Fragment: `requires a target element`
 
 `[REJECTED]` Target `wf:body` or `wf:viewport` — those are trigger-context keys
 for other triggers, not click.

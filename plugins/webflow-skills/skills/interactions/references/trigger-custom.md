@@ -45,8 +45,11 @@ Webflow.require('ix3').emit('my-event');
 
 ## Rejected
 
-`[REJECTED]` Any target other than `wf:body`.
-Guard: `findTriggerTargetContextError` · fragment: `must use the hidden "wf:body"`
+`[REJECTED]` Any target other than `wf:body`, **and** omitting the target
+entirely. Both produce the same message from different places: a wrong key is
+caught by `findTriggerTargetContextError`, an absent target by the missing-target
+branch in `findTriggerInvariantError`.
+Fragment: `must use the hidden "wf:body"`
 
 `[REJECTED]` Action targets `wf:trigger-only` or `wf:trigger-only-parent`. There is
 no trigger element to bind against.

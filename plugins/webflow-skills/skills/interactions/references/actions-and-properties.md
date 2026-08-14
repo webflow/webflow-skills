@@ -113,8 +113,18 @@ with an absolute time.
 Guard: `findActionTimingPositionError` · fragment:
 `is not a start time the Designer can author`
 
-`[REJECTED]` at the guard: `Infinity` or `NaN`. Zod accepts them as numbers; the
-Start field only writes finite seconds.
+These two split across the layers as well, despite both being non-finite:
+
+`[REJECTED]` at schema: `NaN`. Zod's `z.number()` refuses it during parsing, so it
+never reaches the guard. Fragment: `Invalid input`
+
+`[REJECTED]` at the guard: `Infinity` and `-Infinity`. Zod accepts both as numbers
+because the position schema does not apply `.finite()`, so the guard is what stops
+them. The Start field only writes finite seconds.
+Guard: `findActionTimingPositionError`
+
+The guard tests `!Number.isFinite`, which covers `NaN` too, but that branch is
+unreachable through a normal parse and is defensive only.
 
 If you are matching an error, check which layer produced it. A schema failure names
 the expected format; the guard names the Designer.

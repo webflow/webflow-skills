@@ -87,4 +87,9 @@ Guard once landed: `findHoverConfigModelError` (scoped allowance on the update p
 
 ## Rejected
 
-Same target and playback rejects as [`trigger-click.md`](trigger-click.md).
+`[REJECTED]` No target. Hover is in `TRIGGER_REQUIRES_TARGET_KEYS`, so the
+missing-target branch in `findTriggerInvariantError` refuses it.
+Fragment: `requires a target element`
+
+Otherwise the same target and playback rejects as
+[`trigger-click.md`](trigger-click.md).
