@@ -95,15 +95,29 @@ The panel treats `position` as an absolute start time. It writes either a number
 of seconds or an `"Nms"` string, depending on the unit toggle, and Reset clears
 it. There is no operator UI.
 
-`[REJECTED]` GSAP alignment and relative operators — `<`, `>`, `+=0.5`, `<+=1` —
-and malformed strings like `'1.5s'` or a bare `'500'`. The schema accepts them but
-the panel can neither author nor display them: the Start field renders empty and
-the next edit silently overwrites the operator with an absolute time.
+Two layers refuse different things here, and they return different errors.
+
+**Schema first.** `timelinePositionSchema` accepts a number, an `"Nms"` string, a
+GSAP alignment operator (`<`, `>`), a relative operator (`+=0.5`), or an alignment
+with offset (`<+=1.5`). Anything else fails before a guard runs.
+
+`[REJECTED]` at schema: `'1.5s'`, a bare `'500'`, or any other string form.
+Fragment: `Absolute position must be a number or milliseconds string`
+
+**Then the guard.** The operator forms the schema allows are the ones the panel
+cannot author or display: `getTimelineEditorInputValue` returns null for them, so
+the Start field renders empty and the next edit silently overwrites the operator
+with an absolute time.
+
+`[REJECTED]` at the guard: `<`, `>`, `+=0.5`, `<+=1`, and the other operator forms.
 Guard: `findActionTimingPositionError` · fragment:
 `is not a start time the Designer can author`
 
-`[REJECTED]` `Infinity` or `NaN`. Zod accepts them as numbers; the Start field only
-writes finite seconds.
+`[REJECTED]` at the guard: `Infinity` or `NaN`. Zod accepts them as numbers; the
+Start field only writes finite seconds.
+
+If you are matching an error, check which layer produced it. A schema failure names
+the expected format; the guard names the Designer.
 
 On a percent canvas the same field is authored as a percent — see
 [`timelines-and-groups.md`](timelines-and-groups.md).
@@ -114,7 +128,15 @@ The Mask dropdown offers "None" plus the option matching the split type, and
 choosing None omits `mask` rather than storing a value. So the only object forms
 the panel writes are `{type}` or `{type, mask}` with the two equal.
 
-`[REJECTED]` A mask that does not match the type, or `mask: 'none'`.
+Two layers again.
+
+`[REJECTED]` at schema: `mask: 'none'`, or any value outside the mask enum.
+`splitTextMaskSchema` is `z.enum(['chars', 'words', 'lines']).optional()`, so
+`'none'` never reaches the guard. Choosing None in the panel omits `mask` rather
+than storing a value, which is why there is no `'none'` member. **Omit the key**
+instead.
+
+`[REJECTED]` at the guard: an otherwise valid mask that differs from `type`.
 Guard: `findActionSplitTextError` · fragment: `must match`
 
 `[PENDING]` The legacy string form (`splitText: 'chars'`) is **accepted today**, on

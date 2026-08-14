@@ -37,7 +37,7 @@ first, so the target rule could not be isolated.
 | `wf:custom` | yes | `standard` | no | required, specific key | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
 | `wf:dropdown` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
 | `wf:focus` | **no** | `standard` | no | **required** | — | n/a — not authorable |
-| `wf:hover` | yes | `standard` | no | **required** | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
+| `wf:hover` | yes | `standard` | no | **required** | conditional: `mouseEnter`, `mouseLeave` when `multiTimeline: true` | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
 | `wf:load` | yes | `load` | no | **must omit** | — | `none`, `play` |
 | `wf:mouse-move` | yes | `continuous` | yes | optional | `interval`, `mouseX`, `mouseY` | n/a — playback fields rejected |
 | `wf:navbar` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
@@ -112,4 +112,3 @@ Per-interaction count caps (timelines, actions, triggers, targets) are
 applied at the page-automation tool boundary rather than in this schema, so
 they are not exported and cannot be rendered here. See
 `references/limits-and-budgets.md`.
-

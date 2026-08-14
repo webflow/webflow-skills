@@ -53,6 +53,28 @@ timelines: [{canvasDuration: 1, actions: [ACTION]}],  // no role
 With scrub on, action `timing` is authored as a percent of the canvas rather than
 in seconds. See [`timelines-and-groups.md`](timelines-and-groups.md).
 
+### `scrub` takes a number, not a boolean
+
+`scrub: z.number().nonnegative().nullable().optional()`.
+
+| Form               | Meaning                       |
+| ------------------ | ----------------------------- |
+| omitted, or `null` | no scrubbing                  |
+| `0`                | 1:1 scrubbing, no smoothing   |
+| a positive number  | smoothing duration in seconds |
+
+`[REJECTED]` at schema: `scrub: true` or `scrub: false`. A boolean is the shape
+GSAP takes and the shape the panel's toggle suggests, so it is an easy payload to
+reach for, but the schema refuses it before any guard runs. Use `0` to enable
+without smoothing and omit the key to disable.
+
+The JSDoc above the field still describes the old boolean behavior (`true` for 1:1,
+`false` for off). The schema is the contract; that comment is stale.
+
+`scrub != null` is also the predicate that makes a timeline scroll-scrub for
+`findPercentTimelineError` and `findScrollScrubActionTimingError`, so `scrub: 0`
+counts as scrubbing while an omitted `scrub` does not.
+
 ## What the panel writes
 
 `IX3ScrollTriggerConfig` authors `start`, `end`, `scrub`, `showMarkers`, `clamp`,
