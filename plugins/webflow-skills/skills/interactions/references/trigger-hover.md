@@ -50,27 +50,77 @@ Guard: `findTimelineRoleError`
 }
 ```
 
-## Accept — enter and leave
+## Accept — separate hover out
+
+Two shapes reach the runtime here and they are not equivalent. **Prefer the split
+form**, because it is the one the panel produces and the one the panel can edit
+afterwards.
+
+### Split form — what the panel writes
+
+"Add separate hover out" dispatches a trigger split: the panel writes **two**
+`wf:hover` triggers distinguished by `pluginConfig.eventMode`, each pinned to an
+action group, with `multiTimeline: false` on both.
 
 ```js
 {
   pageId,
   name: 'Hover in/out',
-  triggers: [{
-    extensionKey: 'wf:hover',
-    config: {pluginConfig: {multiTimeline: true}},
-    target: {extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]},
-  }],
+  triggers: [
+    {
+      extensionKey: 'wf:hover',
+      config: {
+        control: 'play',
+        assignedGroupId: GROUP_IN,
+        pluginConfig: {multiTimeline: false, eventMode: 'enter'},
+      },
+      target: {extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]},
+    },
+    {
+      extensionKey: 'wf:hover',
+      config: {
+        control: 'play',
+        assignedGroupId: GROUP_OUT,
+        pluginConfig: {multiTimeline: false, eventMode: 'leave'},
+      },
+      target: {extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]},
+    },
+  ],
   timelines: [
-    {triggerMetadata: {role: 'mouseEnter'}, actions: [ACTION]},
-    {triggerMetadata: {role: 'mouseLeave'}, actions: [ACTION2]},
+    {groupId: GROUP_IN, name: 'Hover in actions', actions: [ACTION]},
+    {groupId: GROUP_OUT, name: 'Hover out actions', actions: [ACTION2]},
   ],
 }
 ```
 
-Roles are exactly `'mouseEnter'` and `'mouseLeave'`, and each must be unique across
-timelines. Both are shown here because a hover in and out is the common request,
-not because the guard demands the pair. Guard: `findTimelineRoleError`
+`control: 'play'` is not optional once two groups exist — see
+`findGroupedTriggerControlError` in
+[`timelines-and-groups.md`](timelines-and-groups.md).
+
+### Role form — accepted, but leaves groups the panel cannot remove
+
+```js
+triggers: [{
+  extensionKey: 'wf:hover',
+  config: {pluginConfig: {multiTimeline: true}},
+  target: {extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]},
+}],
+timelines: [
+  {triggerMetadata: {role: 'mouseEnter'}, actions: [ACTION]},
+  {triggerMetadata: {role: 'mouseLeave'}, actions: [ACTION2]},
+],
+```
+
+`[PANEL-TRAP]` The host accepts this and the runtime honors it, but the panel never
+writes it for hover and cannot fully edit the result. The remove control keys off
+`groupId` (absent here) or a `groupRoles` config, and hover declares `triggerSplit`
+instead of `groupRoles` — so neither action group offers a remove button.
+
+Use it only to read or preserve data that already stores it. Do not author it for a
+new hover in/out.
+
+Roles are exactly `'mouseEnter'` and `'mouseLeave'` and must be unique per timeline.
+Guard: `findTimelineRoleError`
 
 ## Legacy pass-through
 

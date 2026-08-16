@@ -33,6 +33,39 @@ refused for a value that has been stored for months.
 
 **Prefer the narrowest possible update.** To rename, send `name` alone.
 
+## Cross-field checks see the half you did not send
+
+The rule above is about **field-scoped** guards. A second set of checks is
+cross-field, and they run whenever **either** `triggers` or `timelines` is
+replaced, against the stored counterpart for whichever one you omitted:
+
+| Guard                              | What it compares                                               |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `findActionTargetContextError`     | trigger keys against action targets                            |
+| `findTimelineRoleError`            | trigger role routing against timeline roles                    |
+| `findPercentTimelineError`         | scrub/continuous triggers against `canvasDuration`             |
+| `findMouseFollowContextError`      | mouse-move triggers against `wf:mouse-follow` actions          |
+| `findScrollScrubActionTimingError` | scrub state against action `timing.repeat` / `yoyo`            |
+| `findGroupedTriggerControlError`   | trigger `control` against the number of grouped timelines      |
+| `findIntervalMetadataTriggerError` | interval metadata against the presence of a mouse-move trigger |
+
+The consequence: **a narrow update can be refused for something you never sent.**
+Replacing only `triggers` runs these against the stored timelines, and replacing
+only `timelines` runs them against the stored triggers.
+
+Two concrete cases:
+
+- Swapping a click trigger's `control` away from `play` on an interaction that
+  already stores two grouped timelines fails `findGroupedTriggerControlError`, even
+  though you sent no timelines. The guard is deliberately wired to live timelines so
+  a trigger-only update cannot strand a grouped interaction on a non-Play control.
+- Replacing `timelines` with roleless ones on an interaction whose stored trigger is
+  role-routed fails `findTimelineRoleError`, even though you sent no triggers.
+
+So "omitted fields are not validated" holds for the field-scoped guards only. If you
+touch either half of the trigger/timeline pair, expect the other half to be
+re-examined as it currently stands in storage.
+
 ## Do not repair legacy data
 
 Several shapes are refused on create but deliberately forwarded on update. If you

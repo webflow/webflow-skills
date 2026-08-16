@@ -73,8 +73,17 @@ Guard: `findGroupedTriggerControlError` · fragment:
 See [`timelines-and-groups.md`](timelines-and-groups.md) for what counts as a
 group.
 
-## Note
+## Adaptive Easing writes a flip-ease control
 
-`reverseFlipEase` is in the accepted control set but the panel filters it out of
-the default dropdown as a guard against stale-CDN GSAP versions that silently
-ignore the `easeReverse` tween var. Prefer not to author it.
+`reverseFlipEase` and `togglePlayReverseFlipEase` are values the panel authors, not
+values to avoid. Two controls write the one field: the Control dropdown renders
+`reverse` for a stored `reverseFlipEase`, and the Adaptive Easing toggle is what
+turns `reverse` into `reverseFlipEase`.
+
+So a stored flip-ease variant is a real authored state. Preserve it on a
+read-then-write rather than normalizing it back to the base control, which would
+silently turn Adaptive Easing off.
+
+The separate point about `STANDARD_TRIGGER_ALLOWED_CONTROLS` being the opt-in
+complete set rather than the default dropdown only matters where a surface narrows
+the allowed set and drops the flip variants, as conditional outcomes do.

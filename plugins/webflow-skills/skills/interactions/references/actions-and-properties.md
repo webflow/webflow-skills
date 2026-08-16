@@ -55,9 +55,12 @@ The message suggests the right namespace when you put a transform property under
 
 Note `rotation`, not `rotate`.
 
-Plugin keys without a deep property list (`wf:lottie`, `wf:spline`,
-`wf:mouse-follow`) skip the property-name check entirely — the namespace gate
-handles unknown extension keys instead.
+`wf:lottie`, `wf:spline`, and `wf:mouse-follow` now carry their own property
+allowlists and are checked like any other key. They are in the generated table with
+their supported properties; do not assume a plugin namespace skips validation.
+
+A key with no entry in the table at all still skips the property-name check, and the
+namespace gate handles unknown extension keys instead.
 
 ## Value shapes
 

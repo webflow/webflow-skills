@@ -29,6 +29,12 @@ single constant, because the policy is spread across several guards.
 (the trigger reference names it). `see reference` means another guard fired
 first, so the target rule could not be isolated.
 
+`optional to validate, required to fire` is the case worth reading twice. The
+probe only reports what validation refuses. A continuous trigger binds per
+resolved element, so with no target the element list is empty and the handler
+is never invoked: the interaction saves, reports success, and does nothing.
+Send a target such as `wf:viewport`.
+
 | Trigger | Authorable | controlType | Standalone | Target | Timeline roles | Allowed `control` |
 | --- | --- | --- | --- | --- | --- | --- |
 | `wf:blur` | **no** | `standard` | no | **required** | — | n/a — not authorable |
@@ -39,7 +45,7 @@ first, so the target rule could not be isolated.
 | `wf:focus` | **no** | `standard` | no | **required** | — | n/a — not authorable |
 | `wf:hover` | yes | `standard` | no | **required** | conditional: `mouseEnter`, `mouseLeave` when `multiTimeline: true` | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
 | `wf:load` | yes | `load` | no | **must omit** | — | `none`, `play` |
-| `wf:mouse-move` | yes | `continuous` | yes | optional | `interval`, `mouseX`, `mouseY` | n/a — playback fields rejected |
+| `wf:mouse-move` | yes | `continuous` | yes | optional to validate, **required to fire** | `interval`, `mouseX`, `mouseY` | n/a — playback fields rejected |
 | `wf:navbar` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
 | `wf:scroll` | yes | `scroll` | yes | **required** | — | n/a — playback fields rejected |
 
@@ -60,6 +66,9 @@ Plugin keys absent from the property table skip the property-name check.
 | Extension key | Authorable | Properties | Non-animatable (Set only) |
 | --- | --- | --- | --- |
 | `wf:class` | yes | `class` | `class` |
+| `wf:lottie` | yes | `lottie`, `manualDuration` | — |
+| `wf:mouse-follow` | yes | `anchor`, `axis`, `followMode`, `groupId`, `leaveBehavior`, `onEnter`, `syncedActionId` | — |
+| `wf:spline` | yes | `animatingState`, `objectId`, `spline` | — |
 | `wf:style` | yes | `backgroundColor`, `borderColor`, `color`, `overflow`, `pointerEvents`, `position`, `zIndex` | `overflow`, `pointerEvents`, `position`, `zIndex` |
 | `wf:transform` | yes | `autoAlpha`, `display`, `height`, `opacity`, `rotation`, `rotationX`, `rotationY`, `scale`, `scaleX`, `scaleY`, `skewX`, `skewY`, `transformOrigin`, `transformPerspective`, `width`, `x`, `xPercent`, `y`, `yPercent`, `z` | `display` |
 
@@ -68,6 +77,9 @@ Plugin keys absent from the property table skip the property-name check.
 | Extension key | Random array | Random min/max | Additive |
 | --- | --- | --- | --- |
 | `wf:class` | — | — | — |
+| `wf:lottie` | — | — | — |
+| `wf:mouse-follow` | — | — | — |
+| `wf:spline` | — | — | — |
 | `wf:style` | `backgroundColor`, `borderColor`, `color` | — | — |
 | `wf:transform` | `autoAlpha`, `height`, `opacity`, `rotation`, `rotationX`, `rotationY`, `scale`, `scaleX`, `scaleY`, `skewX`, `skewY`, `transformPerspective`, `width`, `x`, `xPercent`, `y`, `yPercent`, `z` | `autoAlpha`, `height`, `opacity`, `rotation`, `rotationX`, `rotationY`, `scale`, `scaleX`, `scaleY`, `skewX`, `skewY`, `transformPerspective`, `width`, `x`, `xPercent`, `y`, `yPercent`, `z` | `autoAlpha`, `height`, `opacity`, `rotation`, `rotationX`, `rotationY`, `scale`, `scaleX`, `scaleY`, `skewX`, `skewY`, `transformPerspective`, `width`, `x`, `xPercent`, `y`, `yPercent`, `z` |
 
@@ -96,10 +108,20 @@ rejected on any trigger whose playback editor is visible.
 | `jump` | `none`, `restart`, `resume`, `togglePlayReverse`, `togglePlayReverseFlipEase` |
 | `speed` | `none`, `pause`, `stop` |
 
-Note: `STANDARD_TRIGGER_ALLOWED_CONTROLS` is the opt-in complete set, not the
-panel's default dropdown. `reverseFlipEase` is accepted by the write path but
-the panel filters it out of the default options as a guard against stale-CDN
-GSAP versions, so prefer not to author it.
+### The flip-ease variants are real stored values
+
+The Control dropdown and the Adaptive Easing toggle are two separate controls
+writing one field. The dropdown displays `reverse` for a stored
+`reverseFlipEase` (`controlToDropdownValue`), and the Easing toggle is what
+turns `reverse` into `reverseFlipEase`. So the panel does author
+`reverseFlipEase` and `togglePlayReverseFlipEase` on click, hover, and custom.
+Preserve them; do not normalize a stored flip-ease variant back to its base
+control on a read-then-write.
+
+`STANDARD_TRIGGER_ALLOWED_CONTROLS` is the opt-in complete set rather than the
+default dropdown contents. That distinction only matters where a surface
+narrows the allowed set and omits the flip variants, which is what
+`CONDITIONAL_OUTCOME_CONTROLS` above does.
 
 ## Numeric bounds
 

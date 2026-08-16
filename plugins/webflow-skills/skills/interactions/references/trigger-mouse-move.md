@@ -5,13 +5,40 @@
 
 Read with [`envelope-and-targets.md`](envelope-and-targets.md).
 
-|             |                                                                                         |
-| ----------- | --------------------------------------------------------------------------------------- |
-| controlType | `continuous` (omit and the host stamps it)                                              |
-| Standalone  | **Yes** — must be the only trigger                                                      |
-| Target      | `wf:viewport` with `value: ''` recommended; class/selector/attribute/inst also accepted |
-| Roles       | `[REQUIRED]` on every timeline, unique                                                  |
-| Playback    | `[OMIT]` all of `control`, `delay`, `jump`, `speed`                                     |
+|             |                                                                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| controlType | `continuous` (omit and the host stamps it)                                                                                                      |
+| Standalone  | **Yes** — must be the only trigger                                                                                                              |
+| Target      | `[REQUIRED]` in practice — validation accepts none, the runtime binds nothing. `wf:viewport` with `value: ''`, or class/selector/attribute/inst |
+| Roles       | `[REQUIRED]` on every timeline, unique                                                                                                          |
+| Playback    | `[OMIT]` all of `control`, `delay`, `jump`, `speed`                                                                                             |
+
+## Send a target even though validation does not demand one
+
+Mouse-move is absent from `TRIGGER_REQUIRES_TARGET_KEYS`, so a targetless payload
+passes every guard and saves cleanly. It then never fires.
+
+`bindTrigger` only resolves elements when a target is present:
+
+```ts
+const targetSchema = trigger[2];
+let elements: HTMLElement[] = [];
+if (targetSchema) {
+  elements = this.resolveTargets(targetSchema, {}, interaction);
+}
+```
+
+`ContinuousTriggerStrategy.bind` iterates that list, so an empty one means the
+mouse-move handler is never invoked. There is no fallback to the viewport, body, or
+document: `wf:viewport` binds to `window` only because the handler checks for that
+extension key explicitly.
+
+The same dead outcome applies when a target is present but resolves to nothing, for
+example `wf:class` with an empty value.
+
+**Send `{extensionKey: 'wf:viewport', value: ''}` unless you specifically want to
+bind to elements.** Nothing will tell you otherwise: the write succeeds and the
+interaction is silently inert.
 
 ## Roles
 
