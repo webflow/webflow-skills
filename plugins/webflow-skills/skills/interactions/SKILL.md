@@ -41,7 +41,7 @@ These tools are **not on stable MCP**.
 1. **Call `webflow_guide_tool` first** — always the first MCP tool call
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
-4. **Confirm the gate**: beta MCP + `ff-ix3-interaction-apis` + Bridge connected. If `data_interactions_tool` is unregistered, stop and tell the user — the likely causes are the stable MCP endpoint instead of beta, the flag being off for that workspace, or no Designer Bridge session. Do not work around it.
+4. **Confirm the gate**: beta MCP endpoint, **both** `ff-aio-150-page-automation` (base page-automation gate) and `ff-ix3-interaction-apis` (checked in addition), and a connected Designer Bridge session. If `data_interactions_tool` is unregistered, stop and tell the user — the likely causes are the stable MCP endpoint instead of beta, one of the two gates being off for that identity, or no Bridge session. Do not work around it. Note `ff-ix3-interaction-de-api` is a separate flag for the Designer Extension iframe surface and is not what this tool needs.
 
 ### Phase 2: Read the contract for what you are building
 
