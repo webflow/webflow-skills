@@ -5,6 +5,14 @@
 
 ## Roles
 
+`triggerMetadata` is a **timeline** field. It sits next to `actions`, never on
+the trigger. A timeline that is only `{actions}` has no role.
+
+Triggers that route by role (`wf:mouse-move`, hover with `multiTimeline`, and the
+gated navbar/dropdown pair) refuse a missing role. Flattening a timeline down to
+its actions — or a schema that keeps `actions` and drops the other timeline keys —
+drops the role, and those writes fail with `requires a triggerMetadata.role`.
+
 A timeline's `triggerMetadata.role` routes it for triggers that drive more than
 one timeline. Which roles are valid per trigger is generated:
 [`capabilities.generated.md`](capabilities.generated.md) → Triggers.

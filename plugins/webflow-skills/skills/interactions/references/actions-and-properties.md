@@ -29,6 +29,15 @@ This file covers the rules behind those tables.
 | `2`  | FromTo  |
 | `3`  | Set     |
 
+Omit `tt` and the runtime treats it as To (`0`). `presetId` is optional — omit it
+on a new action; the host does not require one.
+
+From (`1`) and FromTo (`2`) apply their starting values as soon as the timeline is
+built (GSAP immediate-render). The element sits at the from-state until the
+trigger plays. A From fade of opacity `0%` → `100%` looks missing on the canvas
+and on the published page until click, hover, or load. If the element should be
+visible at rest and animate on trigger, author a To (`tt: 0` or omit).
+
 Non-animatable properties are only valid inside a Set action. The Designer always
 emits `tt: 3` for them.
 
@@ -91,6 +100,28 @@ Fragment: `random-array must have between`
 
 `[REJECTED]` A wrapper carrying a known `type` discriminator that fails its
 structural guard. Fragment: `has a malformed`
+
+## `timing.duration` — seconds, not milliseconds
+
+`secondsOrMsSchema` stores a consistent number of **seconds**. Two input forms:
+
+- A number is already seconds. `0.4` is four hundred milliseconds. `400` is four
+  hundred seconds.
+- A `"Nms"` string is converted: `"400ms"` becomes `0.4`.
+
+The built-in presets use `0.3`. The panel's unit toggle writes either a number of
+seconds or an `"Nms"` string; it never writes a millisecond number. The write
+succeeds either way — nothing will tell you that `duration: 400` is six minutes
+forty seconds.
+
+`[REJECTED]` at schema: `'1.5s'`, a bare `'400'`, or any other string form.
+Fragment: `Milliseconds must be in format "123ms" or "123.45ms"`
+
+`timing.delay` is a number of seconds only (`z.number()`), not this union. Do not
+send `"400ms"` there.
+
+On a percent canvas the same field is authored as a percent — see
+[`timelines-and-groups.md`](timelines-and-groups.md).
 
 ## `timing.position` — the Start field
 
@@ -162,6 +193,13 @@ refused outright, so one stored string cannot authorize a second row claiming th
 same id, and changing the value re-enters the reject.
 
 Pass a stored string through untouched. Author the object form for anything new.
+
+SplitText wraps the **target element's own text nodes**. Point it at a Heading,
+Paragraph, or Text that already contains the copy. A Div / Block with no text —
+or a container whose copy lives on a child — saves cleanly and then splits
+nothing. Creating a Block and trying to `set_text` onto it is the wrong fix;
+create or select a text element instead. The write path does not check element
+type.
 
 ## Panel traps
 

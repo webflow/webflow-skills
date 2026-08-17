@@ -47,7 +47,7 @@ These tools are **not on stable MCP**.
 
 5. **Read the reference file for your trigger, plus `references/envelope-and-targets.md`.** That pair is enough to author any single-trigger interaction. See the Reference map below. Do this before your first write on anything beyond the five inline examples in this file.
 6. Optionally also call `data_interactions_tool` action `guide`, or read `webflow://guides/interactions`, when those exist — they serve the same content.
-7. Do not invent `+=` / `<` / `>` `timing.position` strings or `{reducedMotion:"skip"}`.
+7. Do not invent `+=` / `<` / `>` `timing.position` strings or `{reducedMotion:"skip"}`. A bare number for `timing.duration` is seconds (`0.4`, not `400`).
 
 #### Reference map
 
@@ -299,6 +299,10 @@ Mouse-move is **standalone**. Target `wf:viewport` (`value: ""`) is recommended.
 - **Scroll** and **mouse-move** omit playback `control` / `delay` / `jump` / `speed`.
 - **Navbar / dropdown are not authorable through this API today.** They are flag-gated and rejected on create for every caller. Tell the user the trigger is unavailable rather than attempting a write.
 - **No GSAP position operators** (`+=`, `<`, `>`) in `timing.position`. Use a finite number (seconds) or `'500ms'`.
+- **Duration is seconds.** `timing.duration: 0.4` is 400ms. `400` is 400 seconds. Use `"400ms"` if you think in milliseconds.
+- **From / FromTo (`tt: 1` / `2`) sit at the from-state until the trigger fires.** Prefer To (`tt: 0` or omit) when the element should be visible at rest.
+- **`splitText` needs a Heading, Paragraph, or Text that already has copy**, not a Div / Block.
+- **Roles live on `timelines[].triggerMetadata`**, not on the trigger. Mouse-move needs a unique `mouseX` / `mouseY` / `interval` per timeline.
 - On reject: read the error, call `guide` again, do not invent fields.
 
 ## Install / gate
