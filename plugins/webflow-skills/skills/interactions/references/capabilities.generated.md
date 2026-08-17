@@ -37,16 +37,16 @@ Send a target such as `wf:viewport`.
 
 | Trigger | Authorable | controlType | Standalone | Target | Timeline roles | Allowed `control` |
 | --- | --- | --- | --- | --- | --- | --- |
-| `wf:blur` | **no** | `standard` | no | **required** | — | n/a — not authorable |
-| `wf:change` | **no** | `standard` | no | **required** | — | n/a — not authorable |
+| `wf:blur` | **no** | `standard` | no | n/a — not authorable | — | n/a — not authorable |
+| `wf:change` | **no** | `standard` | no | n/a — not authorable | — | n/a — not authorable |
 | `wf:click` | yes | `standard` | no | **required** | — | each: `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`<br>restricted occurrence: `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop` |
 | `wf:custom` | yes | `standard` | no | required, specific key | — | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
-| `wf:dropdown` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
-| `wf:focus` | **no** | `standard` | no | **required** | — | n/a — not authorable |
+| `wf:dropdown` | **no** | `standard` | yes | n/a — not authorable | `close`, `open` | n/a — not authorable |
+| `wf:focus` | **no** | `standard` | no | n/a — not authorable | — | n/a — not authorable |
 | `wf:hover` | yes | `standard` | no | **required** | conditional: `mouseEnter`, `mouseLeave` when `multiTimeline: true` | standard set (`none`, `pause`, `play`, `restart`, `resume`, `reverse`, `reverseFlipEase`, `stop`, `togglePlayReverse`, `togglePlayReverseFlipEase`) |
 | `wf:load` | yes | `load` | no | **must omit** | — | `none`, `play` |
 | `wf:mouse-move` | yes | `continuous` | yes | optional to validate, **required to fire** | `interval`, `mouseX`, `mouseY` | n/a — playback fields rejected |
-| `wf:navbar` | **no** | `standard` | yes | optional | `close`, `open` | n/a — not authorable |
+| `wf:navbar` | **no** | `standard` | yes | n/a — not authorable | `close`, `open` | n/a — not authorable |
 | `wf:scroll` | yes | `scroll` | yes | **required** | — | n/a — playback fields rejected |
 
 Playback fields (`control`, `delay`, `jump`, `speed`) are rejected on control types `continuous`, `scroll`. Navbar and dropdown also hide the playback editor in the panel, but they

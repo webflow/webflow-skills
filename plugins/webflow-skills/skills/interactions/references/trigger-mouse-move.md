@@ -40,6 +40,17 @@ example `wf:class` with an empty value.
 bind to elements.** Nothing will tell you otherwise: the write succeeds and the
 interaction is silently inert.
 
+## `pluginConfig` persist bounds
+
+`[REJECTED]` `smoothness` outside its millisecond range, or `restingState` x/y
+outside 0 to 100. Absent keys are legal.
+Guard: `findMouseMoveRangeError`
+
+The panel's Smoothness **slider** is 0 to 100 while the persisted bound follows the
+number input, so those two ranges differ. Current values are in
+[`capabilities.generated.md`](capabilities.generated.md) → Numeric
+bounds.
+
 ## Roles
 
 Exactly `'mouseX'`, `'mouseY'`, or `'interval'`.

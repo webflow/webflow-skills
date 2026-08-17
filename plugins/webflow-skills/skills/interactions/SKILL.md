@@ -14,7 +14,7 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 - Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call**
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to find the target page by name or slug
-- Use Webflow MCP's `data_interactions_tool` for list / get / create / update / delete (and `guide` when that action exists)
+- Use Webflow MCP's `data_interactions_tool` for list / get / create / update / delete
 - Use Webflow MCP's `data_style_tool` to resolve class **style-block ids** before targeting `wf:class`
 - DO NOT use any other tools or methods for Webflow interaction CRUD
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
@@ -29,9 +29,9 @@ These tools are **not on stable MCP**.
 - **Flag:** `ff-ix3-interaction-apis`
 - **Scopes:** `pages:read` / `pages:write`
 - **Compound tool:** `data_interactions_tool`
-- **Actions:** `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`, and `guide` (after the Cloudflare MCP guide PR). If `guide` is missing, follow **Guidelines** below and do not invent GSAP position strings.
-- Before create/update: call `guide` **or** read MCP resource `webflow://guides/interactions` when those exist
-- `siteId` and `pageId` are **top-level** tool arguments (session / create bookkeeping). They are **not** inside `create_interaction` args. They are still required when calling `guide`.
+- **Actions:** `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`
+- `siteId` and `pageId` are **top-level** tool arguments (session / create bookkeeping). They are **not** inside `create_interaction` args.
+- **There is no `guide` action and no `webflow://guides/interactions` resource yet.** Both are planned. Until they ship, the `references/` files in this skill are the contract — do not try to call `guide` and do not wait for it.
 - `create_interaction` args: `name` (required), `scope` (optional, default site), `triggers` (required array), `timelines` (required array), optional `timelineDefaults`, optional `conditionalPlayback`
 
 ## Instructions
@@ -41,13 +41,12 @@ These tools are **not on stable MCP**.
 1. **Call `webflow_guide_tool` first** — always the first MCP tool call
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
-4. **Confirm the gate**: beta MCP + `ff-ix3-interaction-apis` + Bridge connected. If `data_interactions_tool` is unregistered, stop and tell the user (stable MCP, flag off, or post-#117284 WFS built lane).
+4. **Confirm the gate**: beta MCP + `ff-ix3-interaction-apis` + Bridge connected. If `data_interactions_tool` is unregistered, stop and tell the user — the likely causes are the stable MCP endpoint instead of beta, the flag being off for that workspace, or no Designer Bridge session. Do not work around it.
 
 ### Phase 2: Read the contract for what you are building
 
 5. **Read the reference file for your trigger, plus `references/envelope-and-targets.md`.** That pair is enough to author any single-trigger interaction. See the Reference map below. Do this before your first write on anything beyond the five inline examples in this file.
-6. Optionally also call `data_interactions_tool` action `guide`, or read `webflow://guides/interactions`, when those exist — they serve the same content.
-7. Do not invent `+=` / `<` / `>` `timing.position` strings or `{reducedMotion:"skip"}`. A bare number for `timing.duration` is seconds (`0.4`, not `400`).
+6. Do not invent `+=` / `<` / `>` `timing.position` strings or `{reducedMotion:"skip"}`. A bare number for `timing.duration` is seconds (`0.4`, not `400`).
 
 #### Reference map
 
@@ -79,7 +78,7 @@ through untouched rather than "fixing" it.
 ### Phase 3: Plan (before any write)
 
 7. Resolve class targets: prefer style-block id arrays from `data_style_tool`; class name strings are accepted
-8. Plan the payload from the guide: object format, legal trigger/target, fresh action ids
+8. Plan the payload against the reference you read in Phase 2: object format, legal trigger/target, fresh action ids
 9. **Request explicit confirmation** before create/update/delete:
    - "Would you like me to create this click fade?"
    - "Before I write this interaction: [plan]. Confirm to proceed."
@@ -93,11 +92,11 @@ through untouched rather than "fixing" it.
 
 12. `get_interaction` with the returned id
 13. Report what was created/updated
-14. **On reject:** read the error, call `guide` again, fix the payload. Do not invent GSAP position operators.
+14. **On reject:** read the error, look it up in [references/rejects-index.md](references/rejects-index.md), fix the payload. Do not invent GSAP position operators, and do not retry the same shape hoping for a different result — every rejection here is deterministic.
 
 ## Examples
 
-Each example calls `guide` before `create_interaction` when that action exists. Replace `STYLE_BLOCK_ID` with a style-block id. Mint a **fresh unique** `id` on every action.
+Replace `STYLE_BLOCK_ID` with a style-block id. Mint a **fresh unique** `id` on every action.
 
 ### Example 1: Click fade
 
@@ -105,7 +104,7 @@ Each example calls `guide` before `create_interaction` when that action exists. 
 
 1. Call `webflow_guide_tool`
 2. `list_sites` → `list_pages` → resolve `STYLE_BLOCK_ID` via `data_style_tool`
-3. Call `data_interactions_tool` action `guide` (or read `webflow://guides/interactions`)
+3. Read [references/trigger-click.md](references/trigger-click.md) and [references/envelope-and-targets.md](references/envelope-and-targets.md)
 4. Present the plan and wait for confirmation
 5. After confirmation, `create_interaction`:
 
@@ -141,7 +140,7 @@ Each example calls `guide` before `create_interaction` when that action exists. 
 
 **User:** "Fade this section in when the page loads"
 
-Same discovery + `guide` + confirm. Load **omits the trigger target**. Action targets must not be `wf:trigger-only`.
+Same discovery, reference read, and confirmation. Load **omits the trigger target**. Action targets must not be `wf:trigger-only`.
 
 ```json
 {
@@ -201,7 +200,9 @@ Scroll is **standalone**. Include `scrollTriggerConfig` with `start` and `end`. 
 
 **User:** "Fade in on hover enter and out on leave"
 
-Use `multiTimeline: true` with unique roles `mouseEnter` / `mouseLeave`. Do not mix this with legacy hover `type` / `hover` / `custom`.
+Use the **trigger split**: two `wf:hover` triggers separated by `pluginConfig.eventMode`, each pinned to a timeline group, with `multiTimeline: false` on both. This is the shape the panel writes, so the user can edit and remove the groups afterwards.
+
+Mint your own group ids and reuse each one on its trigger (`assignedGroupId`) and its timeline (`groupId`). `control: "play"` is required once two groups exist.
 
 ```json
 {
@@ -209,13 +210,27 @@ Use `multiTimeline: true` with unique roles `mouseEnter` / `mouseLeave`. Do not 
   "triggers": [
     {
       "extensionKey": "wf:hover",
-      "config": { "pluginConfig": { "multiTimeline": true } },
+      "config": {
+        "control": "play",
+        "assignedGroupId": "grp-hover-in",
+        "pluginConfig": { "multiTimeline": false, "eventMode": "enter" }
+      },
+      "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+    },
+    {
+      "extensionKey": "wf:hover",
+      "config": {
+        "control": "play",
+        "assignedGroupId": "grp-hover-out",
+        "pluginConfig": { "multiTimeline": false, "eventMode": "leave" }
+      },
       "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
     }
   ],
   "timelines": [
     {
-      "triggerMetadata": { "role": "mouseEnter" },
+      "groupId": "grp-hover-in",
+      "name": "Hover in actions",
       "actions": [
         {
           "id": "act-hover-in",
@@ -227,7 +242,8 @@ Use `multiTimeline: true` with unique roles `mouseEnter` / `mouseLeave`. Do not 
       ]
     },
     {
-      "triggerMetadata": { "role": "mouseLeave" },
+      "groupId": "grp-hover-out",
+      "name": "Hover out actions",
       "actions": [
         {
           "id": "act-hover-out",
@@ -242,11 +258,15 @@ Use `multiTimeline: true` with unique roles `mouseEnter` / `mouseLeave`. Do not 
 }
 ```
 
+**Do not** author hover in/out as one trigger with `multiTimeline: true` plus `mouseEnter` / `mouseLeave` roles. The write succeeds and the runtime honors it, but the panel offers no remove button for either resulting group. See [references/trigger-hover.md](references/trigger-hover.md). Use the role form only to read or preserve data that already stores it.
+
+If the user only wants an enter animation, send one trigger with `pluginConfig: { "multiTimeline": false }` — omitting the key drops to the legacy editor instead. Either way, the panel may not offer "Add separate hover out" on a single-timeline hover, so author the full split above whenever the user wants both directions.
+
 ### Example 5: Mouse-move
 
 **User:** "Move this element with the cursor"
 
-Mouse-move is **standalone**. Target `wf:viewport` (`value: ""`) is recommended. Every timeline needs a unique role from `mouseX` / `mouseY` / `interval`. **Omit** playback `control` / `delay` / `jump` / `speed`.
+Mouse-move is **standalone**. It validates without a target but never fires without one, so **always send a target** — `wf:viewport` (`value: ""`) for page-wide tracking, or `wf:inst` / `wf:class` to scope it. Every timeline needs a unique role from `mouseX` / `mouseY` / `interval`. **Omit** playback `control` / `delay` / `jump` / `speed`. See [references/trigger-mouse-move.md](references/trigger-mouse-move.md).
 
 ```json
 {
@@ -303,7 +323,7 @@ Mouse-move is **standalone**. Target `wf:viewport` (`value: ""`) is recommended.
 - **From / FromTo (`tt: 1` / `2`) sit at the from-state until the trigger fires.** Prefer To (`tt: 0` or omit) when the element should be visible at rest.
 - **`splitText` needs a Heading, Paragraph, or Text that already has copy**, not a Div / Block.
 - **Roles live on `timelines[].triggerMetadata`**, not on the trigger. Mouse-move needs a unique `mouseX` / `mouseY` / `interval` per timeline.
-- On reject: read the error, call `guide` again, do not invent fields.
+- On reject: read the error, look it up in [references/rejects-index.md](references/rejects-index.md), do not invent fields.
 
 ## Install / gate
 

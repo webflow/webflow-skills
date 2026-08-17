@@ -68,8 +68,17 @@ Note `rotation`, not `rotate`.
 allowlists and are checked like any other key. They are in the generated table with
 their supported properties; do not assume a plugin namespace skips validation.
 
-A key with no entry in the table at all still skips the property-name check, and the
-namespace gate handles unknown extension keys instead.
+Every action key the API can author now has an entry, so in practice nothing skips
+the property-name check today. The fallback still exists for a key added to the
+registry before its allowlist, and the namespace gate handles unknown extension keys
+either way.
+
+## `timing.autoReverse` is not authorable
+
+Covered in [`envelope-and-targets.md`](envelope-and-targets.md) alongside the other
+fields the Designer never writes. Short version: `[REJECTED]` on both
+`action.timing.autoReverse` and `timeline.settings.autoReverse`, with an unchanged
+stored value allowed through on update.
 
 ## Value shapes
 
@@ -117,8 +126,12 @@ forty seconds.
 `[REJECTED]` at schema: `'1.5s'`, a bare `'400'`, or any other string form.
 Fragment: `Milliseconds must be in format "123ms" or "123.45ms"`
 
-`timing.delay` is a number of seconds only (`z.number()`), not this union. Do not
-send `"400ms"` there.
+`timing.delay` accepts the same two forms. `timingConfigSchema` declares
+`delay: z.number()` but ends with `.merge(playbackSettingsSchema)`, whose `delay` is
+the seconds-or-ms union, and a Zod merge overrides the earlier key. So `"400ms"` is
+accepted on `delay` and normalizes to `0.4`, exactly as on `duration`.
+
+Read the merge before trusting a field's declared type on this schema.
 
 On a percent canvas the same field is authored as a percent — see
 [`timelines-and-groups.md`](timelines-and-groups.md).

@@ -7,9 +7,12 @@ Read this alongside the file for whichever trigger you are building.
 
 ## Create envelope
 
+Through MCP, `siteId` and `pageId` are **top-level tool arguments**, not fields in
+the create action. The tool strips them before dispatch and supplies `pageId` from
+the execution context. So the action body you send is:
+
 ```js
 {
-  pageId,          // [REQUIRED] current page id
   name,            // [REQUIRED] non-empty
   scope,           // optional; defaults to { type: 'site' }
   triggers,        // [REQUIRED] array
@@ -18,6 +21,9 @@ Read this alongside the file for whichever trigger you are building.
   // conditionalPlayback optional — see conditional-playback.md
 }
 ```
+
+Calling the Designer Extension API directly instead of MCP, `pageId` is a field on
+the params object rather than a separate argument. Everything else is identical.
 
 ## `timelineDefaults` is not authorable
 
@@ -31,10 +37,6 @@ Guard: `findTimelineDefaultsError` · fragment:
 `timelineDefaults is not authored by the Designer`
 
 An empty object does not count as "unset". Leave the key out entirely on create.
-
-Through MCP, `siteId` and `pageId` are **top-level tool arguments**, not fields
-inside the create action. The tool strips them before dispatch and supplies
-`pageId` from the execution context.
 
 ## IDs
 
@@ -135,9 +137,15 @@ Prefer omitting it and letting the host stamp, rather than composing it yourself
 
 ## Class targets
 
-Style-block UUIDs from `webflow.createStyle` / `getStyleByName` are preferred over
-class-name slugs — they round-trip through the panel reliably. Class name strings
-are accepted.
+Style-block UUIDs are preferred over class-name slugs — they round-trip through the
+panel reliably. Class name strings are accepted.
+
+Through MCP, resolve one with `data_style_tool`: `get_styles` or `query_styles`
+returns each style's `id`, and that UUID is what goes in the `value` array. Note
+`data_style_tool` requires both `siteId` and `pageId`, so do the page lookup first.
+
+Calling the Designer Extension API directly instead, the equivalents are
+`webflow.createStyle` and `getStyleByName`.
 
 ## Value shapes per target type
 

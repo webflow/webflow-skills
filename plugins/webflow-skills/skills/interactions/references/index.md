@@ -49,24 +49,34 @@ That pair is enough to author any single-trigger interaction.
 Every rule carries exactly one. They are not interchangeable — each implies
 different behavior when you hit it.
 
-| Tag                     | Meaning                                                                                                                | What to do                                                                                                 |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `[REQUIRED]`            | Must be present.                                                                                                       | Always send it.                                                                                            |
-| `[OMIT]`                | The Designer never writes it.                                                                                          | Leave the key out entirely. Do not send a default.                                                         |
-| `[REJECTED]`            | The write path refuses it. Cites the guard and a message fragment.                                                     | Never author. The error explains itself.                                                                   |
-| `[PENDING]`             | The rejection is written but has not landed on every build yet. The guard is named so it can be verified once it does. | Never author. Do **not** rely on getting an error — today the write may succeed silently.                  |
-| `[GATED]`               | Not authorable through this API today. The guards take no flag or session parameter, so every caller is refused.       | Do not attempt. Tell the user the capability is unavailable.                                               |
-| `[PANEL-TRAP]`          | The API accepts it, but the Interactions panel cannot author, display, edit, or clear the result.                      | Do not author unsolicited. If explicitly asked, warn that the result will not be editable in the Designer. |
-| `[LEGACY-OK-ON-UPDATE]` | Refused on create, but forwarded unchanged when an existing interaction is updated without replacing that field.       | On a read-then-write flow, pass the stored value through untouched. Do not "fix" it.                       |
+| Tag                     | Meaning                                                                                                                                                                                               | What to do                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `[REQUIRED]`            | Must be present.                                                                                                                                                                                      | Always send it.                                                                                            |
+| `[OMIT]`                | The Designer never writes it.                                                                                                                                                                         | Leave the key out entirely. Do not send a default.                                                         |
+| `[REJECTED]`            | The write path refuses it. Cites the guard and a message fragment.                                                                                                                                    | Never author. The error explains itself.                                                                   |
+| `[PENDING]`             | The rejection is written but has not landed on every build yet. The guard is named so it can be verified once it does. **No rule currently uses this tag** — kept for the next time one is in flight. | Never author. Do **not** rely on getting an error — the write may succeed silently.                        |
+| `[GATED]`               | Not authorable through this API today. The guards take no flag or session parameter, so every caller is refused.                                                                                      | Do not attempt. Tell the user the capability is unavailable.                                               |
+| `[PANEL-TRAP]`          | The API accepts it, but the Interactions panel cannot author, display, edit, or clear the result.                                                                                                     | Do not author unsolicited. If explicitly asked, warn that the result will not be editable in the Designer. |
+| `[LEGACY-OK-ON-UPDATE]` | Refused on create, but forwarded unchanged when an existing interaction is updated without replacing that field.                                                                                      | On a read-then-write flow, pass the stored value through untouched. Do not "fix" it.                       |
 
 `[PANEL-TRAP]` is the class no error will ever teach you: the write succeeds and
 the damage is only visible to the human afterwards.
 
+## About the guard and constant names
+
+Rules cite names like `findScrollTriggerError` and `TRIGGER_REQUIRES_TARGET_KEYS`.
+Those are provenance, so a Webflow engineer can verify a rule against the source and
+so a rename shows up as a broken citation. **You are not expected to look them up**,
+and they are not part of any payload. Everything you need to author an interaction is
+in the prose and the quoted error fragments.
+
 ## Maintaining this pack
 
-These files are **published copies**. The source of record is the Webflow
-monorepo at `packages/systems/ix3/schema/agent-pack/`, where the capability
-tables are generated from code and a test fails when they drift.
+The source of record is the Webflow monorepo at
+`packages/systems/ix3/schema/agent-pack/`. The capability tables there are
+generated from exported code constants, and a test fails when they drift.
 
-Edit there and re-publish. Changes made directly in this repo will be
-overwritten and are not covered by the drift gate.
+If you are reading this as a published copy in another repo, **do not edit it
+here.** Local changes are overwritten by the next publish and are not covered by
+the drift gate. Webflow engineers: `MAINTAINING.md`, next to the source, has the
+guard-citation audit and the publish command.
