@@ -38,6 +38,14 @@ table. A standard trigger routed to a group takes `control` from the trigger, so
 a stored value there has no effect. See
 [`timelines-and-groups.md`](timelines-and-groups.md).
 
+The role-based hover row is the one trap in this file you should knowingly accept
+when writing through **MCP**. The trigger split the panel prefers cannot be
+expressed there (the MCP timeline input drops `groupId`, so the interaction stores
+triggers bound to groups that do not exist and the runtime skips them), which costs
+the user the whole animation rather than one button. Author the role form, and tell
+the user the groups will not be removable. Details in
+[`trigger-hover.md`](trigger-hover.md).
+
 ## Action timing
 
 | Field                                                              | Panel behavior                                                                | Guard that stops short                                                                  |

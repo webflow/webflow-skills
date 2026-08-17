@@ -146,6 +146,37 @@ action group, with `multiTimeline: false` on both.
 `findGroupedTriggerControlError` in
 [`timelines-and-groups.md`](timelines-and-groups.md).
 
+### The split form is not authorable through MCP today
+
+**Through the MCP `create_interaction` / `update_interaction` tools this shape
+produces an interaction that never runs.** `TimelineInputSchema` in
+`packages/systems/page-automation/core/tools/interactions.ts` has no `groupId` key,
+and it is a plain `z.object()`, so Zod strips `groupId` from every timeline before
+the host sees the request. The triggers keep their `assignedGroupId`, so the stored
+result is two triggers pointed at groups that no timeline claims.
+
+At runtime `AnimationCoordinator` resolves that to nothing. A non-null
+`assignedGroupId` that matches no `groupId` timeline falls through to the role axis,
+and with no `triggerMetadata` anywhere on the interaction it takes the stale-group
+branch and `continue`s, skipping the trigger. Both triggers are skipped, so hovering
+does nothing. Nothing rejects, nothing warns, and `get_interaction` reports the
+triggers you sent.
+
+So through MCP:
+
+| Goal                | Use                                                                         |
+| ------------------- | --------------------------------------------------------------------------- |
+| Enter only          | One trigger, `multiTimeline: false`, one timeline. Clean and works.         |
+| Enter **and** leave | The role form below. It runs correctly; the panel cannot remove the groups. |
+| The split form      | Not available. Do not author it.                                            |
+
+Calling the Designer Extension API directly, the split form works as written above,
+because `groupId` survives on that path.
+
+Adding `groupId` to the MCP timeline input is the fix; until it lands, prefer the
+role form for two-direction hover and tell the user the groups will not be removable
+in the panel.
+
 ### Role form — accepted, but leaves groups the panel cannot remove
 
 ```js
@@ -165,8 +196,16 @@ writes it for hover and cannot fully edit the result. The remove control keys of
 `groupId` (absent here) or a `groupRoles` config, and hover declares `triggerSplit`
 instead of `groupRoles` — so neither action group offers a remove button.
 
-Use it only to read or preserve data that already stores it. Do not author it for a
-new hover in/out.
+**Through MCP this is nonetheless the shape to author for a two-direction hover**,
+because the split form the panel prefers is silently inert there (see above). The
+tradeoff is real but one-sided: this form animates correctly and costs the user a
+remove button, while the split form costs them the entire interaction. Say so when
+you author it, so the user is not surprised by the missing control.
+
+`triggerMetadata` is in the MCP timeline input, so the roles survive the write.
+
+Calling the Designer Extension API directly, prefer the split form and use this one
+only to read or preserve data that already stores it.
 
 Roles are exactly `'mouseEnter'` and `'mouseLeave'` and must be unique per timeline.
 Guard: `findTimelineRoleError`

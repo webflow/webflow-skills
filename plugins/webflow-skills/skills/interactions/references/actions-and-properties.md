@@ -33,10 +33,22 @@ Omit `tt` and the runtime treats it as To (`0`). `presetId` is optional — omit
 on a new action; the host does not require one.
 
 From (`1`) and FromTo (`2`) apply their starting values as soon as the timeline is
-built (GSAP immediate-render). The element sits at the from-state until the
-trigger plays. A From fade of opacity `0%` → `100%` looks missing on the canvas
-and on the published page until click, hover, or load. If the element should be
-visible at rest and animate on trigger, author a To (`tt: 0` or omit).
+built (GSAP immediate-render). That is the **default**, not a guarantee. The element
+then sits at the from-state until the trigger plays, so a From fade of opacity `0%` →
+`100%` looks missing on the canvas and on the published page until click, hover, or
+load. If the element should be visible at rest and animate on trigger, author a To
+(`tt: 0` or omit).
+
+The exception: `buildTimeline` scans each timeline in order and records every
+action's properties per target, including a To. When a later From or FromTo touches a
+property an earlier action already recorded on the same target, that later action is
+built with `immediateRender: false` so it cannot overwrite the earlier action's
+starting value while the paused timeline is built. In that case the element keeps its
+current state until playback, and the initial hidden state you expected at build time
+does not appear.
+
+So a From is only reliably at its start value at rest when no earlier action in the
+same timeline targets the same property on the same target.
 
 Non-animatable properties are only valid inside a Set action. The Designer always
 emits `tt: 3` for them.
@@ -126,12 +138,32 @@ forty seconds.
 `[REJECTED]` at schema: `'1.5s'`, a bare `'400'`, or any other string form.
 Fragment: `Milliseconds must be in format "123ms" or "123.45ms"`
 
-`timing.delay` accepts the same two forms. `timingConfigSchema` declares
-`delay: z.number()` but ends with `.merge(playbackSettingsSchema)`, whose `delay` is
-the seconds-or-ms union, and a Zod merge overrides the earlier key. So `"400ms"` is
-accepted on `delay` and normalizes to `0.4`, exactly as on `duration`.
+A third input form exists and is easy to miss: `secondsOrMsSchema` also accepts
+`null`, and transforms it to **`0.25`**. That is not the same as omitting the field,
+which leaves it unset and lets the runtime default apply. Do not send `null` expecting
+"no duration".
 
-Read the merge before trusting a field's declared type on this schema.
+### `timing.delay` on an action is accepted and then ignored
+
+`timingConfigSchema` declares `delay: z.number()` but ends with
+`.merge(playbackSettingsSchema)`, whose `delay` is the seconds-or-ms union, and a Zod
+merge overrides the earlier key. So `"400ms"` is accepted on `delay` and normalizes to
+`0.4`. Read the merge before trusting a field's declared type on this schema.
+
+**But the value does nothing on an action.** `buildTweensForAction` builds its GSAP
+tween vars from `position`, `duration`, `stagger`, `repeat`, and `repeatDelay`. It
+never reads `action.timing.delay`. The write succeeds, `get_interaction` echoes the
+value back, and the animation is unaffected. Nothing reports it.
+
+Delay is real in the two other places it appears:
+
+| Field                     | Effect                                                                        |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `trigger.config.delay`    | Delays trigger execution. Applied via `setTimeout` in the trigger strategies. |
+| `timeline.settings.delay` | Timeline playback delay. Applied as GSAP `tl.delay()`.                        |
+| `action.timing.delay`     | **Inert.** Accepted by the schema, never passed to GSAP.                      |
+
+To stagger actions inside a timeline, use **`timing.position`**, not `timing.delay`.
 
 On a percent canvas the same field is authored as a percent — see
 [`timelines-and-groups.md`](timelines-and-groups.md).
@@ -207,12 +239,16 @@ same id, and changing the value re-enters the reject.
 
 Pass a stored string through untouched. Author the object form for anything new.
 
-SplitText wraps the **target element's own text nodes**. Point it at a Heading,
-Paragraph, or Text that already contains the copy. A Div / Block with no text —
-or a container whose copy lives on a child — saves cleanly and then splits
-nothing. Creating a Block and trying to `set_text` onto it is the wrong fix;
-create or select a text element instead. The write path does not check element
-type.
+SplitText needs a target that **contains text**, whether directly or in a
+descendant. The runtime hands the resolved element to GSAP SplitText, which walks
+child elements, so a Div wrapping a Paragraph that reads "Hello" is a valid target and
+still yields character targets. You do not need to add a text element, or retarget to
+the inner one, just to make splitting work.
+
+What does split nothing is a target with **no text anywhere inside it**. An empty Div
+or Block saves cleanly and then animates nothing. Creating a Block and trying to
+`set_text` onto it is the wrong fix; point the action at something that already holds
+copy. The write path does not check element type.
 
 ## Panel traps
 

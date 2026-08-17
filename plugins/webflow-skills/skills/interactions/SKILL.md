@@ -50,24 +50,24 @@ These tools are **not on stable MCP**.
 
 #### Reference map
 
-| User asks for | Read |
-| --- | --- |
-| Click | [references/trigger-click.md](references/trigger-click.md) |
-| Hover, mouse enter/leave | [references/trigger-hover.md](references/trigger-hover.md) |
-| Page load | [references/trigger-load.md](references/trigger-load.md) |
-| Scroll, scrub, parallax | [references/trigger-scroll.md](references/trigger-scroll.md) |
-| Mouse move, cursor follow | [references/trigger-mouse-move.md](references/trigger-mouse-move.md) |
-| Custom JS event | [references/trigger-custom.md](references/trigger-custom.md) |
-| Navbar, dropdown, conditions, Rive, variables | [references/gated-capabilities.md](references/gated-capabilities.md) |
-| Envelope, IDs, scope, targets, filters | [references/envelope-and-targets.md](references/envelope-and-targets.md) |
-| Properties, values, `tt`, timing, splitText | [references/actions-and-properties.md](references/actions-and-properties.md) |
-| Roles, groups, percent canvas | [references/timelines-and-groups.md](references/timelines-and-groups.md) |
-| Reduced motion, breakpoint playback | [references/conditional-playback.md](references/conditional-playback.md) |
-| Editing an existing interaction | [references/updating-interactions.md](references/updating-interactions.md) |
-| Size and count limits | [references/limits-and-budgets.md](references/limits-and-budgets.md) |
-| A write succeeded but the user cannot edit it | [references/panel-traps.md](references/panel-traps.md) |
-| Decoding a rejection message | [references/rejects-index.md](references/rejects-index.md) |
-| Which triggers and properties exist at all | [references/capabilities.generated.md](references/capabilities.generated.md) |
+| User asks for                                 | Read                                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| Click                                         | [references/trigger-click.md](references/trigger-click.md)                   |
+| Hover, mouse enter/leave                      | [references/trigger-hover.md](references/trigger-hover.md)                   |
+| Page load                                     | [references/trigger-load.md](references/trigger-load.md)                     |
+| Scroll, scrub, parallax                       | [references/trigger-scroll.md](references/trigger-scroll.md)                 |
+| Mouse move, cursor follow                     | [references/trigger-mouse-move.md](references/trigger-mouse-move.md)         |
+| Custom JS event                               | [references/trigger-custom.md](references/trigger-custom.md)                 |
+| Navbar, dropdown, conditions, Rive, variables | [references/gated-capabilities.md](references/gated-capabilities.md)         |
+| Envelope, IDs, scope, targets, filters        | [references/envelope-and-targets.md](references/envelope-and-targets.md)     |
+| Properties, values, `tt`, timing, splitText   | [references/actions-and-properties.md](references/actions-and-properties.md) |
+| Roles, groups, percent canvas                 | [references/timelines-and-groups.md](references/timelines-and-groups.md)     |
+| Reduced motion, breakpoint playback           | [references/conditional-playback.md](references/conditional-playback.md)     |
+| Editing an existing interaction               | [references/updating-interactions.md](references/updating-interactions.md)   |
+| Size and count limits                         | [references/limits-and-budgets.md](references/limits-and-budgets.md)         |
+| A write succeeded but the user cannot edit it | [references/panel-traps.md](references/panel-traps.md)                       |
+| Decoding a rejection message                  | [references/rejects-index.md](references/rejects-index.md)                   |
+| Which triggers and properties exist at all    | [references/capabilities.generated.md](references/capabilities.generated.md) |
 
 Start at [references/index.md](references/index.md) if you are unsure. It also
 explains the enforcement tags — in particular `[PANEL-TRAP]`, which means the
@@ -126,7 +126,9 @@ Replace `STYLE_BLOCK_ID` with a style-block id. Mint a **fresh unique** `id` on 
           "name": "Fade",
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     }
@@ -154,7 +156,9 @@ Same discovery, reference read, and confirmation. Load **omits the trigger targe
           "name": "Fade",
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     }
@@ -188,7 +192,9 @@ Scroll is **standalone**. Include `scrollTriggerConfig` with `start` and `end`. 
           "name": "Fade",
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     }
@@ -200,9 +206,7 @@ Scroll is **standalone**. Include `scrollTriggerConfig` with `start` and `end`. 
 
 **User:** "Fade in on hover enter and out on leave"
 
-Use the **trigger split**: two `wf:hover` triggers separated by `pluginConfig.eventMode`, each pinned to a timeline group, with `multiTimeline: false` on both. This is the shape the panel writes, so the user can edit and remove the groups afterwards.
-
-Mint your own group ids and reuse each one on its trigger (`assignedGroupId`) and its timeline (`groupId`). `control: "play"` is required once two groups exist.
+Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and two timelines tagged `mouseEnter` and `mouseLeave` via `triggerMetadata`. Roles must be exactly those strings and unique per timeline. Do not mix this with legacy hover `type` / `hover` / `custom`.
 
 ```json
 {
@@ -210,47 +214,36 @@ Mint your own group ids and reuse each one on its trigger (`assignedGroupId`) an
   "triggers": [
     {
       "extensionKey": "wf:hover",
-      "config": {
-        "control": "play",
-        "assignedGroupId": "grp-hover-in",
-        "pluginConfig": { "multiTimeline": false, "eventMode": "enter" }
-      },
-      "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
-    },
-    {
-      "extensionKey": "wf:hover",
-      "config": {
-        "control": "play",
-        "assignedGroupId": "grp-hover-out",
-        "pluginConfig": { "multiTimeline": false, "eventMode": "leave" }
-      },
+      "config": { "pluginConfig": { "multiTimeline": true } },
       "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
     }
   ],
   "timelines": [
     {
-      "groupId": "grp-hover-in",
-      "name": "Hover in actions",
+      "triggerMetadata": { "role": "mouseEnter" },
       "actions": [
         {
           "id": "act-hover-in",
           "name": "Fade in",
           "timing": { "duration": 0.3 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     },
     {
-      "groupId": "grp-hover-out",
-      "name": "Hover out actions",
+      "triggerMetadata": { "role": "mouseLeave" },
       "actions": [
         {
           "id": "act-hover-out",
           "name": "Fade out",
           "timing": { "duration": 0.3 },
           "properties": { "wf:transform": { "opacity": ["100%", "0%"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     }
@@ -258,7 +251,11 @@ Mint your own group ids and reuse each one on its trigger (`assignedGroupId`) an
 }
 ```
 
-**Do not** author hover in/out as one trigger with `multiTimeline: true` plus `mouseEnter` / `mouseLeave` roles. The write succeeds and the runtime honors it, but the panel offers no remove button for either resulting group. See [references/trigger-hover.md](references/trigger-hover.md). Use the role form only to read or preserve data that already stores it.
+**Tell the user one caveat:** the panel will animate this correctly but will not offer a remove button for either action group, because it never writes hover this way itself.
+
+**Do not** author the two-trigger split the panel prefers (two `wf:hover` triggers with `eventMode` plus `assignedGroupId`, and `groupId` on the timelines). The MCP timeline input has no `groupId` field, so Zod strips it and the triggers end up pointed at groups no timeline claims. The runtime then skips both triggers and the interaction silently does nothing. Nothing rejects and `get_interaction` still echoes your triggers back. See [references/trigger-hover.md](references/trigger-hover.md).
+
+For enter only, send one trigger with `pluginConfig: { "multiTimeline": false }` and a single timeline.
 
 If the user only wants an enter animation, send one trigger with `pluginConfig: { "multiTimeline": false }` — omitting the key drops to the legacy editor instead. Either way, the panel may not offer "Add separate hover out" on a single-timeline hover, so author the full split above whenever the user wants both directions.
 
@@ -287,7 +284,9 @@ Mouse-move is **standalone**. It validates without a target but never fires with
           "name": "Follow X",
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "x": ["0px", "40px"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     },
@@ -299,7 +298,9 @@ Mouse-move is **standalone**. It validates without a target but never fires with
           "name": "Follow Y",
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "y": ["0px", "40px"] } },
-          "targets": [{ "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }]
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
         }
       ]
     }
