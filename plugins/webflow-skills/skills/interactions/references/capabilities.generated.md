@@ -143,6 +143,11 @@ host on create and on update.
 | Actions per timeline | 200 |
 | Targets per action | 20 |
 
-A stored interaction already over a cap raises the ceiling for itself, so an
-update to legacy data is not forced to shrink it. See
-`references/limits-and-budgets.md`.
+The host raises the ceiling for a stored interaction already over a cap, so a
+Designer Extension update to legacy data is not forced to shrink it.
+
+**That exception is host-only.** The MCP tools apply these caps as Zod `.max()`
+on the create *and* update argument schemas, so the request is refused before
+the host sees the stored baseline. Reading a timeline with more than
+200 actions and resubmitting it unchanged to edit
+one action does not work over MCP. See `references/limits-and-budgets.md`.

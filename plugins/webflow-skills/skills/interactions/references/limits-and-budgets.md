@@ -54,9 +54,21 @@ change cannot drift out of the reference.
 
 Fragment: `An interaction may define at most`
 
-**Stored over-cap data raises its own ceiling.** The guard takes the larger of the
-cap and the interaction's existing count, so legacy data already past a limit is not
-forced to shrink on its next update. You still cannot grow it further.
+**Stored over-cap data raises its own ceiling — but only on the host path.**
+`findInteractionCountError` takes the larger of the cap and the interaction's
+existing count, so a Designer Extension update to legacy data is not forced to
+shrink it.
+
+`[REJECTED]` Over-cap lists sent through MCP, even when the stored interaction
+already exceeds the cap. The MCP tools apply the same caps as Zod `.max()` on both
+the create and update argument schemas, which runs **before** the host's
+baseline-aware check. So a read-modify-write of an over-cap interaction fails on
+resubmission: reading a timeline with more actions than the cap and sending it back
+unchanged to edit one action is refused.
+
+There is no MCP-side workaround. Splitting the interaction is the only path, and
+that changes what the user sees. Treat an over-cap stored interaction as read-only
+through MCP.
 
 ## Duration
 

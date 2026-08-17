@@ -83,6 +83,16 @@ passes, so a duration or target read-modify-write is not forced to strip it.
 Guard: `findIntervalMetadataTriggerError` · fragment:
 `not write them without a "wf:mouse-move" trigger`
 
+`[LEGACY-OK-ON-UPDATE]` Already-stranded stored data passes: if the stored triggers
+also lacked mouse-move and the same timeline already carried an interval role with
+`distance` or `axes`, the update is not introducing the mismatch and is allowed. The
+panel gates its interval editor on the role alone, so a user can still edit those
+fields on a stranded pair.
+
+Two writes still reject: removing the mouse-move trigger from an interaction that
+has interval metadata, and newly attaching those fields to an interaction that has
+no mouse-move trigger.
+
 `[REJECTED]` A `distance` that is fractional, or outside 1 to 10000. Bounded in
 `triggerMetadata`'s schema as `z.number().finite().int().min(1).max(10000)`, so
 this fails schema validation before any guard runs. The bound exists to keep a

@@ -13,6 +13,32 @@ Read with [`envelope-and-targets.md`](envelope-and-targets.md).
 | Roles       | Required only in multi-timeline mode               |
 | Playback    | Allowed, same rules as click                       |
 
+## Which model the panel creates depends on a flag
+
+Both models are accepted by the write path, and this page documents both. But which
+one a _new_ hover gets in the panel is gated:
+`defaultValue: {multiTimeline: false}` is only registered when
+`isMultiTimelineHoverEnabled` is true, and that flag ships off today. With it off, a
+hover created in the panel stays legacy and carries no `multiTimeline` key.
+
+What is **not** gated is the set of affordances. `isMultiTimelineFor`,
+`timelineGroupConfig`, and `triggerSplit` are registered unconditionally,
+specifically so a hover already persisted as new-model keeps its enter/leave split
+flow even after the flag rolls off. So new-model data you author through the API
+remains editable regardless of flag state.
+
+Practical guidance:
+
+- **Read-modify-write: preserve the stored model.** Never add `multiTimeline` to
+  legacy data or strip it from new-model data. Changing the discriminator moves the
+  interaction between editors.
+- **Creating something new:** the new model is the better shape and stays editable,
+  but be aware it is not what a flag-off panel would have produced for that user. If
+  matching the shipping panel exactly matters more than the enter/leave split, author
+  legacy.
+
+Flag state is not visible in the payload, so no rule here can decide this for you.
+
 ## Pick one config model
 
 Hover is the only trigger with two mutually exclusive `pluginConfig` shapes. Mixing
@@ -50,16 +76,16 @@ Guard: `findTimelineRoleError`
 }
 ```
 
-**Send `multiTimeline: false` explicitly.** `HoverTriggerInput` decides which editor
-to show with `typeof config?.multiTimeline === 'boolean'`, and the schema seeds the
-boolean at creation. Omitting it puts the interaction on the legacy path, which
-defaults `type` to `mouseenter` and makes the panel treat the data as legacy,
-hiding "Add separate hover out". An empty `config` therefore produces an
-enter-only interaction the user cannot extend, not the editable single-timeline one
-this example is meant to show.
+**Send `multiTimeline: false` explicitly to get this model.**
+`HoverTriggerInput` decides which editor to show with
+`typeof config?.multiTimeline === 'boolean'`. Omitting the key puts the interaction
+on the legacy path, which defaults `type` to `mouseenter` and hides "Add separate
+hover out", so an empty `config` produces an enter-only interaction the user cannot
+extend rather than the editable single-timeline one this example is for.
 
-On a read-then-write, preserve whichever model the stored data already uses rather
-than adding the discriminator to legacy data.
+Note the flag caveat above: the panel only seeds this boolean itself when
+`isMultiTimelineHoverEnabled` is on. Authoring it explicitly is what puts new data on
+the new model regardless.
 
 ## Accept — separate hover out
 
