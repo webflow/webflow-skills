@@ -152,14 +152,16 @@ instead.
 `[REJECTED]` at the guard: an otherwise valid mask that differs from `type`.
 Guard: `findActionSplitTextError` · fragment: `must match`
 
-`[PENDING]` The legacy string form (`splitText: 'chars'`) is **accepted today**, on
-create as well as update. `findActionSplitTextError` skips any non-object value,
-and the docblock states that whether to reject it on write is a separate decision.
-Rejecting it is part of DES-7448 and has not landed.
+`[REJECTED]` The legacy string form (`splitText: 'chars'`) on create. The panel
+reads it for migration but no longer writes it.
+Guard: `findActionSplitTextError`
 
-The panel no longer writes the string form, so prefer the object form. Do not
-expect an error if you send a string, and do not rewrite a stored string during a
-read-then-write.
+`[LEGACY-OK-ON-UPDATE]` A stored string survives an update when the same action id
+echoes the same value. Two extra conditions apply: a duplicated action id is
+refused outright, so one stored string cannot authorize a second row claiming the
+same id, and changing the value re-enters the reject.
+
+Pass a stored string through untouched. Author the object form for anything new.
 
 ## Panel traps
 

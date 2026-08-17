@@ -38,13 +38,22 @@ so the exact wording differs by surface. See
 Recorded here so this file stays useful at GA rather than being rewritten. Do not
 author against it yet.
 
-Both are standalone, take no target (the Designer resolves an instance), and
-require both an `open` and a `close` timeline role. The playback editor is hidden,
-**but the panel still writes `control: 'play'`** and
+Both are standalone. Their roles are `open` and `close`: each supplied timeline
+needs one of the two and they must be unique, but the guard does **not** require the
+pair, so a single `open` timeline is valid. Do not add a second timeline purely to
+satisfy validation.
+
+The playback editor is hidden, **but the panel still writes `control: 'play'`** and
 `findGroupedTriggerControlError` requires it once the interaction has two or more
-grouped timelines. They are deliberately excluded from
-`NO_PLAYBACK_CONTROL_TYPES` for exactly that reason — rejecting the field would
-make the two guards contradict each other.
+grouped timelines. They are deliberately excluded from `NO_PLAYBACK_CONTROL_TYPES`
+for exactly that reason: rejecting the field would make the two guards contradict
+each other.
+
+**Send a target.** The panel supplies one through `ComponentTriggerTarget`, which
+writes a `wf:inst` target for the navbar or dropdown instance. Validation does not
+demand it, but `bindTrigger` only resolves elements when a target is present, so a
+targetless navbar interaction saves and never fires. This is the same trap as
+mouse-move, described in [`trigger-mouse-move.md`](trigger-mouse-move.md).
 
 ### Conditions
 

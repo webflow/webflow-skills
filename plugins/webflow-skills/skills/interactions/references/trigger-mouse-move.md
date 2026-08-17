@@ -71,14 +71,17 @@ Exactly `'mouseX'`, `'mouseY'`, or `'interval'`.
 
 `distance` and `axes` are authored only on an `interval` timeline.
 
-`[PENDING]` Either field on a timeline whose role is not `interval`. Part of
-DES-7448, **not on `dev` yet** — today the write may succeed silently.
-Guard once landed: `findOffIntervalMetadataError` · fragment:
-`distance and axes are only authored on interval`
+`[REJECTED]` Either field on a timeline whose role is not `interval`. The interval
+editor is the only place the Designer writes them.
+Guard: `findOffIntervalMetadataError` · fragment:
+`only authored on interval mouse-move timelines`
 
-`[PENDING]` Interval metadata on an interaction with no mouse-move trigger. Same
-ticket, same status.
-Guard once landed: `findIntervalMetadataTriggerError`
+`[LEGACY-OK-ON-UPDATE]` An unchanged echo of a stored value on the same timeline id
+passes, so a duration or target read-modify-write is not forced to strip it.
+
+`[REJECTED]` Interval metadata on an interaction with no `wf:mouse-move` trigger.
+Guard: `findIntervalMetadataTriggerError` · fragment:
+`not write them without a "wf:mouse-move" trigger`
 
 `[REJECTED]` A `distance` that is fractional, or outside 1 to 10000. Bounded in
 `triggerMetadata`'s schema as `z.number().finite().int().min(1).max(10000)`, so

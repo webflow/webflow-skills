@@ -14,10 +14,23 @@ Read this alongside the file for whichever trigger you are building.
   scope,           // optional; defaults to { type: 'site' }
   triggers,        // [REQUIRED] array
   timelines,       // [REQUIRED] array
-  // timelineDefaults    optional
+  // timelineDefaults    [OMIT] on create — see below
   // conditionalPlayback optional — see conditional-playback.md
 }
 ```
+
+## `timelineDefaults` is not authorable
+
+`[OMIT]` on create. `[REJECTED]` for any non-null value, on create or update.
+
+The Designer never dispatches a timeline-defaults update, so there is no authored
+value to mirror. Only `null` is meaningful, and only on update, where it clears a
+stored bag.
+
+Guard: `findTimelineDefaultsError` · fragment:
+`timelineDefaults is not authored by the Designer`
+
+An empty object does not count as "unset". Leave the key out entirely on create.
 
 Through MCP, `siteId` and `pageId` are **top-level tool arguments**, not fields
 inside the create action. The tool strips them before dispatch and supplies
@@ -131,6 +144,30 @@ are accepted.
 `validateTargetValue` enforces a per-key value shape shared with the DE
 responders. It rejects, for example, a string where an id array is expected.
 Fragment varies by key; the message names the expected shape.
+
+## `autoReverse` is not authorable either
+
+`[REJECTED]` `action.timing.autoReverse` and `timeline.settings.autoReverse`.
+Neither the action timing editor nor the timeline settings UI writes them, and the
+runtime reverses with `playInReverse` instead.
+
+Guard: `findTimingAutoReverseError` · fragment:
+`is not authored by the Designer; the runtime uses playInReverse`
+
+`[LEGACY-OK-ON-UPDATE]` An unchanged stored value on the same id passes. The panel
+has no control that clears one either, and `get()` returns it, so rejecting it
+outright would strand any interaction that already carries one on its next
+read-modify-write. A new or altered value still rejects.
+
+## Mouse-move persist bounds
+
+`[REJECTED]` `wf:mouse-move` `pluginConfig.smoothness` outside its millisecond
+range, or `restingState` x/y outside 0 to 100. Absent keys are legal.
+Guard: `findMouseMoveRangeError`
+
+Note the two numbers differ: the Smoothness **slider** in the panel is 0 to 100,
+while the persisted bound follows the number input. The generated bounds table has
+the current values.
 
 ## Size
 

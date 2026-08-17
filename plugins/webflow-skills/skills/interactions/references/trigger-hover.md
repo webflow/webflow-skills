@@ -43,12 +43,23 @@ Guard: `findTimelineRoleError`
   name: 'Hover',
   triggers: [{
     extensionKey: 'wf:hover',
-    config: {},
+    config: {pluginConfig: {multiTimeline: false}},
     target: {extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]},
   }],
   timelines: [{actions: [ACTION]}],
 }
 ```
+
+**Send `multiTimeline: false` explicitly.** `HoverTriggerInput` decides which editor
+to show with `typeof config?.multiTimeline === 'boolean'`, and the schema seeds the
+boolean at creation. Omitting it puts the interaction on the legacy path, which
+defaults `type` to `mouseenter` and makes the panel treat the data as legacy,
+hiding "Add separate hover out". An empty `config` therefore produces an
+enter-only interaction the user cannot extend, not the editable single-timeline one
+this example is meant to show.
+
+On a read-then-write, preserve whichever model the stored data already uses rather
+than adding the discriminator to legacy data.
 
 ## Accept — separate hover out
 
@@ -124,16 +135,16 @@ Guard: `findTimelineRoleError`
 
 ## Legacy pass-through
 
-`[PENDING]` `pluginConfig.type: 'mouseover'`. The Designer's Type dropdown only
-offers mouseenter and mouseleave, so `mouseover` is not something the panel can
-produce. The rejection — and the matching allowance that lets an already-stored
-`mouseover` survive an unrelated update — are part of DES-7448 and are **not on
-`dev` yet**, so today the write may succeed silently.
+`[REJECTED]` `pluginConfig.type: 'mouseover'` on create. The Designer's Type
+dropdown only offers mouseenter and mouseleave, so the panel cannot produce it.
+Guard: `findHoverConfigModelError`
 
-Do not author it. When reading an interaction that already stores it, pass it
-through untouched rather than rewriting it.
+`[LEGACY-OK-ON-UPDATE]` A stored `mouseover` hover survives an update. The
+allowance is counted one-for-one against the `wf:hover` triggers the stored
+interaction already carried, so you cannot use one stored `mouseover` to authorize
+a second. A non-hover trigger cannot inherit the allowance either.
 
-Guard once landed: `findHoverConfigModelError` (scoped allowance on the update path)
+Pass a stored `mouseover` through untouched. Do not author a new one.
 
 ## Rejected
 

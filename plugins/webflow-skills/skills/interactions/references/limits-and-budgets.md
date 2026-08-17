@@ -30,17 +30,16 @@ plugin's `pluginConfig`).
 
 ## Count caps
 
-Applied at the tool boundary on create and update. They bound the worst-case
-inline response — `get_interaction` resolves every timeline inline — rather than
-reflecting a Designer authoring rule. They are never re-applied when existing data
-is hydrated, so stored records over a cap still load.
+Enforced by `findInteractionCountError` in the Designer Extension host, on create
+and on update. They bound the worst-case inline response, since `get_interaction`
+resolves every timeline inline, rather than reflecting a Designer authoring rule.
+They are never re-applied when existing data is hydrated, so stored records over a
+cap still load.
 
-| Cap                       | Value                         | Source                                                    |
-| ------------------------- | ----------------------------- | --------------------------------------------------------- |
-| Timelines per interaction | `IX3_MAX_TIMELINE_GROUPS` (5) | mirrors the store's authoring cap on `timelineIds.length` |
-| Actions per timeline      | 200                           | guardrail                                                 |
-| Triggers per interaction  | 20                            | guardrail                                                 |
-| Targets per action        | 20                            | guardrail                                                 |
+See [`capabilities.generated.md`](capabilities.generated.md) for the
+current values of `IX3_MAX_TIMELINES_PER_INTERACTION`,
+`IX3_MAX_ACTIONS_PER_TIMELINE`, `IX3_MAX_TRIGGERS_PER_INTERACTION`, and
+`IX3_MAX_TARGETS_PER_ACTION`.
 
 The timeline cap is a flat count of the `timelines` array. It does not read
 `groupId`, so an ungrouped timeline still counts toward it.
@@ -48,10 +47,16 @@ The timeline cap is a flat count of the `timelines` array. It does not read
 Some triggers cap lower still — a standalone trigger allows exactly one, and load
 allows at most one per interaction.
 
-These four live as local constants in the page-automation tool layer
-(`packages/systems/page-automation/core/tools/interactions.ts`) rather than as
-exports, which is why they are written here by hand instead of generated. If you
-change them, update this table.
+All four are exported as `IX3_MAX_*` and enforced by `findInteractionCountError`,
+which runs in the Designer Extension host on create **and** update. The current
+values are in the generated bounds table rather than written here by hand, so a cap
+change cannot drift out of the reference.
+
+Fragment: `An interaction may define at most`
+
+**Stored over-cap data raises its own ceiling.** The guard takes the larger of the
+cap and the interaction's existing count, so legacy data already past a limit is not
+forced to shrink on its next update. You still cannot grow it further.
 
 ## Duration
 

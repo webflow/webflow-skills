@@ -17,13 +17,13 @@ trigger's set, or a duplicate role across timelines.
 Guard: `findTimelineRoleError` · fragments: `requires a triggerMetadata.role`,
 `Expected one of:`
 
-`[PENDING]` `assignedTimelineRole`. The panel writes `assignedGroupId` instead;
-there is no Designer control that produces this field. The rejection, and the
-allowance that lets a stored value survive an unrelated update, are part of
-DES-7448 and are **not on `dev` yet** — today the write may succeed silently.
-Do not author it; pass a stored one through untouched.
-Guard once landed: `findAssignedTimelineRoleError` · fragment:
+`[REJECTED]` `assignedTimelineRole`. The panel writes `assignedGroupId` to route a
+trigger to a timeline group; no Designer control produces this field.
+Guard: `findAssignedTimelineRoleError` · fragment:
 `must not set assignedTimelineRole`
+
+`[LEGACY-OK-ON-UPDATE]` A stored value survives an update, allowanced per
+trigger-and-role slot so one stored value cannot authorize a second.
 
 ## Groups
 

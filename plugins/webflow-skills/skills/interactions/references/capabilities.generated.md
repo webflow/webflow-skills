@@ -129,8 +129,20 @@ narrows the allowed set and omits the flip variants, which is what
 | --- | --- |
 | `timeline.canvasDuration` | at most 12 seconds |
 | `ix3-random-array` values | 2 to 12 entries |
+| `wf:mouse-move` `pluginConfig.smoothness` | 0 to 2000 ms |
 
-Per-interaction count caps (timelines, actions, triggers, targets) are
-applied at the page-automation tool boundary rather than in this schema, so
-they are not exported and cannot be rendered here. See
+### Per-interaction caps
+
+Enforced by `findInteractionCountError`, which runs in the Designer Extension
+host on create and on update.
+
+| Cap | Limit |
+| --- | --- |
+| Triggers per interaction | 20 |
+| Timelines per interaction | 5 |
+| Actions per timeline | 200 |
+| Targets per action | 20 |
+
+A stored interaction already over a cap raises the ceiling for itself, so an
+update to legacy data is not forced to shrink it. See
 `references/limits-and-budgets.md`.
