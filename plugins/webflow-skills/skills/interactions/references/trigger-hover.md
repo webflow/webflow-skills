@@ -21,11 +21,23 @@ one a _new_ hover gets in the panel is gated:
 `isMultiTimelineHoverEnabled` is true, and that flag ships off today. With it off, a
 hover created in the panel stays legacy and carries no `multiTimeline` key.
 
-What is **not** gated is the set of affordances. `isMultiTimelineFor`,
-`timelineGroupConfig`, and `triggerSplit` are registered unconditionally,
-specifically so a hover already persisted as new-model keeps its enter/leave split
-flow even after the flag rolls off. So new-model data you author through the API
-remains editable regardless of flag state.
+The affordance _registrations_ are not gated: `isMultiTimelineFor`,
+`timelineGroupConfig`, and `triggerSplit` are declared unconditionally so a hover
+already persisted as new-model keeps its enter/leave split flow after the flag rolls
+off.
+
+But a **second** flag, `IX3_TIMELINE_GROUPS`, gates both "add group" entry points in
+the panel. That splits editability in two, and the distinction matters:
+
+| Stored shape                          | `IX3_TIMELINE_GROUPS` off                                                                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New-model hover with **one** timeline | Cannot gain a separate hover out. The add button is not rendered.                                                                                                         |
+| An existing **two-group** split       | Still editable, renameable, and removable. The remove control stays reachable on purpose so a rollback does not strand authors in a multi-timeline view they cannot exit. |
+
+So authoring a single-timeline new-model hover through the API can produce something
+the user cannot extend in the panel, depending on a flag you cannot see from the
+payload. Authoring the full split avoids that, because two groups keep their
+controls either way.
 
 Practical guidance:
 

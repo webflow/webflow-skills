@@ -59,16 +59,25 @@ Fragment: `An interaction may define at most`
 existing count, so a Designer Extension update to legacy data is not forced to
 shrink it.
 
-`[REJECTED]` Over-cap lists sent through MCP, even when the stored interaction
-already exceeds the cap. The MCP tools apply the same caps as Zod `.max()` on both
-the create and update argument schemas, which runs **before** the host's
-baseline-aware check. So a read-modify-write of an over-cap interaction fails on
-resubmission: reading a timeline with more actions than the cap and sending it back
-unchanged to edit one action is refused.
+`[REJECTED]` An over-cap **list sent through MCP**, even when the stored interaction
+already exceeds the cap. The MCP tools apply the same caps as Zod `.max()` on the
+create and update argument schemas, which runs **before** the host's baseline-aware
+check.
 
-There is no MCP-side workaround. Splitting the interaction is the only path, and
-that changes what the user sees. Treat an over-cap stored interaction as read-only
-through MCP.
+What that does and does not block:
+
+| Update                          | Over-cap stored interaction                                                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `name` and/or `scope` only      | **Works.** `triggers` and `timelines` are optional on update; omit them and no `.max()` applies, and the host skips the count check too |
+| Sends `triggers` or `timelines` | **Refused** if the list is over cap, including an unchanged resubmission                                                                |
+
+So an over-cap interaction is not read-only through MCP: renaming and rescoping are
+safe. What breaks is read-modify-write of the capped list itself, since reading a
+timeline with more actions than the cap and sending it back to edit one action is
+refused on resubmission.
+
+There is no MCP-side workaround for that path. Splitting the interaction is the only
+option, and it changes what the user sees.
 
 ## Duration
 

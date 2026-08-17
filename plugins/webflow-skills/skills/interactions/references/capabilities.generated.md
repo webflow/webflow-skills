@@ -120,8 +120,12 @@ control on a read-then-write.
 
 `STANDARD_TRIGGER_ALLOWED_CONTROLS` is the opt-in complete set rather than the
 default dropdown contents. That distinction only matters where a surface
-narrows the allowed set and omits the flip variants, which is what
-`CONDITIONAL_OUTCOME_CONTROLS` above does.
+narrows the allowed set and omits the flip variants, as the conditional
+outcome set below does.
+
+Conditional outcome controls: `none`, `pause`, `play`, `restart`, `resume`, `reverse`, `stop`, `togglePlayReverse`.
+No flip-ease variants, which is the narrowing referred to above. That surface
+is unreachable while the conditions capability is off.
 
 ## Numeric bounds
 

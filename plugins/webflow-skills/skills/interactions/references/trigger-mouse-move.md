@@ -125,7 +125,17 @@ Guard: `findConditionalPlaybackError`
 
 ## Panel trap
 
-`[PANEL-TRAP]` `timing.repeat` and `timing.yoyo` are hidden by the panel on a
-continuous interaction, but only the **scroll-scrub** variant is rejected by the
-write path — `findScrollScrubActionTimingError` keys off scrub, not continuous. A
-value set here is stored, ignored by the runtime, and invisible in the panel.
+`[PANEL-TRAP]` `timing.repeat` and `timing.yoyo` on a continuous interaction. The
+panel hides both controls when a continuous trigger is present, and
+`findScrollScrubActionTimingError` keys off scrub rather than continuous, so nothing
+rejects them.
+
+**They are not inert.** `buildTweensForAction` forwards a finite `repeat` and any
+`yoyo` straight into the GSAP tween vars, and repeat extends the timeline duration
+that continuous scrubbing maps gesture progress across. So a value set here changes
+how the interaction plays while remaining invisible and uneditable in the panel,
+which is the worst combination in this class.
+
+One special case: on a percent canvas an infinite `repeat: -1` is materialized to a
+single cycle (`0`), because an infinite duration would break the 0 to 1 scrub
+mapping. Outside a percent canvas, `-1` passes through unchanged.
