@@ -18,7 +18,7 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 - Use Webflow MCP's `data_style_tool` to resolve class **style-block ids** before targeting `wf:class`
 - DO NOT use any other tools or methods for Webflow interaction CRUD
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
-- **The Webflow Designer MCP Bridge must stay open.** `data_interactions_tool` is not headless the way `data_element_tool` is — it needs a live Designer session.
+- **No Designer or MCP Bridge required.** `data_interactions_tool` is headless, the same way `data_element_tool` is. Designer is only useful afterward, to inspect the Interactions panel or Preview. Do not ask the user to open the Bridge app in order to list or write interactions.
 - After Webflow monorepo PR #117284 ships: if the Webflow Filesystem (WFS) interactions lane is `built`, prefer `site/interactions/interactions.ix3.json` — `data_interactions_tool` is then unregistered. **Until that PR lands, the tool is still registered even in WFS sessions.** This skill is the MCP CRUD path.
 
 ## Tool surface (beta dogfood)
@@ -30,7 +30,7 @@ These tools are **not on stable MCP**.
 - **Scopes:** `pages:read` / `pages:write`
 - **Compound tool:** `data_interactions_tool`
 - **Actions:** `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`
-- `siteId` and `pageId` are **top-level** tool arguments (session / create bookkeeping). They are **not** inside `create_interaction` args.
+- `siteId` and `pageId` are **top-level** tool arguments (page context / create bookkeeping). They are **not** inside `create_interaction` args.
 - **There is no `guide` action and no `webflow://guides/interactions` resource yet.** Both are planned. Until they ship, the `references/` files in this skill are the contract — do not try to call `guide` and do not wait for it.
 - `create_interaction` args: `name` (required), `scope` (optional, default site), `triggers` (required array), `timelines` (required array), optional `timelineDefaults`, optional `conditionalPlayback`
 
@@ -41,7 +41,7 @@ These tools are **not on stable MCP**.
 1. **Call `webflow_guide_tool` first** — always the first MCP tool call
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
-4. **Confirm the gate**: beta MCP endpoint, `ff-ix3-interaction-apis` covering the caller's identity, and a connected Designer Bridge session. If `data_interactions_tool` is unregistered, stop and tell the user — the likely causes are the stable MCP endpoint instead of beta, the flag not covering that identity, or no Bridge session. Do not work around it. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
+4. **Confirm the gate**: beta MCP endpoint and `ff-ix3-interaction-apis` covering the caller's identity. If `data_interactions_tool` is unregistered, stop and tell the user. The likely causes are the stable MCP endpoint instead of beta, or the flag not covering that identity. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. Do not work around it. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
 
 ### Phase 2: Read the contract for what you are building
 
@@ -372,5 +372,4 @@ Optional `--agent claude-code` (or cursor). Testers also need:
 
 - Beta MCP: `https://mcp.webflow.com/beta/mcp`
 - Flag: `ff-ix3-interaction-apis`
-- Designer MCP Bridge connected
 - Scopes: `pages:read` / `pages:write`
