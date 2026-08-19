@@ -66,6 +66,7 @@ These tools are **not on stable MCP**.
 | Editing an existing interaction               | [references/updating-interactions.md](references/updating-interactions.md)   |
 | Size and count limits                         | [references/limits-and-budgets.md](references/limits-and-budgets.md)         |
 | A write succeeded but the user cannot edit it | [references/panel-traps.md](references/panel-traps.md)                       |
+| A write succeeded but nothing animates        | [references/rejects-index.md](references/rejects-index.md) → "nothing to decode" |
 | Decoding a rejection message                  | [references/rejects-index.md](references/rejects-index.md)                   |
 | Which triggers and properties exist at all    | [references/capabilities.generated.md](references/capabilities.generated.md) |
 
@@ -77,7 +78,7 @@ through untouched rather than "fixing" it.
 
 ### Phase 3: Plan (before any write)
 
-7. Resolve class targets: prefer style-block id arrays from `data_style_tool`; class name strings are accepted
+7. Resolve class targets: prefer style-block id arrays from `data_style_tool`; class name strings are accepted. **Confirm with `query_styles` that the class resolves to exactly one style block** — a name reused as the leaf of several combo chains returns several, and each targets a different element. When an element needs its own class, create it with `create_style` naming the full `parent_style_names` chain you intend to apply, then apply that same chain with `data_element_tool` `set_style`; a chain that does not already exist as a style block is refused
 8. Plan the payload against the reference you read in Phase 2: object format, legal trigger/target, fresh action ids
 9. **Request explicit confirmation** before create/update/delete:
    - "Would you like me to create this click fade?"
@@ -93,6 +94,7 @@ through untouched rather than "fixing" it.
 12. `get_interaction` with the returned id
 13. Report what was created/updated
 14. **On reject:** read the error, look it up in [references/rejects-index.md](references/rejects-index.md), fix the payload. Do not invent GSAP position operators, and do not retry the same shape hoping for a different result — every rejection here is deterministic.
+15. **A successful write is not proof the animation runs.** Several legal payloads save, read back byte-identical, and do nothing: a scroll reveal with no `enter`, a `[from, to]` pair on a To tween, a class array that is not one combo chain, a grouped interaction, `control: "reverse"` on a first click. `get_interaction` cannot detect any of them. Check the payload against the Guidelines below before reporting success, and if the user says nothing happens, start at [references/rejects-index.md](references/rejects-index.md) → "When there is nothing to decode" instead of rewriting the interaction.
 
 ## Examples
 
@@ -170,28 +172,35 @@ Same discovery, reference read, and confirmation. Load **omits the trigger targe
 
 **User:** "Scrub a fade as the user scrolls"
 
-Scroll is **standalone**. Include `scrollTriggerConfig` with `start` and `end`. **Omit** playback `control` / `delay` / `jump` / `speed`.
+Scroll is **standalone**. A scrub needs a numeric `scrub` (not `true`), a roleless timeline with `canvasDuration: 1`, and action `timing.duration` equal to that canvas so the tween spans the full pass. **Omit** playback `control` / `delay` / `jump` / `speed`. Omitting `scrub` is a one-shot play when the range is crossed — not a scrub.
 
 ```json
 {
-  "name": "Scroll fade",
+  "name": "Scroll scrub fade",
   "triggers": [
     {
       "extensionKey": "wf:scroll",
       "config": {
-        "scrollTriggerConfig": { "start": "top 90%", "end": "bottom 25%" }
+        "scrollTriggerConfig": {
+          "start": "top bottom",
+          "end": "top 10%",
+          "scrub": 0.3
+        }
       },
-      "target": { "extensionKey": "wf:body", "value": "" }
+      "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
     }
   ],
   "timelines": [
     {
+      "canvasDuration": 1,
       "actions": [
         {
-          "id": "act-scroll-fade",
+          "id": "act-scroll-scrub",
           "name": "Fade",
-          "timing": { "duration": 0.4 },
-          "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
+          "timing": { "duration": 1 },
+          "properties": {
+            "wf:transform": { "opacity": ["0%", "100%"], "xPercent": [-40, 0] }
+          },
           "targets": [
             { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
           ]
@@ -201,6 +210,25 @@ Scroll is **standalone**. Include `scrollTriggerConfig` with `start` and `end`. 
   ]
 }
 ```
+
+**Play-once variant (a reveal, not a scrub).** Drop `scrub` and `canvasDuration`, put `timing.duration` back in seconds — and **send `enter: "play"`**. Omitted toggle actions become `none`, and without scrub those toggles are the only playback, so a reveal with no `enter` binds successfully and never runs. Nothing errors.
+
+```json
+{
+  "extensionKey": "wf:scroll",
+  "config": {
+    "scrollTriggerConfig": {
+      "start": "top 90%",
+      "end": "bottom 15%",
+      "enter": "play",
+      "leaveBack": "reset"
+    }
+  },
+  "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+}
+```
+
+`leaveBack: "reset"` is optional and replays the reveal when the user scrolls back up. Use a From (`tt: 1`) for the reveal itself so the element starts hidden.
 
 ### Example 4: Hover enter / leave
 
@@ -314,10 +342,18 @@ Mouse-move is **standalone**. It validates without a target but never fires with
 - **IDs:** omit timeline `id` on create (the host mints it). Every action needs a fresh unique `id`. Do not send trigger `id`.
 - **Opacity** lives under `wf:transform` (e.g. `["0%","100%"]`), never `wf:style`.
 - **Class targets:** style-block id arrays preferred; class name strings are accepted.
+- **A `wf:class` id array is ANDed into one compound selector**, not a list of alternatives: `["a","b"]` resolves to `.a.b`. The host expands a combo class's parents for you, so pass the one leaf id. Ids from two different combo chains produce a selector no element carries, and the target resolves to nothing with no error. One target means one class or one combo chain — animate two different sets of elements with two actions.
+- **A leaf class name reused across chains** (`.btn.lift` and `.btn.cta.lift` are two style blocks both named `lift`) is rejected when passed as a name string and matches the wrong element when passed as ids. Give each element its own class instead.
 - **Send only what the Interactions panel can author.** Worker Zod is lenient; illegal shapes fail on the Designer write path.
 - **`conditionalPlayback`** is an **array** of `{ type, behavior }` (and breakpoint form), not `{reducedMotion:"skip"}`. Example: `[{ "type": "prefers-reduced-motion", "behavior": "dont-animate" }]`.
 - **Load** omits trigger `target` and `pluginConfig`.
 - **Scroll** and **mouse-move** omit playback `control` / `delay` / `jump` / `speed`.
+- **A scroll without `scrub` needs `enter: "play"`.** Omitted toggle actions become `none`, so the ScrollTrigger binds and the timeline never plays. The panel always writes all four toggles; match it.
+- **Scroll scrub:** send numeric `scrub`, `canvasDuration: 1`, and action `timing.duration: 1`. A tiny duration occupies ~1% of the scroll range and looks like nothing happened.
+- **`control: "reverse"` is a no-op on the first click** (the playhead starts at 0). For a reverse the user can try in Preview, use `togglePlayReverse` (`pluginConfig.click` omitted or `"each"`).
+- **A To tween reads only its `to` slot.** `[from, to]` on `tt: 0` is half discarded and GSAP animates from the element's live value, so `scale: [0.55, 1.15]` on an unscaled element goes 1 → 1.15 and `opacity: ["20%","100%"]` on an opaque element does nothing at all. Use `tt: 2` whenever the animation needs a start value.
+- **Do not put a click or hover trigger on an element its own from-state collapses** (`scaleX: 0`, `width: 0`). No box is left to click. Trigger on a parent and animate the child.
+- **Grouped interactions are not authorable through MCP.** The timeline input drops `groupId`, so the triggers persist pointed at groups no timeline claims and the runtime skips them. Author a single group, or say the capability is unavailable.
 - **Navbar / dropdown are not authorable through this API today.** They are flag-gated and rejected on create for every caller. Tell the user the trigger is unavailable rather than attempting a write.
 - **No GSAP position operators** (`+=`, `<`, `>`) in `timing.position`. Use a finite number (seconds) or `'500ms'`.
 - **Duration is seconds.** `timing.duration: 0.4` is 400ms. `400` is 400 seconds. Use `"400ms"` if you think in milliseconds.

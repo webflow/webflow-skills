@@ -37,6 +37,35 @@ trigger-and-role slot so one stored value cannot authorize a second.
 
 `groupId` marks a timeline as part of a user-managed action group.
 
+### Groups are not authorable through MCP today
+
+**Do not author a grouped interaction through the MCP interaction tools.** It stores,
+reads back looking correct, and never runs.
+
+`TimelineInputSchema` in
+`packages/systems/page-automation/core/tools/interactions.ts` has no `groupId` key and
+is a plain `z.object()`, so Zod strips `groupId` from every timeline. The trigger keeps
+its `assignedGroupId`, so the interaction persists with triggers routed to groups no
+timeline claims. `AnimationCoordinator` reads an unmatched group id as a removed group
+and skips the trigger, so nothing fires. No layer reports it, and `get_interaction`
+echoes the triggers back intact.
+
+This applies to **every** trigger type, not only hover. A click with two action groups
+fails the same way.
+
+Until the field is accepted, through MCP:
+
+- Author a **single-group** interaction: omit `groupId` on the timelines and
+  `assignedGroupId` on the triggers. Every trigger then drives every timeline, which is
+  the right shape for one animation.
+- For a two-direction hover specifically, use the role form. See
+  [`trigger-hover.md`](trigger-hover.md).
+- If the request genuinely needs independent groups, tell the user the capability is
+  unavailable through this API rather than writing something inert.
+
+Calling the Designer Extension API directly, `groupId` works as described below. The
+rest of this section is real behavior; only the MCP input schema drops the field.
+
 **The five-item limit is a flat cap on timelines, not on groups.** The tool
 applies `.max(IX3_MAX_TIMELINE_GROUPS)` to the `timelines` array and the store
 checks `interaction.timelineIds.length`; neither reads `groupId`. A six-timeline
@@ -62,6 +91,11 @@ Scroll-scrub and mouse X/Y timelines are not time-based — progress is driven b
 the gesture — so the panel authors action `timing` as a percent of the timeline's
 nominal `canvasDuration`. Values are still **stored in seconds**; the percent is a
 presentation layer.
+
+For a visible scrub, set action `timing.duration` equal to `canvasDuration`, usually
+both `1`. A much smaller duration is accepted and then occupies only that fraction of
+the gesture, so the result looks like a no-op. See
+[`trigger-scroll.md`](trigger-scroll.md).
 
 `[REJECTED]` `canvasDuration` on a timeline that is neither scroll-scrub nor mouse
 X/Y, or on one that carries a role when the scrub percent timeline must be

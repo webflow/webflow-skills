@@ -44,6 +44,21 @@ nothing to alternate between and are also dropped.
 `[REJECTED]` A control outside the trigger's allowed set.
 Guard: `findTriggerControlAllowedError`
 
+### `reverse` does nothing on the first click
+
+`control: 'reverse'` is legal and the write succeeds. The runtime calls GSAP
+`reverse()` on a playhead that starts at 0, so the first click has nothing to rewind
+and the user sees a button that does nothing.
+
+For a reverse the user can actually try, send `togglePlayReverse` — allowed while
+`pluginConfig.click` is omitted or `'each'`. The first click plays forward and the
+second reverses. Keep `control: 'reverse'` only when another trigger has already
+played the same timeline, or when the user explicitly asked for that control to be
+stored.
+
+Do not reach for `togglePlayReverse` when `pluginConfig.click` is `first`, `odd`,
+`even`, or a count: those drop the toggle controls, per the paragraph above.
+
 ## Rejected
 
 `[REJECTED]` No target. Enforced by the missing-target branch in

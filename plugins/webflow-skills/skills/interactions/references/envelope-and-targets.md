@@ -147,6 +147,44 @@ returns each style's `id`, and that UUID is what goes in the `value` array. Note
 Calling the Designer Extension API directly instead, the equivalents are
 `webflow.createStyle` and `getStyleByName`.
 
+### One `wf:class` target is one compound selector, so the ids are ANDed
+
+The id array is not a list of alternatives. Publishing joins every id's class name
+with a dot (`transformClassTargetValue` → `.join('.')`) and the runtime resolver
+queries `.${value}`, so `['a', 'b']` becomes the selector `.a.b` and matches only
+elements carrying **both** classes.
+
+That is exactly why a combo class works. The host expands each id's ancestor chain on
+write (`resolveComboClassParents`, via `withComboParents` in `ix3ClassTargets.ts`), so
+passing the single id for `.card.featured` stores both ids and resolves to `.card.featured`
+— the selector that combo already styles. **Pass the one leaf id and let the host
+expand it.** Do not assemble the chain yourself.
+
+`[REQUIRED]` in practice: the resulting ids must form a single combo chain. Two ids
+from different chains produce a selector no element carries, and the target resolves to
+zero elements. Nothing rejects it — `isValidStylePath` guards `element.setStyles`, not
+IX3 targets — so the interaction saves, reads back with both ids intact, and never
+runs.
+
+The shape to watch for is one leaf class name reused across different parents, for
+example a `lift` combo that exists as both `.btn.lift` and `.btn.cta.lift`. Those are
+two distinct style blocks with the same name. Passing both ids expands to the union of
+their parents and asks for an element carrying `btn`, `cta`, and `lift` at once, which
+is only the second element — or, if the parents diverge, nothing.
+
+So: **one target means one class or one combo chain.** Two different sets of elements
+means two targets or two actions. When several elements need to animate differently,
+give each its own class rather than reusing one name across chains.
+
+`[REJECTED]` A class-name **string** whose name matches more than one style block —
+which is precisely the reused-leaf-name case above. The host cannot pick for you.
+Resolver: `resolveWfClassBase` · fragment:
+`matches multiple style blocks; use a style-block id array instead`
+
+`[REJECTED]` A name that matches no style block on the site
+(`does not match a style block on this site`), and an id array containing an id that
+is not a class style block on the site (`is not on this site`).
+
 ## Value shapes per target type
 
 `validateTargetValue` enforces a per-key value shape shared with the DE

@@ -48,6 +48,8 @@ If a fragment below does not match your error exactly, check the other family:
 | `is not offered by the Designer (shouldShow: false in all contexts)`                  | `wf:id`                                                                                                                                                                                                 | [envelope](envelope-and-targets.md)                  |
 | `is not offered by the Designer's Filter-by picker`                                   | Bad key inside `filterBy`                                                                                                                                                                               | [envelope](envelope-and-targets.md)                  |
 | `target.value is required`                                                            | Missing `value` — use `''`                                                                                                                                                                              | [envelope](envelope-and-targets.md)                  |
+| `matches multiple style blocks; use a style-block id array instead`                   | A `wf:class` name string reused as a leaf across combo chains. Host normalization, not a guard                                                                                                          | [envelope](envelope-and-targets.md)                  |
+| `does not match a style block on this site` / `is not on this site`                   | A `wf:class` name or id that does not resolve. Host normalization, not a guard                                                                                                                          | [envelope](envelope-and-targets.md)                  |
 | `is not a supported`                                                                  | Property not on the allowlist for its key                                                                                                                                                               | [actions](actions-and-properties.md)                 |
 | `is non-animatable and must only be used in a Set action`                             | Needs `tt: 3`                                                                                                                                                                                           | [actions](actions-and-properties.md)                 |
 | `must not be a plain {from, to} object`                                               | Use an array                                                                                                                                                                                            | [actions](actions-and-properties.md)                 |
@@ -82,6 +84,30 @@ rather than the Designer. These have no guard to cite.
 | `Number must be greater than or equal to 1` on `distance`   | Interval distance below the minimum. Note this is a min/max message, not `Invalid input`                                                                                                                                                                                                                                                  | [mouse-move](trigger-mouse-move.md)  |
 | `Number must be less than or equal to 10000` on `distance`  | Interval distance above the maximum                                                                                                                                                                                                                                                                                                       | [mouse-move](trigger-mouse-move.md)  |
 | `actions.0.id: Required`                                    | Missing action id                                                                                                                                                                                                                                                                                                                         | [envelope](envelope-and-targets.md)  |
+
+## When there is nothing to decode
+
+A payload that saves and then does nothing has no message to match against. These
+are the known causes, and none of them errors, warns, or reads back differently —
+`get_interaction` echoes exactly what you sent.
+
+| Symptom                                                         | Cause                                                                                              | Read                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| A scroll reveal never plays                                     | No `enter` on a non-scrub scroll. Omitted toggle actions become `none`, which installs no callback | [scroll](trigger-scroll.md)          |
+| A scrub barely moves, or an authored start value is ignored     | `[from, to]` on a To (`tt: 0`). Only the `to` half reaches GSAP                                    | [actions](actions-and-properties.md) |
+| A scrub plays in a sliver of the range                          | Action `timing.duration` is smaller than `canvasDuration`                                          | [scroll](trigger-scroll.md)          |
+| A "scrub" plays all at once when the range is crossed           | `scrub` omitted. That shape is a one-shot play, not a scrub                                        | [scroll](trigger-scroll.md)          |
+| The first click does nothing                                    | `control: 'reverse'` on a playhead that starts at 0. Use `togglePlayReverse`                       | [click](trigger-click.md)            |
+| A grouped interaction written through MCP never runs            | The MCP timeline input drops `groupId`, so triggers point at groups no timeline claims             | [timelines](timelines-and-groups.md) |
+| A class target animates nothing                                 | The ids do not form one combo chain, so the compound selector matches no element                   | [envelope](envelope-and-targets.md)  |
+| A trigger element cannot be clicked or hovered                  | Its own from-state collapses the box (`scaleX: 0`, `width: 0`)                                     | [actions](actions-and-properties.md) |
+| Mouse-move never fires                                          | No trigger target. Validation accepts none and `bindTrigger` resolves nothing                      | [mouse-move](trigger-mouse-move.md)  |
+| `action.timing.delay` has no effect                             | Inert on actions. Use `timing.position`                                                            | [actions](actions-and-properties.md) |
+| A hover in/out authored as the panel's trigger split never runs | The MCP timeline input drops `groupId`, so the triggers point at groups no timeline claims         | [hover](trigger-hover.md)            |
+
+A reveal that plays but is never seen is a different problem with the same
+appearance: check `start` before assuming the interaction is broken. See
+[`trigger-scroll.md`](trigger-scroll.md).
 
 ## Ordering
 

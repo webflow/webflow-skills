@@ -50,6 +50,47 @@ does not appear.
 So a From is only reliably at its start value at rest when no earlier action in the
 same timeline targets the same property on the same target.
 
+### The runtime reads only the slot your `tt` names
+
+`buildTweensForAction` makes one GSAP call per tween type and hands it only the
+matching half of the config:
+
+| `tt` | Call                                          | Slots used  |
+| ---- | --------------------------------------------- | ----------- |
+| `0`  | `tl.to(els, {...vars, ...config.to})`         | `to` only   |
+| `1`  | `tl.from(els, {...vars, ...config.from})`     | `from` only |
+| `2`  | `tl.fromTo(els, config.from, {...config.to})` | both        |
+| `3`  | `tl.set(els, {...vars, ...config.to})`        | `to` only   |
+
+A `[from, to]` pair on a To is therefore built and then half discarded. GSAP animates
+from the element's **live computed value** to `to`, not from the value you authored:
+`scale: [0.55, 1.15]` with `tt: 0` on an unscaled element animates 1 → 1.15, and
+`opacity: ['20%', '100%']` on an element that is already opaque animates nothing at
+all. The write succeeds, `get_interaction` echoes both values back, and no error is
+raised.
+
+This is the most common reason a scroll-scrub payload looks inert: both endpoints are
+authored, one is used, and the visible delta is whatever sits between the element's
+current state and the `to` value. **Author `tt: 2` whenever the animation needs a
+start value.** Reserve `tt: 0` for "from wherever it is now".
+
+The mirror case is dropped rather than half-applied. A To carrying only a from value
+(`y: [40, null]`) leaves `config.to` empty, and the action is skipped outright:
+`if (tweenType === 0 && !hasToProps) continue`.
+
+The panel disables the editor for the unused slot, so the user cannot clear a stored
+value there either — see [`panel-traps.md`](panel-traps.md).
+
+### A from-state that collapses the element can make it unclickable
+
+When the trigger element and the action target are the same element, the from-state is
+what the user has to interact with. A start value of `scaleX: 0` or `width: 0` leaves
+no box to hit, so a click or hover trigger on that element never fires; `opacity: '0%'`
+keeps the hit area but gives the user nothing to aim at. Both save cleanly and animate
+correctly once triggered — they just cannot be triggered.
+
+Put the trigger on a parent that keeps its box and animate the child.
+
 Non-animatable properties are only valid inside a Set action. The Designer always
 emits `tt: 3` for them.
 

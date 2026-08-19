@@ -18,6 +18,15 @@ Send only what the Interactions panel can author. The storage schema
 parse; the authoring boundary is `designerInvariants.ts`. A payload that satisfies
 the schema can still be refused.
 
+And a payload that satisfies both can still animate nothing. A scroll reveal with no
+`enter`, a `[from, to]` pair on a To tween, `control: 'reverse'` on a timeline that has
+never played, a scrub whose action `timing.duration` is a sliver of its
+`canvasDuration`, a `wf:class` array that is not one combo chain — each of those saves,
+reads back exactly as sent, and does nothing. They are documented on the trigger and
+action pages rather than as `[REJECTED]`, because the write succeeds. When a user
+reports that a written interaction does nothing, start at
+[`rejects-index.md`](rejects-index.md) → "When there is nothing to decode".
+
 ## Which file to read
 
 Read the file for the trigger you are building, plus `envelope-and-targets.md`.
@@ -33,16 +42,17 @@ That pair is enough to author any single-trigger interaction.
 | Custom JS event                               | [`trigger-custom.md`](trigger-custom.md)         |
 | Navbar, dropdown, conditions, Rive, variables | [`gated-capabilities.md`](gated-capabilities.md) |
 
-| Also relevant                                         | Read                                                     |
-| ----------------------------------------------------- | -------------------------------------------------------- |
-| Envelope, IDs, scope, targets, filters                | [`envelope-and-targets.md`](envelope-and-targets.md)     |
-| Animation properties, values, `tt`, timing, splitText | [`actions-and-properties.md`](actions-and-properties.md) |
-| Timeline roles, groups, percent canvas                | [`timelines-and-groups.md`](timelines-and-groups.md)     |
-| Reduced motion, breakpoint playback rules             | [`conditional-playback.md`](conditional-playback.md)     |
-| Editing an existing interaction                       | [`updating-interactions.md`](updating-interactions.md)   |
-| Size and count limits                                 | [`limits-and-budgets.md`](limits-and-budgets.md)         |
-| A write succeeded but the user cannot edit it         | [`panel-traps.md`](panel-traps.md)                       |
-| Decoding a rejection message                          | [`rejects-index.md`](rejects-index.md)                   |
+| Also relevant                                         | Read                                                                       |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| Envelope, IDs, scope, targets, filters                | [`envelope-and-targets.md`](envelope-and-targets.md)                       |
+| Animation properties, values, `tt`, timing, splitText | [`actions-and-properties.md`](actions-and-properties.md)                   |
+| Timeline roles, groups, percent canvas                | [`timelines-and-groups.md`](timelines-and-groups.md)                       |
+| Reduced motion, breakpoint playback rules             | [`conditional-playback.md`](conditional-playback.md)                       |
+| Editing an existing interaction                       | [`updating-interactions.md`](updating-interactions.md)                     |
+| Size and count limits                                 | [`limits-and-budgets.md`](limits-and-budgets.md)                           |
+| A write succeeded but the user cannot edit it         | [`panel-traps.md`](panel-traps.md)                                         |
+| A write succeeded but nothing animates                | [`rejects-index.md`](rejects-index.md) → "When there is nothing to decode" |
+| Decoding a rejection message                          | [`rejects-index.md`](rejects-index.md)                                     |
 
 ## Enforcement tags
 
