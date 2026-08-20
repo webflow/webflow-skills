@@ -113,6 +113,8 @@ Guided, educational skills from [Webflow University](https://university.webflow.
 | Skill | Description |
 |-------|-------------|
 | webflow-university:mcp-getting-started | Guided onboarding for your first Webflow MCP workflow — checks your connection, helps you pick a real task, coaches your prompt, and runs it with you |
+| webflow-university:new-cms-plan | Guided activity for planning a new Webflow CMS collection architecture from scratch, then generating a custom portable skill to build it |
+| webflow-university:migrate-cms | Guided activity for migrating existing content into a Webflow CMS, then generating a custom portable skill to build and populate it |
 
 ## Resources
 
