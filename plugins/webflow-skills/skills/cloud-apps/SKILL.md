@@ -1,13 +1,13 @@
 ---
 name: webflow-mcp:cloud-apps
-description: Monitor and troubleshoot existing Webflow Cloud apps through Webflow MCP. Use when identifying apps or environments, checking domains or deployed versions, reviewing deployment health and history, diagnosing build, deploy, or runtime failures, verifying environment-variable keys, or previewing a retry, rollback, or GitHub branch deployment. Do not use for design/CSS variables, creating Cloud apps, deploying local source, or creating/updating environment-variable values.
+description: Monitor, troubleshoot, and manage environments for existing Webflow Cloud apps through Webflow MCP. Use when identifying apps or environments, checking domains or deployed versions, diagnosing failures, verifying environment-variable keys, correcting branch or mount mappings, provisioning branch environments, or previewing a retry, rollback, or GitHub branch deployment. Do not use for design/CSS variables, creating Cloud apps, deploying local source, or passing environment-variable values through MCP.
 ---
 
 # Webflow Cloud Apps
 
-Use `data_apps_tool` to answer operational questions about existing Webflow
-Cloud apps. Start from the user's outcome, gather only the evidence needed, and
-distinguish observations from conclusions.
+Use `data_apps_tool` to answer operational questions and manage environments for
+existing Webflow Cloud apps. Start from the user's outcome, gather only the
+evidence needed, and distinguish observations from conclusions.
 
 Use the `webflow-cli:cloud` skill when the task requires creating an app,
 building or deploying local source, or creating or updating environment
@@ -19,13 +19,14 @@ recovered through MCP.
 ### 1. Establish scope
 
 1. Call `webflow_guide_tool` before any other Webflow MCP tool.
-2. Use only Webflow MCP tools for Webflow operations. Never call Webflow APIs
-   directly.
+2. Use Webflow MCP tools for Webflow operations except the explicit CLI handoff
+   for environment-variable values. Never call Webflow APIs directly.
 3. Include the required `context` parameter in every tool call. Write 15-25
    words in third-person perspective.
 4. Route by the capability the task requires:
    - Use `data_apps_tool` to inspect existing apps, environments, domains,
-     deployment records, available server-side logs, and variable metadata.
+     deployment records, available server-side logs, and variable metadata; to
+     create, update, or delete environments; and to enqueue deployments.
    - Use `data_variable_tool` for Designer color, size, font, and CSS variables.
    - Use `webflow-cli:cloud` for app creation, local builds and deployments, or
      creating and updating environment-variable values.
@@ -33,8 +34,9 @@ recovered through MCP.
    capability is not enabled. Do not bypass it with a direct API request.
 
 Never ask the user to paste an environment-variable value or secret into chat.
-For a create or update, route to the installed Webflow CLI's built-in help and
-require a hidden prompt, stdin, or protected file. Do not guess a CLI command.
+For a create or update, use the installed Webflow CLI's `apps env-vars` help and
+require a hidden prompt, stdin, or protected file. Never pass a secret as a
+positional argument.
 
 ### 2. Resolve the target
 
@@ -118,6 +120,58 @@ unambiguous.
 4. If the value must be created or changed, stop the MCP workflow and route to
    `webflow-cli:cloud` without requesting the value in chat.
 
+#### Why is this environment serving the wrong branch or route?
+
+1. Resolve the exact environment and report its current branch, mount, deploy
+   URL, and latest deployment status.
+2. Compare the current branch and mount with the user's intended mapping. If
+   the request is only diagnostic, stop after reporting the mismatch.
+3. For a correction, show the exact before-and-after mapping. Explain that
+   `update_environment` is immediate, has no dry run, and does not deploy code.
+4. Require `confirm`, call `update_environment` once, and report the returned
+   environment and `mountRefreshStatus`.
+5. If the response is unreadable or the outcome is uncertain, reconcile with
+   `list_environments`, filtering by the expected new branch when available and
+   keeping the selected filters unchanged while paging, before considering a
+   retry.
+6. A failed or unknown mount refresh does not mean the environment update was
+   rolled back. Report routing as uncertain and do not retry the update solely
+   because the refresh failed.
+7. If the branch changed and the user wants its code deployed, treat
+   `trigger_deployment` as a separate previewed and confirmed mutation.
+
+#### Create an isolated environment for a branch and deploy it
+
+1. Resolve the existing app. Page through `list_environments` to check whether
+   the requested branch or mount is already in use.
+2. Show the proposed branch and mount. Explain that `create_environment` is
+   immediate, has no dry run, and creates a mapping without deploying code.
+3. Generate one stable `idempotency_key`, require `confirm`, and call
+   `create_environment`. Reuse that key for retries of the same creation.
+4. Report the returned environment and `mountRefreshStatus`. A failed refresh
+   means creation succeeded but routing may be incomplete; do not retry the
+   creation. If the environment is null or the outcome is otherwise uncertain,
+   reconcile through a complete `list_environments` search before retrying.
+5. Determine whether configuration is required before deployment. Use only
+   user-identified keys, a protected local file, or keys inspected from a
+   user-selected reference environment. Never copy values returned by MCP.
+6. If values are required, switch to the installed Webflow CLI and inspect
+   `webflow apps env-vars --help`. Pass the resolved app and environment IDs
+   explicitly. Use `set` with stdin or a hidden prompt, or `import` with a
+   protected `.env` file. A secret import marks every key in that file secret,
+   so use separate inputs when secrecy is mixed.
+7. Run the CLI operation with `--dry-run` first. Show only target IDs, keys, and
+   intended secrecy, then require a separate `confirm` before executing it.
+8. Verify the required keys and secrecy through paginated `list_variables`.
+   Never quote or report plaintext values. If a write or import partially
+   fails, stop before deployment and leave the environment intact.
+9. Call `trigger_deployment` with its default dry run. If supported, show the
+   branch, explain that branch HEAD rather than local files will deploy, and
+   require a separate `confirm`.
+10. Execute with `dry_run: false` and a stable deployment `idempotency_key`.
+    Reuse that key for retries of the same deployment request, then monitor the
+    new deployment as described below.
+
 #### Can this deployment be retried, rolled back, or rebuilt from branch HEAD?
 
 Use the mutation's default dry run as the capability check. Do not infer
@@ -163,6 +217,8 @@ For a retry or rollback:
 - Require an itemized preview and the exact word `confirm` before every
   mutation.
 - Reconcile an uncertain mutation through observable state before retrying it.
+- Never delete a newly created environment automatically when configuration or
+  deployment fails. Report the partial state and wait for an explicit request.
 
 ### 5. Handle explicit administrative requests
 
@@ -184,6 +240,17 @@ For `delete_variable`:
 4. Call once with `dry_run: false`. Treat `deleted: true` as success even if the
    backend message is absent.
 
+For `delete_environment`:
+
+1. Preview with the default dry run. Identify the app, environment, branch, and
+   mount, and explain that its worker, KV/D1/R2 storage, deployments, and
+   variables will be permanently removed.
+2. Explain that deletion is irreversible and is rejected for the app's last
+   environment. Require `confirm`.
+3. Call once with `dry_run: false`. Treat `deleted: true` as success.
+4. A failed or null `mountRefreshStatus` means deletion succeeded but routing
+   cleanup is failed or uncertain. Report it and never retry the delete.
+
 For `delete_app`:
 
 1. Preview with the default dry run and report `deletionMode`.
@@ -204,6 +271,10 @@ For `delete_app`:
 - `5xx` on a read: retry a bounded number of times.
 - `5xx` on a mutation: treat the outcome as uncertain and reconcile it before
   considering a retry.
+- Duplicate environment branch or mount: report the conflicting environment;
+  do not silently update or delete it.
+- Partial CLI variable import: report the failed keys without values and stop
+  before deployment. Do not roll back successful keys or delete the environment.
 - Rejected cursor: restart that listing without the cursor and page again.
 - `GITHUB_APP_NOT_INSTALLED`: provide the returned `installUrl`, require the
   user to reconnect GitHub, and retry only after reconnection.
@@ -247,6 +318,27 @@ failure from empty MCP logs.
 4. If unsupported, make no mutation and route to a fresh CLI deployment.
 5. After execution, poll and report the new deployment's status.
 
+### Correct an environment mapping
+
+**User:** "Production is serving the preview branch at `/app`. Point it back to
+`main` at `/`."
+
+Resolve production, show its current and proposed branch and mount, explain
+that the update does not deploy `main`, and require `confirm`. Apply the update,
+reconcile the environment, and preview a separate branch-HEAD deployment only
+if the user also asked to deploy it.
+
+### Provision, configure, and deploy a branch environment
+
+**User:** "Create a `/preview` environment for `feature/search` and deploy it.
+It needs the variables in `.env.preview`."
+
+Check for branch and mount conflicts, confirm and create the environment, then
+use the CLI to dry-run and import the protected file without displaying values.
+Confirm the import separately, verify its keys through MCP, and only then
+preview and confirm the branch-HEAD deployment. Stop before deployment if any
+required variable fails and leave the environment in place.
+
 ### Check or set configuration
 
 **User:** "Is `DATABASE_URL` configured in production?"
@@ -260,8 +352,10 @@ value outside chat.
 - Start from the user's operational question, not the action inventory.
 - Prefer observable evidence over assumptions about how an app was built.
 - Use mutation previews and returned errors as capability checks.
-- Use CLI for app creation, local builds and deployments, and variable writes.
+- Use CLI for app creation, local builds and deployments, and variable values.
 - Never use `data_apps_tool` for Designer variables.
 - Never expose secrets from variables, logs, errors, or URLs.
 - Never mutate without an exact preview and explicit `confirm`.
 - Never retry an uncertain mutation before reconciling observable state.
+- Never deploy a newly created environment until required configuration has
+  been verified or the user has established that none is needed.
