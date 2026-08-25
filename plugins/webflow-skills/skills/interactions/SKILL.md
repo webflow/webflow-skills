@@ -31,7 +31,7 @@ These tools are **not on stable MCP**.
 - **Compound tool:** `data_interactions_tool`
 - **Actions:** `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`
 - `siteId` and `pageId` are **top-level** tool arguments (page context / create bookkeeping). They are **not** inside `create_interaction` args.
-- **There is no `guide` action and no `webflow://guides/interactions` resource yet.** Both are planned. Until they ship, the `references/` files in this skill are the contract — do not try to call `guide` and do not wait for it.
+- **The `guide` action and the `webflow://guides/interactions` resource are not live yet.** They are in review as `mcp-remote-cloudflare-server` #399. Until that ships, the `references/` files in this skill are the contract — do not try to call `guide` and do not wait for it. Once it is live, prefer it for payload shapes and use this skill for the workflow around them.
 - `create_interaction` args: `name` (required), `scope` (optional, default site), `triggers` (required array), `timelines` (required array), optional `timelineDefaults`, optional `conditionalPlayback`
 
 ## Instructions
@@ -94,7 +94,7 @@ through untouched rather than "fixing" it.
 12. `get_interaction` with the returned id
 13. Report what was created/updated
 14. **On reject:** read the error, look it up in [references/rejects-index.md](references/rejects-index.md), fix the payload. Do not invent GSAP position operators, and do not retry the same shape hoping for a different result — every rejection here is deterministic.
-15. **A successful write is not proof the animation runs.** Several legal payloads save, read back byte-identical, and do nothing: a scroll reveal with no `enter`, a `[from, to]` pair on a To tween, a class array that is not one combo chain, a grouped interaction, `control: "reverse"` on a first click. `get_interaction` cannot detect any of them. Check the payload against the Guidelines below before reporting success, and if the user says nothing happens, start at [references/rejects-index.md](references/rejects-index.md) → "When there is nothing to decode" instead of rewriting the interaction.
+15. **A successful write is not proof the animation runs.** Several legal payloads save, read back byte-identical, and do nothing: a `[from, to]` pair on a To tween, a class array that is not one combo chain, a mouse-move trigger with no target, `control: "reverse"` on a first click. `get_interaction` cannot detect any of them. Check the payload against the Guidelines below before reporting success, and if the user says nothing happens, start at [references/rejects-index.md](references/rejects-index.md) → "When there is nothing to decode" instead of rewriting the interaction.
 
 ## Examples
 
@@ -211,7 +211,7 @@ Scroll is **standalone**. A scrub needs a numeric `scrub` (not `true`), a rolele
 }
 ```
 
-**Play-once variant (a reveal, not a scrub).** Drop `scrub` and `canvasDuration`, put `timing.duration` back in seconds — and **send `enter: "play"`**. Omitted toggle actions become `none`, and without scrub those toggles are the only playback, so a reveal with no `enter` binds successfully and never runs. Nothing errors.
+**Play-once variant (a reveal, not a scrub).** Drop `scrub` and `canvasDuration`, put `timing.duration` back in seconds — and **send `enter: "play"`**. The host stamps absent toggle keys on create and on trigger replacement (`enter: "play"`, the other three `"none"`) and leaves an explicit `"none"` alone, so an omission is repaired rather than left inert. Send `enter` anyway: it is what the panel writes, and it is correct on both sides of that rollout.
 
 ```json
 {
@@ -281,7 +281,7 @@ Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and tw
 
 **Tell the user one caveat:** the panel will animate this correctly but will not offer a remove button for either action group, because it never writes hover this way itself.
 
-**Do not** author the two-trigger split the panel prefers (two `wf:hover` triggers with `eventMode` plus `assignedGroupId`, and `groupId` on the timelines). The MCP timeline input has no `groupId` field, so Zod strips it and the triggers end up pointed at groups no timeline claims. The runtime then skips both triggers and the interaction silently does nothing. Nothing rejects and `get_interaction` still echoes your triggers back. See [references/trigger-hover.md](references/trigger-hover.md).
+The two-trigger split the panel prefers (two `wf:hover` triggers with `eventMode` plus `assignedGroupId`, and `groupId` on the timelines) **is** authorable now. `groupId` was added to the MCP timeline input, so it survives to the host instead of being stripped, and an `assignedGroupId` matching no timeline group is rejected rather than stored inert. The role form above is still the shape this skill recommends, because its playback is the one verified end to end here; if you author the split instead, match every `assignedGroupId` to a `groupId` exactly and verify in Preview. See [references/trigger-hover.md](references/trigger-hover.md).
 
 For enter only, send one trigger with `pluginConfig: { "multiTimeline": false }` and a single timeline.
 
@@ -348,13 +348,13 @@ Mouse-move is **standalone**. It validates without a target but never fires with
 - **`conditionalPlayback`** is an **array** of `{ type, behavior }` (and breakpoint form), not `{reducedMotion:"skip"}`. Example: `[{ "type": "prefers-reduced-motion", "behavior": "dont-animate" }]`.
 - **Load** omits trigger `target` and `pluginConfig`.
 - **Scroll** and **mouse-move** omit playback `control` / `delay` / `jump` / `speed`.
-- **A scroll without `scrub` needs `enter: "play"`.** Omitted toggle actions become `none`, so the ScrollTrigger binds and the timeline never plays. The panel always writes all four toggles; match it.
+- **A scroll without `scrub` needs `enter: "play"`.** The host stamps absent toggle keys on persist (`enter: "play"`, the rest `"none"`) and keeps an explicit `"none"`, but send `enter` yourself: the panel always writes all four toggles, and being explicit is correct regardless of where that stamp has rolled out. `scrollTriggerConfig` itself is never invented — missing or null is rejected.
 - **Scroll scrub:** send numeric `scrub`, `canvasDuration: 1`, and action `timing.duration: 1`. A tiny duration occupies ~1% of the scroll range and looks like nothing happened.
 - **`control: "reverse"` is a no-op on the first click** (the playhead starts at 0). For a reverse the user can try in Preview, use `togglePlayReverse` (`pluginConfig.click` omitted or `"each"`).
 - **A To tween reads only its `to` slot.** `[from, to]` on `tt: 0` is half discarded and GSAP animates from the element's live value, so `scale: [0.55, 1.15]` on an unscaled element goes 1 → 1.15 and `opacity: ["20%","100%"]` on an opaque element does nothing at all. Use `tt: 2` whenever the animation needs a start value.
 - **Do not put a click or hover trigger on an element its own from-state collapses** (`scaleX: 0`, `width: 0`). No box is left to click. Trigger on a parent and animate the child.
-- **Grouped interactions are not authorable through MCP.** The timeline input drops `groupId`, so the triggers persist pointed at groups no timeline claims and the runtime skips them. Author a single group, or say the capability is unavailable.
-- **Navbar / dropdown are not authorable through this API today.** They are flag-gated and rejected on create for every caller. Tell the user the trigger is unavailable rather than attempting a write.
+- **Grouped timelines are authorable.** `groupId` (1–64 characters) is accepted on the MCP timeline input, and `config.assignedGroupId` on a click or hover trigger routes to it. An `assignedGroupId` that matches no timeline `groupId` is rejected rather than stored inert, so mismatches surface as an error instead of a dead interaction. Load, scroll, and continuous triggers ignore `assignedGroupId`.
+- **`wf:navbar` and `wf:dropdown` are not authorable, and neither are `wf:focus`, `wf:blur`, or `wf:change`.** The guards take no flag or session argument, so this holds for every caller regardless of Statsig state — no flag turns it on for you. Navbar and dropdown are registered in the Designer and excluded pending GA; focus, blur, and change have no Designer schema at all. Tell the user the trigger is unavailable rather than attempting a write. See [references/gated-capabilities.md](references/gated-capabilities.md).
 - **No GSAP position operators** (`+=`, `<`, `>`) in `timing.position`. Use a finite number (seconds) or `'500ms'`.
 - **Duration is seconds.** `timing.duration: 0.4` is 400ms. `400` is 400 seconds. Use `"400ms"` if you think in milliseconds.
 - **From / FromTo (`tt: 1` / `2`) sit at the from-state until the trigger fires.** Prefer To (`tt: 0` or omit) when the element should be visible at rest.

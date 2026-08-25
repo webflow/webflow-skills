@@ -61,6 +61,7 @@ If a fragment below does not match your error exactly, check the other family:
 | `timelineDefaults is not authored by the Designer`                                    | Any non-null `timelineDefaults`. Omit on create; `null` on update clears a stored bag                                                                                                                   | [envelope](envelope-and-targets.md)                  |
 | `the runtime uses playInReverse, not autoReverse`                                     | A new or altered `timing.autoReverse` / `settings.autoReverse`                                                                                                                                          | [envelope](envelope-and-targets.md)                  |
 | `must not set assignedTimelineRole`                                                   | Panel writes `assignedGroupId` instead                                                                                                                                                                  | [timelines](timelines-and-groups.md)                 |
+| `matches no timeline groupId`                                                          | A discrete standard trigger routed to a group no timeline claims. `null`, a matching id, and role-routed triggers are all fine; load/scroll/continuous are exempt. Unchanged stored pairings grandfather | [hover](trigger-hover.md), [timelines](timelines-and-groups.md) |
 | `only authored on interval mouse-move timelines`                                      | `distance` / `axes` on a non-interval role, or with no mouse-move trigger                                                                                                                               | [mouse-move](trigger-mouse-move.md)                  |
 | `duplicate action id`                                                                 | A second action reusing an id to ride a stored legacy `splitText` allowance                                                                                                                             | [actions](actions-and-properties.md)                 |
 | `An interaction may define at most`                                                   | A per-interaction cap. Through MCP this is Zod `.max()` on the argument schema and applies even to over-cap stored data; the host's baseline-aware ceiling is host-only                                 | [limits](limits-and-budgets.md)                      |
@@ -89,21 +90,23 @@ rather than the Designer. These have no guard to cite.
 
 A payload that saves and then does nothing has no message to match against. These
 are the known causes, and none of them errors, warns, or reads back differently —
-`get_interaction` echoes exactly what you sent.
+`get_interaction` echoes exactly what you sent. Some rows are now historical: the
+write path has since grown a stamp or a rejection, so they explain stored data you
+inherit rather than a payload you can still create. Those say so in the cause column.
 
 | Symptom                                                         | Cause                                                                                              | Read                                 |
 | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| A scroll reveal never plays                                     | No `enter` on a non-scrub scroll. Omitted toggle actions become `none`, which installs no callback | [scroll](trigger-scroll.md)          |
+| A scroll reveal never plays                                     | No `enter` on a non-scrub scroll, written before the host stamped absent toggles. Only repaired on the next write through the host | [scroll](trigger-scroll.md)          |
 | A scrub barely moves, or an authored start value is ignored     | `[from, to]` on a To (`tt: 0`). Only the `to` half reaches GSAP                                    | [actions](actions-and-properties.md) |
 | A scrub plays in a sliver of the range                          | Action `timing.duration` is smaller than `canvasDuration`                                          | [scroll](trigger-scroll.md)          |
 | A "scrub" plays all at once when the range is crossed           | `scrub` omitted. That shape is a one-shot play, not a scrub                                        | [scroll](trigger-scroll.md)          |
 | The first click does nothing                                    | `control: 'reverse'` on a playhead that starts at 0. Use `togglePlayReverse`                       | [click](trigger-click.md)            |
-| A grouped interaction written through MCP never runs            | The MCP timeline input drops `groupId`, so triggers point at groups no timeline claims             | [timelines](timelines-and-groups.md) |
+| A grouped interaction written through MCP never runs            | Written before `groupId` was accepted on the timeline input, so triggers point at groups no timeline claims. New writes are rejected instead | [timelines](timelines-and-groups.md) |
 | A class target animates nothing                                 | The ids do not form one combo chain, so the compound selector matches no element                   | [envelope](envelope-and-targets.md)  |
 | A trigger element cannot be clicked or hovered                  | Its own from-state collapses the box (`scaleX: 0`, `width: 0`)                                     | [actions](actions-and-properties.md) |
 | Mouse-move never fires                                          | No trigger target. Validation accepts none and `bindTrigger` resolves nothing                      | [mouse-move](trigger-mouse-move.md)  |
 | `action.timing.delay` has no effect                             | Inert on actions. Use `timing.position`                                                            | [actions](actions-and-properties.md) |
-| A hover in/out authored as the panel's trigger split never runs | The MCP timeline input drops `groupId`, so the triggers point at groups no timeline claims         | [hover](trigger-hover.md)            |
+| A hover in/out authored as the panel's trigger split never runs | Same stored cause as the grouped row above. Authoring it fresh now either works or is rejected     | [hover](trigger-hover.md)            |
 
 A reveal that plays but is never seen is a different problem with the same
 appearance: check `start` before assuming the interaction is broken. See

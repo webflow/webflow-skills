@@ -37,34 +37,32 @@ trigger-and-role slot so one stored value cannot authorize a second.
 
 `groupId` marks a timeline as part of a user-managed action group.
 
-### Groups are not authorable through MCP today
+### Groups through MCP
 
-**Do not author a grouped interaction through the MCP interaction tools.** It stores,
-reads back looking correct, and never runs.
+`groupId` is accepted. `TimelineInputSchema` in
+`packages/systems/page-automation/core/tools/interactions.ts` declares
+`groupId: z.string().min(1).max(64)`, so a grouped write reaches the host intact on
+both the MCP and Designer Extension paths.
 
-`TimelineInputSchema` in
-`packages/systems/page-automation/core/tools/interactions.ts` has no `groupId` key and
-is a plain `z.object()`, so Zod strips `groupId` from every timeline. The trigger keeps
-its `assignedGroupId`, so the interaction persists with triggers routed to groups no
-timeline claims. `AnimationCoordinator` reads an unmatched group id as a removed group
-and skips the trigger, so nothing fires. No layer reports it, and `get_interaction`
-echoes the triggers back intact.
+The field was omitted once, and because the schema is a plain `z.object()`, Zod
+stripped `groupId` from every timeline while the trigger kept its `assignedGroupId`.
+The interaction persisted with triggers routed to groups no timeline claimed,
+`AnimationCoordinator` read the unmatched id as a removed group and skipped the
+trigger, and no layer reported it. That applied to **every** trigger type, not only
+hover. A site written during that window can still carry it.
 
-This applies to **every** trigger type, not only hover. A click with two action groups
-fails the same way.
+`[REJECTED]` The silent version is gone. A non-null `assignedGroupId` with no matching
+timeline `groupId` is refused on a discrete standard trigger. `null` is allowed, a
+matching id is allowed, and role-routed triggers whose timelines carry
+`triggerMetadata` are exempt. Load, scroll, and continuous ignore the field entirely.
+An unchanged stored pairing grandfathers on update, so a read-modify-write of
+already-broken data still commits.
+Guard: `findOrphanedGroupAssignmentError` · fragment: `matches no timeline groupId`
 
-Until the field is accepted, through MCP:
-
-- Author a **single-group** interaction: omit `groupId` on the timelines and
-  `assignedGroupId` on the triggers. Every trigger then drives every timeline, which is
-  the right shape for one animation.
-- For a two-direction hover specifically, use the role form. See
-  [`trigger-hover.md`](trigger-hover.md).
-- If the request genuinely needs independent groups, tell the user the capability is
-  unavailable through this API rather than writing something inert.
-
-Calling the Designer Extension API directly, `groupId` works as described below. The
-rest of this section is real behavior; only the MCP input schema drops the field.
+So a grouped write needs `groupId` on the timeline and a matching `assignedGroupId` on
+the trigger that should play it. Omit both for a single-group interaction, where every
+trigger drives every timeline. For a two-direction hover see
+[`trigger-hover.md`](trigger-hover.md).
 
 **The five-item limit is a flat cap on timelines, not on groups.** The tool
 applies `.max(IX3_MAX_TIMELINE_GROUPS)` to the `timelines` array and the store

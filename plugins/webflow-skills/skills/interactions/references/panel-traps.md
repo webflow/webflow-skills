@@ -31,19 +31,19 @@ _incomplete_ rather than _wrong_.
 | `settings.control` on a **role-routed** timeline whose Control dropdown is hidden       | Hidden while reusing when the trigger offers one control or none. `getEffectivePlaybackConfig` reads role-routed timelines from settings alone, so the value dispatches.                                                                                               | The playback guards (`findTriggerJumpError`, `findTriggerSpeedError`, `findUneditablePlaybackFieldError`) are all **trigger-level**. Nothing validates `timeline.settings.*`. |
 | Any `timeline.settings.*` on a continuous, non-interval timeline                        | The settings popover does not render, but `buildSubTimeline` still passes settings into the GSAP defaults, so the value is live.                                                                                                                                       | Same, trigger-level only.                                                                                                                                                     |
 | A hover in/out authored as `multiTimeline: true` with `mouseEnter` / `mouseLeave` roles | The panel writes a trigger split instead (two `wf:hover` triggers with `eventMode`, groups keyed by `groupId`). The remove control keys off `groupId` or a `groupRoles` config, and hover declares `triggerSplit`, so neither role-based group offers a remove button. | `findTimelineRoleError` validates the roles and accepts the shape. Nothing checks that the grouping matches what the panel can edit.                                          |
-| `assignedGroupId` on a load, scroll, or continuous trigger                              | The assign UI lists standard triggers only; the runtime ignores the assignment.                                                                                                                                                                                        | No guard covers `assignedGroupId`. The DES-7448 rejection targets the separate legacy `assignedTimelineRole` field.                                                           |
+| `assignedGroupId` on a load, scroll, or continuous trigger                              | The assign UI lists standard triggers only; the runtime ignores the assignment.                                                                                                                                                                                        | `findOrphanedGroupAssignmentError` covers discrete standard triggers only and deliberately exempts these, so an ignored assignment still stores.                              |
 
 `settings.control` on a **grouped** timeline is deliberately absent from this
 table. A standard trigger routed to a group takes `control` from the trigger, so
 a stored value there has no effect. See
 [`timelines-and-groups.md`](timelines-and-groups.md).
 
-The role-based hover row is the one trap in this file you should knowingly accept
-when writing through **MCP**. The trigger split the panel prefers cannot be
-expressed there (the MCP timeline input drops `groupId`, so the interaction stores
-triggers bound to groups that do not exist and the runtime skips them), which costs
-the user the whole animation rather than one button. Author the role form, and tell
-the user the groups will not be removable. Details in
+The role-based hover row is a trap you may knowingly accept when writing through
+**MCP**, but it is no longer forced. The MCP timeline input carries `groupId` now, so
+the trigger split the panel prefers is expressible there, and an unmatched
+`assignedGroupId` is rejected by `findOrphanedGroupAssignmentError` instead of stored
+inert. Taking the role form costs the user a remove button; taking the split form
+keeps the panel fully in control. Details in
 [`trigger-hover.md`](trigger-hover.md).
 
 ## Action timing

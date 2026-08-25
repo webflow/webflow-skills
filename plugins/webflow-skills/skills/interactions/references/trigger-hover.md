@@ -146,36 +146,39 @@ action group, with `multiTimeline: false` on both.
 `findGroupedTriggerControlError` in
 [`timelines-and-groups.md`](timelines-and-groups.md).
 
-### The split form is not authorable through MCP today
+### The split form through MCP
 
-**Through the MCP `create_interaction` / `update_interaction` tools this shape
-produces an interaction that never runs.** `TimelineInputSchema` in
-`packages/systems/page-automation/core/tools/interactions.ts` has no `groupId` key,
-and it is a plain `z.object()`, so Zod strips `groupId` from every timeline before
-the host sees the request. The triggers keep their `assignedGroupId`, so the stored
-result is two triggers pointed at groups that no timeline claims.
+The split form is authorable through MCP. `TimelineInputSchema` in
+`packages/systems/page-automation/core/tools/interactions.ts` declares
+`groupId: z.string().min(1).max(64)`, so it reaches the host intact.
 
-At runtime `AnimationCoordinator` resolves that to nothing. A non-null
-`assignedGroupId` that matches no `groupId` timeline falls through to the role axis,
-and with no `triggerMetadata` anywhere on the interaction it takes the stale-group
-branch and `continue`s, skipping the trigger. Both triggers are skipped, so hovering
-does nothing. Nothing rejects, nothing warns, and `get_interaction` reports the
-triggers you sent.
+It did not always, and a site written during that window can still carry the damage.
+The field was absent and the schema is a plain `z.object()`, so Zod stripped `groupId`
+from every timeline while `assignedGroupId` survived on the triggers. The stored
+result was two triggers pointed at groups no timeline claimed. `AnimationCoordinator`
+resolved that to nothing: a non-null `assignedGroupId` matching no `groupId` timeline
+fell through to the role axis, took the stale-group branch with no `triggerMetadata`
+anywhere on the interaction, and `continue`d. Both triggers were skipped, nothing
+rejected, and `get_interaction` echoed back the triggers you sent.
+
+`[REJECTED]` An unmatched assignment no longer stores silently. A non-null
+`assignedGroupId` with no matching timeline `groupId` is refused on a discrete
+standard trigger. `null` is allowed — the store parks removed groups there — as are
+role-routed triggers whose timelines carry `triggerMetadata`. Load, scroll, and
+continuous ignore the field. An unchanged stored pairing is grandfathered on update,
+so a read-modify-write of already-broken data still commits.
+Guard: `findOrphanedGroupAssignmentError` · fragment: `matches no timeline groupId`
 
 So through MCP:
 
-| Goal                | Use                                                                         |
-| ------------------- | --------------------------------------------------------------------------- |
-| Enter only          | One trigger, `multiTimeline: false`, one timeline. Clean and works.         |
-| Enter **and** leave | The role form below. It runs correctly; the panel cannot remove the groups. |
-| The split form      | Not available. Do not author it.                                            |
+| Goal                | Use                                                                                      |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| Enter only          | One trigger, `multiTimeline: false`, one timeline. Clean and works.                      |
+| Enter **and** leave | Either form. The role form below is the one verified end to end for this pack.           |
+| The split form      | Available. Match every `assignedGroupId` to a `groupId`, and confirm playback in Preview. |
 
-Calling the Designer Extension API directly, the split form works as written above,
-because `groupId` survives on that path.
-
-Adding `groupId` to the MCP timeline input is the fix; until it lands, prefer the
-role form for two-direction hover and tell the user the groups will not be removable
-in the panel.
+Calling the Designer Extension API directly, the split form works as written above.
+`groupId` survives on both paths now.
 
 ### Role form — accepted, but leaves groups the panel cannot remove
 
@@ -196,11 +199,12 @@ writes it for hover and cannot fully edit the result. The remove control keys of
 `groupId` (absent here) or a `groupRoles` config, and hover declares `triggerSplit`
 instead of `groupRoles` — so neither action group offers a remove button.
 
-**Through MCP this is nonetheless the shape to author for a two-direction hover**,
-because the split form the panel prefers is silently inert there (see above). The
-tradeoff is real but one-sided: this form animates correctly and costs the user a
-remove button, while the split form costs them the entire interaction. Say so when
-you author it, so the user is not surprised by the missing control.
+**Through MCP both forms reach the runtime** (see above). The tradeoff is now a real
+choice rather than a forced one: this form is the one verified end to end here and
+costs the user a remove button, while the split form is what the panel writes and
+stays fully editable but should have its playback confirmed in Preview rather than
+inferred from a successful write. Say which one you chose, so the user is not
+surprised by a missing control.
 
 `triggerMetadata` is in the MCP timeline input, so the roles survive the write.
 

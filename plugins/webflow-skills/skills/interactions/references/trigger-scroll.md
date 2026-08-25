@@ -11,7 +11,7 @@ Read with [`envelope-and-targets.md`](envelope-and-targets.md).
 | Standalone            | **Yes** — must be the only trigger on the interaction              |
 | Target                | `[REQUIRED]` — class, selector, attribute, inst, or `wf:body`      |
 | `scrollTriggerConfig` | `[REQUIRED]` — object with `start` and `end`                       |
-| `enter`               | `[REQUIRED]` in practice without scrub — omit it and nothing plays |
+| `enter`               | Stamped to `play` when absent; send it anyway on a non-scrub       |
 | Roles                 | None. A scrub percent timeline must be roleless.                   |
 | Playback              | `[OMIT]` all of `control`, `delay`, `jump`, `speed`                |
 
@@ -31,7 +31,7 @@ bails.
       scrollTriggerConfig: {
         start: 'top 90%',
         end: 'bottom 25%',
-        enter: 'play', // without this the timeline never plays
+        enter: 'play', // the panel always writes this; stamped if you omit it
       },
     },
     target: {extensionKey: 'wf:body', value: ''},
@@ -40,10 +40,17 @@ bails.
 }
 ```
 
-## Send `enter` without scrub, or nothing plays
+## Send `enter` on a non-scrub reveal
 
 `enter`, `leave`, `enterBack`, and `leaveBack` are `.optional()` with no schema
-default, so an omitted key stays omitted. `buildGSAPConfig` then coerces each one:
+default. The host stamps the absent ones on create and on trigger replacement —
+`enter: 'play'` with the other three `'none'` — and leaves an explicit `'none'`
+alone, so `leaveBack: 'reset'` on its own still gets a working `enter`. Send `enter`
+yourself regardless: it is what the panel writes, and it is correct wherever that
+stamp has or has not rolled out. A missing or null `scrollTriggerConfig` is never
+invented; that is still a reject.
+
+What the stamp repairs is the following. `buildGSAPConfig` coerces each key:
 
 ```ts
 const actions = [
@@ -57,28 +64,30 @@ const actions = [
 Without scrub those four **are** the playback. The timeline is not attached to the
 ScrollTrigger; `createToggleActionHandlers` builds one callback per action and skips
 any that is `'none'`, so a config carrying none of them installs no `onEnter` at all.
-The ScrollTrigger is created, the target resolves, `get_interaction` echoes the
-config back, and the timeline never runs. Nothing errors.
+Before the stamp, such a payload created the ScrollTrigger, resolved the target,
+echoed back from `get_interaction`, and never ran, with nothing to error on. A site
+written in that window can still carry it, and a stored omission is only repaired the
+next time it is written through the host.
 
-With scrub on this cannot happen — the timeline is attached as `gsapConfig.animation`
-and driven by scroll position, so the toggle actions are unread. The same omission is
-therefore harmless on a scrub payload and fatal on a play-once reveal. Do not carry a
-working scrub config over to a reveal and assume it plays.
+With scrub on, none of this applies — the timeline is attached as
+`gsapConfig.animation` and driven by scroll position, so the toggle actions are
+unread. Carrying a working scrub config over to a reveal is still the mistake to
+watch for, because the two shapes read playback from different places.
 
-The panel never reaches that state: `defaultScrollTriggerConfig` and
+The panel never omits them either: `defaultScrollTriggerConfig` and
 `createBaseTriggerConfig` both seed `enter: 'play'` with the other three `'none'`, so
-every scroll trigger it writes carries all four. Match it and send at least
-`enter: 'play'`.
+every scroll trigger it writes carries all four.
 
 Values are `play`, `pause`, `resume`, `reverse`, `restart`, `reset`, `complete`,
 `none`. Add `leaveBack: 'reset'` when the user expects a reveal to replay on the way
 back up.
 
-The worst version of this pairs with a From or FromTo whose start value hides the
+The worst version of this paired with a From or FromTo whose start value hides the
 element (`opacity: '0%'`, `width: 0`). The build-time immediate render applies that
 start value, the timeline never plays, and the element stays hidden — which reads to
 the user as "the animation ran before I scrolled to it" rather than "it never ran".
-See [`actions-and-properties.md`](actions-and-properties.md).
+That is the shape to look for in stored data written before the stamp. See
+[`actions-and-properties.md`](actions-and-properties.md).
 
 ## Accept — scrub with a percent canvas
 
