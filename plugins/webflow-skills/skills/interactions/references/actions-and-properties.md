@@ -13,12 +13,30 @@ This file covers the rules behind those tables.
 ```js
 {
   id: 'act-...',                 // [REQUIRED] fresh unique string
-  name: 'Fade',
-  timing: {duration: 0.4},
+  name: 'Fade',                  // [REQUIRED]
+  tt: 2,                         // optional; omitted = To, which reads only `to`
+  timing: {duration: 0.4},       // [REQUIRED] — even on a Set, use {duration: 0}
   properties: {'wf:transform': {opacity: ['100%', '40%']}},
   targets: [{extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]}],
+  // splitText: {type: 'words'}  // action-level, NOT timing.splitText
 }
 ```
+
+`id`, `name`, `timing`, `properties`, and `targets` are all required. The two that
+are easy to assume optional are not:
+
+`[REJECTED]` An action with no `timing`, including a Set action that has nothing to
+time. Fragment: `timelines.0.actions.0.timing: Required`. Send
+`timing: {duration: 0}` on a Set.
+
+`[REJECTED]` An action with no `name`. Fragment:
+`timelines.0.actions.0.name: Required`.
+
+By contrast, trigger `config.control` **is** optional on a single-group
+interaction — `config: {}` is accepted and stored as-is, with nothing stamped. But
+omitting it is not the same as sending `play`: the runtime treats a missing
+`control` as `restart`. Send `control: 'play'` when you mean play. It becomes
+mandatory once the interaction has two or more action groups.
 
 ## Tween type (`tt`)
 
@@ -50,6 +68,24 @@ does not appear.
 So a From is only reliably at its start value at rest when no earlier action in the
 same timeline targets the same property on the same target.
 
+### Choosing between From and FromTo for a reveal
+
+Three rules in this pack point different ways on this, so state it once:
+
+- A **reveal** — element hidden at rest, animating to whatever its stylesheet says
+  — is a **From (`tt: 1`)** carrying **only a from value**: `opacity: ['0%']` or
+  `['0%', null]`. GSAP animates from that value to the element's live value, so
+  there is no `to` to supply.
+- Adding a `to` value to a From is a `[PANEL-TRAP]`, not an error. It stores, and
+  the panel's To editor is disabled, so the user can neither see nor clear it. See
+  [`panel-traps.md`](panel-traps.md).
+- Use **FromTo (`tt: 2`)** when you genuinely want both endpoints pinned, and the
+  end state is *not* the element's resting style — a hover that lifts to `-8px`
+  and returns, for instance.
+
+So "use `tt: 1` for a reveal" and "use `tt: 2` whenever the animation needs a
+start value" are both right, and neither means "send `[from, to]` on a From".
+
 ### The runtime reads only the slot your `tt` names
 
 `buildTweensForAction` makes one GSAP call per tween type and hands it only the
@@ -80,6 +116,21 @@ The mirror case is dropped rather than half-applied. A To carrying only a from v
 
 The panel disables the editor for the unused slot, so the user cannot clear a stored
 value there either — see [`panel-traps.md`](panel-traps.md).
+
+### A later From/FromTo does not park the element at its from-state
+
+When two actions in the same interaction touch the same property on the same
+target — the usual hover in / hover out pair — only the first records a rest
+state. The second does not apply its from-value on load.
+
+Verified on a published page with a two-trigger hover split: the leave action was
+`tt: 2` with `y: ['-8px', '0px']`, and at rest the element measured
+`translateY(0)`, not `-8px`. It moved `0 → -8` on enter and `-8 → 0` on leave.
+
+So authoring the out-direction as a FromTo mirror of the in-direction is safe
+inside one interaction, and does not leave the element visibly displaced before
+the user interacts. Two *separate* interactions have no such ordering
+relationship — there, prefer a To for the out-direction.
 
 ### A from-state that collapses the element can make it unclickable
 
@@ -126,6 +177,64 @@ the property-name check today. The fallback still exists for a key added to the
 registry before its allowlist, and the namespace gate handles unknown extension keys
 either way.
 
+## `wf:class` — the Class operation
+
+The only `wf:class` property is `class`, and it is non-animatable, so it lives in a
+Set action (`tt: 3`). The value is `null` (unset / reset — the runtime treats it as
+a no-op) or an object carrying **both** keys:
+
+```js
+{
+  tt: 3,
+  timing: {duration: 0},
+  properties: {
+    'wf:class': {
+      class: {operation: 'addClass', selectors: [STYLE_BLOCK_ID]},
+    },
+  },
+}
+```
+
+`operation` is `addClass` / `removeClass` / `toggleClass`. `selectors` is an array
+of non-empty style-block id strings.
+
+**`selectors` is not combo-expanded.** Unlike a `wf:class` *target* value, where
+the host walks the chain and adds the combo's parents for you, a `selectors` entry
+applies exactly the one class it names. Verified on a published page: passing the
+combo leaf id for `is-featured` turned `class="pg-card"` into
+`class="pg-card is-featured"` — the leaf and nothing else. So name the class you
+want applied, and if the visual result depends on a parent already being present,
+make sure the element carries it.
+
+Every rejection below comes from `validateWfClassPropertyValue`, except the last.
+
+`[REJECTED]` A property name other than `class` under `wf:class`.
+Guard: `validateActionPropertyShape` · fragment: `is not a supported`
+
+`[REJECTED]` A bare array or string value. Fragment:
+`value must be null or an object {operation, selectors}`
+
+`[REJECTED]` An extra key alongside `operation` / `selectors`. Fragment:
+`does not support property`
+
+`[REJECTED]` Only one of the two keys. Fragment:
+`must include both "operation" and "selectors"`
+
+`[REJECTED]` An operation outside the three. Fragment:
+`operation must be one of addClass, removeClass, toggleClass`
+
+`[REJECTED]` `selectors` not an array, or containing an empty string. Fragments:
+`selectors must be an array of style-block id strings` and
+`must be an array of non-empty style-block id strings`
+
+`[REJECTED]` The whole property on an animated tween. Because `class` is
+non-animatable it is Set-only.
+Guard: `validateActionPropertyShape` · fragment:
+`non-animatable and must only be used in a Set action (tt: 3)`
+
+Guessing this shape from the tool schema costs four round trips — each message is
+precise, but they only arrive one at a time.
+
 ## `timing.autoReverse` is not authorable
 
 Covered in [`envelope-and-targets.md`](envelope-and-targets.md) alongside the other
@@ -141,6 +250,62 @@ random/additive wrapper.
 `[REJECTED]` A plain `{from, to}` object. The Designer never stores one.
 Guard: `validateActionPropertyShape` · fragment:
 `must not be a plain {from, to} object`
+
+### `wf:style` value shapes
+
+Seven properties, in two groups. The three colours animate; the other four do not
+and are Set-only (`tt: 3`).
+
+| Property | Animatable | Value |
+| -------- | ---------- | ----- |
+| `backgroundColor` | yes | `'#rrggbb'` |
+| `borderColor` | yes | `'#rrggbb'` |
+| `color` | yes | `'#rrggbb'` |
+| `zIndex` | **no** | unitless number, e.g. `10` |
+| `position` | **no** | `static` \| `relative` \| `absolute` \| `fixed` \| `sticky` (default `static`) |
+| `overflow` | **no** | `visible` \| `hidden` \| `scroll` \| `auto` \| `clip` (default `visible`) |
+| `pointerEvents` | **no** | `auto` \| `none` (default `auto`) |
+
+```js
+// Set the four non-animatable ones together
+{
+  tt: 3,
+  timing: {duration: 0},
+  properties: {'wf:style': {zIndex: 10, position: 'absolute', pointerEvents: 'none'}},
+}
+```
+
+Note the asymmetry worth remembering: `display` is non-animatable but lives under
+`wf:transform`, while these four are non-animatable and live under `wf:style`.
+Non-animatable is a property fact, not a namespace fact.
+
+### Colour and rotation value formats
+
+**Colours are hex strings.** The three `wf:style` colour properties
+(`backgroundColor`, `borderColor`, `color`) take `'#rrggbb'`. Verified accepted as
+a bare scalar (`'#1a1a2e'`) and as a `[from, to]` pair; the pair is what
+interpolates, and `['#ffffff', '#f2eee6']` was measured animating a published
+`body` to `rgb(242, 238, 230)`. A bare scalar on a To reads the `to` slot and
+tweens from the element's live colour.
+
+**Rotation is in degrees, as a bare number.** `rotation: [0, 8]` is eight degrees,
+not radians and not a `'deg'` string. Verified by measurement: the published
+element reported `matrix(0.990268, 0.139173, …)`, which is `cos 8°` / `sin 8°`.
+
+### On a Set action, a bare scalar is enough
+
+A Set (`tt: 3`) reads only the `to` slot, and a bare scalar occupies it. Both of
+these are accepted **and** applied at runtime — verified on a published page,
+where `.pg-card` went from `display: block` to `display: none`:
+
+```js
+properties: {'wf:transform': {display: 'none'}}            // bare scalar
+properties: {'wf:transform': {display: ['block', 'none']}} // pair, to slot wins
+```
+
+Prefer the bare scalar on a Set: there is no from-state to express, so a pair
+invites the reader to think the first value does something. `display` takes a CSS
+display keyword as a string; `'none'` and `'block'` are both confirmed.
 
 ## Random and additive
 
@@ -252,7 +417,149 @@ the expected format; the guard names the Designer.
 On a percent canvas the same field is authored as a percent — see
 [`timelines-and-groups.md`](timelines-and-groups.md).
 
+## `timing.ease` — the Ease field
+
+**`ease` is a number, not a string.** `easeConfigSchema` is
+`z.union([z.number().int().nonnegative(), advancedEaseSchema])`.
+
+This one is worth reading carefully, because the rejection teaches you nothing.
+It is a Zod union failure, so the message is a bare `Invalid input` at
+`timing.ease` with no branch detail and no enum — the only non-enumerating
+validation message on this surface. A dogfood run spent seven attempts on it
+(four string forms, a bezier array, two object shapes) and never landed it.
+
+`[REJECTED]` Any string: `'power1.out'`, `'power2.out'`, `'ease-out'`, `'linear'`.
+Layer: Zod (`easeConfigSchema`) · fragment: `Invalid input`
+
+`[REJECTED]` A 4-number bezier array such as `[0.25, 0.1, 0.25, 1]`.
+`customBezierSchema` exists but is deprecated and is **not** part of
+`easeConfigSchema`. Use `{type: 'customEase', bezierCurve}`.
+
+`[SILENTLY-DROPPED]` `easing` in place of `ease`. `timingConfigSchema` is a
+non-strict object, so the misspelling is stripped and the animation ships with
+default easing. Nothing reports it. Same failure mode as the trigger `config`
+strip in [`envelope-and-targets.md`](envelope-and-targets.md).
+
+### Built-in easing index
+
+The integer indexes `EASING_NAMES` in
+`packages/systems/ix3/runtime/src/utils.ts`. The panel's "Linear" is `0`; its
+"Power 1 out" is `2`.
+
+| Index | Name | Index | Name | Index | Name |
+| ----- | ---- | ----- | ---- | ----- | ---- |
+| 0 | `none` (panel "Linear") | 11 | `power4.out` | 22 | `elastic.in` |
+| 1 | `power1.in` | 12 | `power4.inOut` | 23 | `elastic.out` |
+| 2 | `power1.out` | 13 | `back.in` | 24 | `elastic.inOut` |
+| 3 | `power1.inOut` | 14 | `back.out` | 25 | `expo.in` |
+| 4 | `power2.in` | 15 | `back.inOut` | 26 | `expo.out` |
+| 5 | `power2.out` | 16 | `bounce.in` | 27 | `expo.inOut` |
+| 6 | `power2.inOut` | 17 | `bounce.out` | 28 | `sine.in` |
+| 7 | `power3.in` | 18 | `bounce.inOut` | 29 | `sine.out` |
+| 8 | `power3.out` | 19 | `circ.in` | 30 | `sine.inOut` |
+| 9 | `power3.inOut` | 20 | `circ.out` | | |
+| 10 | `power4.in` | 21 | `circ.inOut` | | |
+
+```js
+timing: {duration: 0.4, ease: 2}
+```
+
+### Advanced eases
+
+Objects discriminated on `type`, each `.strict()`. `[GATED]` behind
+`ff-styl-1612-ix3-advanced-easing` — check the flag before offering them.
+
+| `type` | Fields |
+| ------ | ------ |
+| `back` | `curve`, `power` |
+| `elastic` | `curve`, `amplitude`, `period` |
+| `steps` | `stepCount` (int) |
+| `rough` | `templateCurve`, `points` (int), `strength`, `taper`, `randomizePoints`, `clampPoints` |
+| `slowMo` | `linearRatio`, `power`, `yoyoMode` |
+| `expoScale` | `startingScale`, `endingScale`, `templateCurve` |
+| `customWiggle` | `wiggles` (int), `wiggleType` |
+| `customBounce` | `strength`, `squash`, `endAtStart` |
+| `customEase` | `bezierCurve` (string) |
+
+`curve` is `in` / `out` / `inOut`. `taper` is `none` / `in` / `out` / `both`.
+`wiggleType` is `easeOut` / `easeInOut` / `anticipate` / `uniform` / `random`.
+`templateCurve` is a `"family.direction"` string; the `rough` set covers every
+family, the `expoScale` set omits back / bounce / circ / elastic.
+
+```js
+timing: {duration: 0.4, ease: {type: 'back', curve: 'out', power: 1.7}}
+```
+
+`timing.stagger.ease` takes the identical union.
+
+`[PANEL-TRAP]` `timing.ease` on a Set action. The Ease row is not rendered for
+Set, so a stored value is invisible and uneditable.
+
+## `timing.stagger` — the Stagger block
+
+`staggerConfigSchema` is an object. A bare number is rejected.
+
+| Field | Shape |
+| ----- | ----- |
+| `each` | seconds or an `"Nms"` string — the panel's "Offset time" |
+| `amount` | seconds or an `"Nms"` string — total spread, alternative to `each` |
+| `axis` | `'x'` / `'y'` |
+| `ease` | same union as `timing.ease` |
+| `from` | `'start'` / `'center'` / `'end'` / `'edges'` / `'random'`, a number, or `null` |
+| `grid` | `'auto'`, a `[columns, rows]` number pair, or `null` |
+
+`[REJECTED]` A bare number for `stagger`. Layer: Zod · fragment:
+`Expected object, received number`
+
+`[REJECTED]` `grid: 'none'`. The panel's Grid "None" is the absent / `null` state,
+not a string. Layer: Zod · fragment: `Invalid input`
+
+`[REJECTED]` `stagger.ease` as a string, per the ease rules above.
+
+```js
+timing: {
+  duration: 0.5,
+  stagger: {each: 0.05, from: 'start', grid: [2, 2], ease: 0},
+}
+```
+
+`[PANEL-TRAP]` `stagger` on a Set action — the repeat / yoyo / stagger / splitText
+block is gated behind a non-Set tween type.
+
 ## `splitText`
+
+**`splitText` is an action-level field**, a sibling of `timing`, `properties`, and
+`targets` — **not** `timing.splitText`. Getting that wrong is a
+`[SILENTLY-DROPPED]`, not a rejection: `timingConfigSchema` is non-strict, so a
+misplaced `splitText` is stripped and the text ships unsplit with no error.
+
+```js
+{
+  id: 'a1',
+  name: 'Reveal words',
+  tt: 1,
+  splitText: {type: 'words'},          // <- here, beside timing
+  timing: {duration: 0.5, stagger: {each: 0.05}},
+  properties: {'wf:transform': {opacity: ['0%']}},  // From: from slot only
+  targets: [{extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]}],
+}
+```
+
+Where the panel-trap table lists "`timing.repeat` / `yoyo` / `stagger` /
+`splitText` on a Set action", the first three are `timing` keys and the fourth is
+not; they share a trap, not a parent.
+
+### The target needs text, not a particular element type
+
+The constraint is that copy exists inside the target — in the element itself or a
+descendant. It is **not** that the target be a Heading, Paragraph, or Text.
+Verified on a published page: a Block whose text is a child String node
+(`.pg-card` containing "Card one") produced two `gsap_split_word` spans, while a
+Paragraph in the same run produced twenty.
+
+What does fail is a target with no text anywhere inside it. That saves, reads back
+intact, and animates nothing — no error, because nothing structural is wrong with
+the payload.
 
 The Mask dropdown offers "None" plus the option matching the split type, and
 choosing None omits `mask` rather than storing a value. So the only object forms

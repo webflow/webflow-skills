@@ -25,6 +25,44 @@ the execution context. So the action body you send is:
 Calling the Designer Extension API directly instead of MCP, `pageId` is a field on
 the params object rather than a separate argument. Everything else is identical.
 
+## Unknown keys on `trigger.config` are silently discarded
+
+`[SILENTLY-DROPPED]` Any key on `trigger.config` that is not a declared field.
+
+`triggerConfigSchema` is a plain `z.object`, so Zod strips unknown keys, and the
+object→tuple transform then re-emits only the fields it names. There is no error.
+The write returns success, `get_interaction` round-trips byte-identically, and the
+field you sent is gone.
+
+Declared `config` fields — everything else is dropped:
+
+```
+control · delay · jump · speed · controlType · scrollTriggerConfig
+pluginConfig · assignedGroupId · assignedTimelineRole · conditionalLogic
+```
+
+**Every plugin-specific field belongs inside `config.pluginConfig`.** That is where
+`eventName` (custom), `eventMode` and `multiTimeline` (hover), and `smoothness`
+(mouse-move) live.
+
+```js
+// WRONG — stripped, and the trigger can never fire
+config: {eventName: 'my-event'}
+// RIGHT
+config: {pluginConfig: {eventName: 'my-event'}}
+```
+
+Why this rule leads the file: a dogfood run put three different fields at `config`
+level, watched all three vanish, and filed three capability gaps that did not
+exist. The docs for each field were correct and already installed. They went
+unread because the escalate-on-rejection habit that normally sends an agent to the
+reference **cannot fire when the write succeeds**.
+
+So the diagnostic is: if a field you sent is absent from the response, assume you
+addressed it wrong before you conclude it is unsupported. `timingConfigSchema` is
+non-strict the same way — see `easing`-for-`ease` in
+[`actions-and-properties.md`](actions-and-properties.md).
+
 ## `timelineDefaults` is not authorable
 
 `[OMIT]` on create. `[REJECTED]` for any non-null value, on create or update.
@@ -124,6 +162,38 @@ Guard: `validateTargetValue` · fragment: `does not support Scope`
 A malformed scope wrapper reports separately as
 `target scope must be a valid DirectScope or SelectorScope`.
 
+## `filterContext.relationship` — the full enum
+
+Eight values. A wrong one is rejected with an enum-listing Zod message, so this is
+the cheap kind of mistake — but a CSS-flavoured guess like `descendants` reads as
+obviously correct, so check the list rather than inferring.
+
+| Value | Selects |
+| ----- | ------- |
+| `none` | no filter (the stamped placeholder) |
+| `within` | descendants of the filter set |
+| `direct-child-of` | immediate children of the filter set |
+| `contains` | ancestors of the filter set |
+| `direct-parent-of` | immediate parents of the filter set |
+| `next-to` | adjacent siblings |
+| `next-sibling-of` | the immediately following sibling |
+| `prev-sibling-of` | the immediately preceding sibling |
+
+These are the panel's authoring names. **The published runtime uses a different
+internal vocabulary** — `all`, `parent`, `children`, `siblings`, `next`,
+`previous`, `first-ancestor`, `first-descendant`, `descendants`, `ancestors` — and
+the host maps between them. Reading the runtime bundle and copying those names
+back into a write is a trap: `descendants` looks like a real value because it is
+one, just not on this side of the boundary.
+
+```js
+filterContext: {
+  relationship: 'within',
+  filterBy: ['wf:class', [STYLE_BLOCK_ID]],
+  firstMatchOnly: false,
+}
+```
+
 ## The stamped filterContext
 
 When a caller omits `filterContext` on an element-scoped target, the host stamps
@@ -190,6 +260,42 @@ is not a class style block on the site (`is not on this site`).
 `validateTargetValue` enforces a per-key value shape shared with the DE
 responders. It rejects, for example, a string where an id array is expected.
 Fragment varies by key; the message names the expected shape.
+
+| Key | `value` |
+| --- | ------- |
+| `wf:class` | style-block id **array**, or a class-name string |
+| `wf:inst` | **`[componentId, elementId]`** |
+| `wf:selector` | a CSS selector string, e.g. `'body'` |
+| `wf:id` | element DOM id string |
+| `wf:attribute` | attribute name or selector — a bare name (`'data-thing'`) is accepted and stored as `[data-thing]` |
+| `wf:body`, `wf:viewport` | `''` |
+| `wf:any-element`, `wf:trigger-only`, `wf:trigger-only-parent` | `''` |
+
+Two of these are the ones agents get wrong.
+
+**`wf:inst` is a 2-tuple, not a bare element id.** For an element that lives on a
+page rather than inside a component definition, the `componentId` slot is the
+**page id**:
+
+```js
+{extensionKey: 'wf:inst', value: [PAGE_ID, ELEMENT_ID]}
+```
+
+`[REJECTED]` A bare string. Fragment: `wf:inst value must be [componentId, elementId]`
+
+**`wf:selector` is how you reach the body from an action.** `wf:body` is
+trigger-context-only, so an action target has to use a selector instead:
+
+```js
+{extensionKey: 'wf:selector', value: 'body'}
+```
+
+`[REJECTED]` `wf:body` as an action target.
+Guard: `findActionTargetContextError` · fragment:
+`is a trigger-context-only target and cannot be used as an action target`
+
+The message names the fix, which is the only reason `wf:selector` is discoverable
+at all — it appears in no capability table.
 
 ## `autoReverse` is not authorable either
 

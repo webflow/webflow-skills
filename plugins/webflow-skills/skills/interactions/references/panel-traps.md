@@ -52,7 +52,7 @@ keeps the panel fully in control. Details in
 | ------------------------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `timing.duration` on a Set action                                  | Duration input disabled for Set.                                              | `findActionTimingPositionError` covers `position` only.                                 |
 | `timing.ease` on a Set action                                      | Ease row not rendered for Set.                                                | No `timing.ease` guard exists.                                                          |
-| `timing.repeat` / `yoyo` / `stagger` / `splitText` on a Set action | The whole block is gated behind a non-Set tween type.                         | `findScrollScrubActionTimingError` keys off scroll scrub, not Set.                      |
+| `timing.repeat` / `timing.yoyo` / `timing.stagger`, and action-level `splitText`, on a Set action | The whole block is gated behind a non-Set tween type. | `findScrollScrubActionTimingError` keys off scroll scrub, not Set. |
 | `timing.repeat` / `yoyo` on a continuous-only interaction          | Repeat UI not rendered when a continuous trigger is present.                  | `findScrollScrubActionTimingError` keys off **scrub**; continuous alone is not covered. |
 | Start plus duration past 100% of a percent canvas                  | Start is clamped to `100% − duration%` and the input disables entirely at 0%. | `findActionTimingPositionError` rejects operator strings, not out-of-range numerics.    |
 

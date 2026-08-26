@@ -68,9 +68,17 @@ different behavior when you hit it.
 | `[GATED]`               | Not authorable through this API today. The guards take no flag or session parameter, so every caller is refused.                                                                                      | Do not attempt. Tell the user the capability is unavailable.                                               |
 | `[PANEL-TRAP]`          | The API accepts it, but the Interactions panel cannot author, display, edit, or clear the result.                                                                                                     | Do not author unsolicited. If explicitly asked, warn that the result will not be editable in the Designer. |
 | `[LEGACY-OK-ON-UPDATE]` | Refused on create, but forwarded unchanged when an existing interaction is updated without replacing that field.                                                                                      | On a read-then-write flow, pass the stored value through untouched. Do not "fix" it.                       |
+| `[SILENTLY-DROPPED]`    | The key is not declared on a non-strict Zod object, so it is stripped before persist. No error, and `get` echoes a payload that no longer contains it.                                                 | Put the field where it belongs. Never infer from a missing field that the capability is unsupported.        |
 
-`[PANEL-TRAP]` is the class no error will ever teach you: the write succeeds and
-the damage is only visible to the human afterwards.
+`[PANEL-TRAP]` and `[SILENTLY-DROPPED]` are the two classes no error will ever
+teach you. A panel trap succeeds and the damage is only visible to the human
+afterwards. A silently-dropped key is worse for an agent specifically: the write
+returns success, `get_interaction` round-trips byte-identically, and the missing
+field reads as a missing *feature*. A dogfood run filed three capability gaps that
+way — every one of them was a field written one level too high, and every one was
+already documented correctly in this pack. The habit that normally rescues an
+agent, escalating to the reference on a rejection, cannot fire when there is no
+rejection.
 
 ## About the guard and constant names
 

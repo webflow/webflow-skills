@@ -78,9 +78,86 @@ Exactly `'mouseX'`, `'mouseY'`, or `'interval'`.
 }
 ```
 
+## `wf:mouse-follow` — the purpose-built action
+
+Prefer this over `wf:transform` x/y when the user wants an element to track the
+cursor. The transform form works and is what SKILL.md Example 5 shows, but it
+hard-codes a travel range; `wf:mouse-follow` handles anchoring, leave behaviour,
+and axis pairing for you.
+
+One action per axis, on the matching `mouseX` / `mouseY` timeline. Never on an
+`interval` timeline.
+
+```js
+timelines: [
+  {
+    triggerMetadata: {role: 'mouseX'},
+    actions: [{
+      id: 'act-follow-x',
+      name: 'Follow X',
+      timing: {duration: 0.4},
+      properties: {'wf:mouse-follow': {
+        axis: 'x',
+        followMode: 'full',
+        leaveBehavior: 'stay',
+        anchor: '0% 0%',        // cursor at the target's top-left; omit to centre
+        groupId: 'mf-cursor',
+        syncedActionId: 'act-follow-y',
+      }},
+      targets: [{extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]}],
+    }],
+  },
+  // …mirror for role 'mouseY' with axis 'y' and syncedActionId 'act-follow-x'
+]
+```
+
+Values are bare scalars, not `[from, to]` pairs — there is no from-state to
+express. `timing` is still required, as on every action.
+
+**`groupId` here is not timeline group routing.** Two different fields share the
+name: `timeline.groupId` routes a trigger via `config.assignedGroupId`
+(see [`timelines-and-groups.md`](timelines-and-groups.md)), while
+`wf:mouse-follow`'s `groupId` pairs the X and Y actions of one follow effect.
+
+Shapes and defaults, from `MouseFollowActionConfig`:
+
+| Property | Shape | Default | Notes |
+| -------- | ----- | ------- | ----- |
+| `axis` | `'x'` \| `'y'` | derived | Optional and **not load-bearing** — the runtime takes the authoritative axis from the timeline role (`mouseX` → x, `mouseY` → y). The store writes it for display only. |
+| `followMode` | `'full'` \| `'x-only'` \| `'y-only'` | `'full'` | `'full'` keeps X and Y siblings in sync. Absence is treated as `'full'`, so pre-field data behaves unchanged. |
+| `leaveBehavior` | `'return'` \| `'stay'` | `'return'` | `'return'` tweens back to the start position when the cursor leaves; `'stay'` settles at the last position. |
+| `onEnter` | `'animate'` \| `'snap'` | — | Behaviour on first enter and every re-enter. Reduced-motion users always snap regardless. |
+| `anchor` | `"X% Y%"` string, or an `ix3-origin` object | `"50% 50%"` | Anchor point of the target relative to the cursor. Omitted centres the target on the cursor. |
+| `groupId` | string | — | Pairs the X and Y actions of one effect. |
+| `syncedActionId` | string | — | The sibling action this one is mirrored with. |
+
+`followMode` is mirrored between paired actions so both sides agree; setting
+`'x-only'` or `'y-only'` on a pair tells the editor's exit reconciler to delete the
+redundant sibling.
+
+The trigger's own `pluginConfig` also carries a resting state for when the pointer
+is idle or has left: per-axis percentages `0–100`, defaulting to `{x: 50, y: 50}`
+(centre).
+
 ## Interval metadata
 
 `distance` and `axes` are authored only on an `interval` timeline.
+
+Shapes:
+
+| Field | Shape | Bounds |
+| ----- | ----- | ------ |
+| `distance` | integer | finite, 1–10000 |
+| `axes` | `{x?: boolean, y?: boolean}` | per-axis enable bits |
+
+`axes` is a shared shape for continuous triggers rather than a mouse-move
+invention — any plugin driving 2D channels uses the same object instead of
+re-implementing it in `pluginConfig`. Both fields live at
+`timeline.triggerMetadata`, beside `role`.
+
+```js
+triggerMetadata: {role: 'interval', distance: 100, axes: {x: true, y: true}}
+```
 
 `[REJECTED]` Either field on a timeline whose role is not `interval`. The interval
 editor is the only place the Designer writes them.

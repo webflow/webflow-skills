@@ -1,7 +1,34 @@
 ---
 name: webflow-mcp:interactions
+version: 2026.08.25
 description: Create, update, list, and delete Webflow IX3 interactions (GSAP animations) through Webflow MCP. Use when the user wants click/hover/load/scroll/mouse-move animations, interaction timelines, or data_interactions_tool / create_interaction payloads. Requires beta MCP + ff-ix3-interaction-apis during dogfood.
 ---
+
+<!--
+CHANGELOG
+2026.08.25 — Dogfood corrections against Webflow MCP 2.0.1.
+  * Added the silent-strip rule for unknown `config` keys (the single most
+    expensive trap on this surface — it cost a dogfood run three misfiled bugs).
+  * Documented `timing.ease` / `timing.stagger.ease` as an integer index into
+    EASING_NAMES, with the full 0–30 table, plus the advanced-ease object union.
+    Previously undocumented in every file.
+  * Documented the `wf:class` `{operation, selectors}` shape.
+  * Documented the `stagger` object, the `filterContext.relationship` enum,
+    `wf:selector`, the `wf:inst` `[componentId, elementId]` shape, `wf:attribute`,
+    and the per-interaction caps.
+  * Added `"tt": 2` to Examples 1–3. As written they paired a [from,to] array with
+    an omitted tween type, which is a measured no-op on a default element. Example 1
+    also gained the rest-state note: a FromTo holds its from-state, so the click
+    example renders at `opacity: 0` until clicked, which reads as a failed write
+    unless the agent says so.
+  * Corrected the hover-split section: `eventMode` is `pluginConfig.eventMode`
+    with values 'enter'/'leave'.
+  * Added Example 6 (custom JS event) including the Webflow.require('ix3').emit()
+    firing call, which appears nowhere else in the pack.
+  * Noted the tool-schema errata for conditionalPlayback and the siteId/site_id
+    placement split across the tool family.
+-->
+
 
 # Interactions
 
@@ -126,6 +153,7 @@ Replace `STYLE_BLOCK_ID` with a style-block id. Mint a **fresh unique** `id` on 
         {
           "id": "act-click-fade",
           "name": "Fade",
+          "tt": 2,
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
           "targets": [
@@ -139,6 +167,8 @@ Replace `STYLE_BLOCK_ID` with a style-block id. Mint a **fresh unique** `id` on 
 ```
 
 6. `get_interaction` to verify
+
+A FromTo holds its from-state at rest, so this element renders at **`opacity: 0` until the first click** — measured on a published page. That is what fading in means, but **tell the user**, because an element they cannot see reads as a failed write rather than a working interaction. If it should be visible before the click, animate a property whose rest value is already visible (an `x` offset, a colour) or use a To.
 
 ### Example 2: Page load fade
 
@@ -156,6 +186,7 @@ Same discovery, reference read, and confirmation. Load **omits the trigger targe
         {
           "id": "act-load-fade",
           "name": "Fade",
+          "tt": 2,
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
           "targets": [
@@ -197,6 +228,7 @@ Scroll is **standalone**. A scrub needs a numeric `scrub` (not `true`), a rolele
         {
           "id": "act-scroll-scrub",
           "name": "Fade",
+          "tt": 2,
           "timing": { "duration": 1 },
           "properties": {
             "wf:transform": { "opacity": ["0%", "100%"], "xPercent": [-40, 0] }
@@ -253,6 +285,7 @@ Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and tw
         {
           "id": "act-hover-in",
           "name": "Fade in",
+          "tt": 2,
           "timing": { "duration": 0.3 },
           "properties": { "wf:transform": { "opacity": ["0%", "100%"] } },
           "targets": [
@@ -267,6 +300,7 @@ Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and tw
         {
           "id": "act-hover-out",
           "name": "Fade out",
+          "tt": 2,
           "timing": { "duration": 0.3 },
           "properties": { "wf:transform": { "opacity": ["100%", "0%"] } },
           "targets": [
@@ -281,7 +315,49 @@ Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and tw
 
 **Tell the user one caveat:** the panel will animate this correctly but will not offer a remove button for either action group, because it never writes hover this way itself.
 
-The two-trigger split the panel prefers (two `wf:hover` triggers with `eventMode` plus `assignedGroupId`, and `groupId` on the timelines) **is** authorable now. `groupId` was added to the MCP timeline input, so it survives to the host instead of being stripped, and an `assignedGroupId` matching no timeline group is rejected rather than stored inert. The role form above is still the shape this skill recommends, because its playback is the one verified end to end here; if you author the split instead, match every `assignedGroupId` to a `groupId` exactly and verify in Preview. See [references/trigger-hover.md](references/trigger-hover.md).
+The two-trigger split the panel prefers **is** authorable, but the discriminator
+is **`config.pluginConfig.eventMode`**, with the values **`'enter'` / `'leave'`** —
+not `mouseEnter`/`mouseLeave`, and **not** at `config` level, where it is silently
+discarded (see the first Guidelines section). `eventMode` also requires a boolean
+`multiTimeline` beside it, and the interaction needs `control: "play"` once it has
+two or more action groups.
+
+**Use `multiTimeline: false` on the split**, not `true`. The runtime branches on
+that flag: `true` is two-group *role* mode, which emits `mouseEnter` / `mouseLeave`
+role callbacks and is the role form above; `false` is single-group mode, where each
+trigger drives its own group and `eventMode` gates which event binds
+(`bindEnter = eventMode !== 'leave'`). The split routes by `groupId`, so it wants
+`false`.
+
+```json
+"triggers": [
+  {
+    "extensionKey": "wf:hover",
+    "config": {
+      "control": "play",
+      "assignedGroupId": "grp-in",
+      "pluginConfig": { "multiTimeline": false, "eventMode": "enter" }
+    },
+    "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+  },
+  {
+    "extensionKey": "wf:hover",
+    "config": {
+      "control": "play",
+      "assignedGroupId": "grp-out",
+      "pluginConfig": { "multiTimeline": false, "eventMode": "leave" }
+    },
+    "target": { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+  }
+]
+```
+
+with `groupId: "grp-in"` / `"grp-out"` on the two timelines. `groupId` survives to
+the host, and an `assignedGroupId` matching no timeline group is rejected rather
+than stored inert. Note multi-timeline hover routes by timeline **role** first,
+then by group. The role form above is still the shape this skill recommends,
+because its playback is the one verified end to end here. See
+[references/trigger-hover.md](references/trigger-hover.md).
 
 For enter only, send one trigger with `pluginConfig: { "multiTimeline": false }` and a single timeline.
 
@@ -310,6 +386,7 @@ Mouse-move is **standalone**. It validates without a target but never fires with
         {
           "id": "act-mouse-x",
           "name": "Follow X",
+          "tt": 2,
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "x": ["0px", "40px"] } },
           "targets": [
@@ -324,6 +401,7 @@ Mouse-move is **standalone**. It validates without a target but never fires with
         {
           "id": "act-mouse-y",
           "name": "Follow Y",
+          "tt": 2,
           "timing": { "duration": 0.4 },
           "properties": { "wf:transform": { "y": ["0px", "40px"] } },
           "targets": [
@@ -336,7 +414,211 @@ Mouse-move is **standalone**. It validates without a target but never fires with
 }
 ```
 
+### Example 6: Custom JS event
+
+**User:** "Play this when my script fires an event"
+
+Three non-obvious requirements, all mandatory:
+
+1. The trigger target must be **`wf:body`** (`value: ""`). Any other key is rejected.
+2. The event name lives at **`config.pluginConfig.eventName`**. At `config` level
+   it is silently discarded and the trigger can never fire.
+3. It is **not** a DOM `CustomEvent`. Dispatching one does nothing. The site fires
+   it through the IX3 module.
+
+```json
+{
+  "name": "Custom event flash",
+  "triggers": [
+    {
+      "extensionKey": "wf:custom",
+      "config": {
+        "control": "play",
+        "pluginConfig": { "eventName": "my-event" }
+      },
+      "target": { "extensionKey": "wf:body", "value": "" }
+    }
+  ],
+  "timelines": [
+    {
+      "actions": [
+        {
+          "id": "act-custom-flash",
+          "name": "Flash",
+          "tt": 2,
+          "timing": { "duration": 0.4 },
+          "properties": { "wf:transform": { "opacity": ["100%", "20%"] } },
+          "targets": [
+            { "extensionKey": "wf:class", "value": ["STYLE_BLOCK_ID"] }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Tell the user how to fire it.** This is the part that looks broken otherwise:
+
+```js
+const wfIx = Webflow.require('ix3');
+wfIx.emit('my-event');
+```
+
+`emit` is the only firing method — the module exposes
+`{getInstance, emit, destroy, ready, instance}`. There is no `trigger`, `dispatch`,
+or `fire`. A non-string or whitespace-only `eventName` is rejected at the write
+boundary; an **absent** one is accepted for backward compatibility and yields a
+trigger that never fires. See [references/trigger-custom.md](references/trigger-custom.md).
+
 ## Guidelines
+
+### Read this one first: unknown `config` keys are silently discarded
+
+`triggerConfigSchema` is a non-strict Zod object, so **any key you put on
+`trigger.config` that is not a declared field is dropped without an error.** The
+write succeeds, the response looks clean, `get_interaction` round-trips
+byte-identically, and your field is gone.
+
+Declared `config` fields: `control`, `delay`, `jump`, `speed`, `controlType`,
+`scrollTriggerConfig`, `pluginConfig`, `assignedGroupId`, `assignedTimelineRole`,
+`conditionalLogic`.
+
+**Everything plugin-specific goes inside `config.pluginConfig`** — `eventName`,
+`eventMode`, `multiTimeline`, `smoothness`, and anything else a plugin defines.
+Putting one of those at `config` level is the single most expensive mistake on
+this surface, because nothing tells you:
+
+```jsonc
+// WRONG — silently discarded, trigger never fires
+"config": { "eventName": "my-event" }
+// RIGHT
+"config": { "pluginConfig": { "eventName": "my-event" } }
+```
+
+A dogfood run lost three fields this way (`eventName`, `eventMode`, and a
+mistyped `easing`) and misfiled all three as missing API features. If a field you
+sent is absent from the response, assume you addressed it wrong before you
+conclude it is unsupported.
+
+### Easing: `timing.ease` is a number, not a string
+
+`ease` is either a **non-negative integer index** into the built-in easing table
+or an advanced-ease object. A string is rejected with a bare `Invalid input` that
+does not tell you this.
+
+| Index | Name | | Index | Name | | Index | Name |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | `none` (Linear) | | 11 | `power4.out` | | 22 | `elastic.in` |
+| 1 | `power1.in` | | 12 | `power4.inOut` | | 23 | `elastic.out` |
+| 2 | `power1.out` | | 13 | `back.in` | | 24 | `elastic.inOut` |
+| 3 | `power1.inOut` | | 14 | `back.out` | | 25 | `expo.in` |
+| 4 | `power2.in` | | 15 | `back.inOut` | | 26 | `expo.out` |
+| 5 | `power2.out` | | 16 | `bounce.in` | | 27 | `expo.inOut` |
+| 6 | `power2.inOut` | | 17 | `bounce.out` | | 28 | `sine.in` |
+| 7 | `power3.in` | | 18 | `bounce.inOut` | | 29 | `sine.out` |
+| 8 | `power3.out` | | 19 | `circ.in` | | 30 | `sine.inOut` |
+| 9 | `power3.inOut` | | 20 | `circ.out` | | | |
+| 10 | `power4.in` | | 21 | `circ.inOut` | | | |
+
+The panel's "Power 1 out" is `2`; its "Linear" is `0`.
+
+```json
+"timing": { "duration": 0.4, "ease": 2 }
+```
+
+Advanced eases are objects discriminated on `type`, and are gated behind
+`ff-styl-1612-ix3-advanced-easing`:
+`back {curve,power}`, `elastic {curve,amplitude,period}`, `steps {stepCount}`,
+`rough {templateCurve,points,strength,taper,randomizePoints,clampPoints}`,
+`slowMo {linearRatio,power,yoyoMode}`, `expoScale {startingScale,endingScale,templateCurve}`,
+`customWiggle {wiggles,wiggleType}`, `customBounce {strength,squash,endAtStart}`,
+`customEase {bezierCurve}`. `curve` is `in` / `out` / `inOut`.
+
+```json
+"timing": { "duration": 0.4, "ease": { "type": "back", "curve": "out", "power": 1.7 } }
+```
+
+`timing.stagger.ease` takes the same shape. A 4-number bezier array is **not**
+accepted — use `{type: "customEase", bezierCurve: "..."}`.
+
+### Class change: `wf:class`
+
+One property, named `class`, Set-only (`tt: 3`):
+
+```json
+"tt": 3,
+"properties": {
+  "wf:class": {
+    "class": { "operation": "addClass", "selectors": ["STYLE_BLOCK_ID"] }
+  }
+}
+```
+
+`operation` is `addClass` / `removeClass` / `toggleClass`. A bare array, a bare
+string, or `{add: [...]}` are all rejected.
+
+### `stagger` is an object
+
+`{amount?, axis?, each?, ease?, from?, grid?}`. A bare number is rejected.
+
+- `each` / `amount` — seconds, or a `"250ms"` string
+- `axis` — `'x'` / `'y'`
+- `ease` — the same index-or-object shape as `timing.ease`
+- `from` — `'start' | 'center' | 'end' | 'edges' | 'random'`, a number, or `null`
+- `grid` — `'auto'`, a `[columns, rows]` number pair, or `null`. `'none'` is rejected.
+
+```json
+"timing": { "duration": 0.5, "stagger": { "each": 0.05, "from": "start", "grid": [2, 2] } }
+```
+
+### `filterContext.relationship` enum
+
+`none` · `within` · `direct-child-of` · `contains` · `direct-parent-of` ·
+`next-to` · `next-sibling-of` · `prev-sibling-of`. CSS-flavoured guesses like
+`descendants` are rejected.
+
+### Target value shapes
+
+| Key | Value |
+| --- | --- |
+| `wf:class` | style-block id array, or a class name string |
+| `wf:inst` | **`[componentId, elementId]`** — for a page-level element the componentId slot is the **page id** |
+| `wf:selector` | a CSS selector string, e.g. `"body"`. This is how you target the body from an action; `wf:body` is trigger-context-only |
+| `wf:body`, `wf:viewport` | `""` — **trigger targets only** |
+| `wf:any-element`, `wf:trigger-only`, `wf:trigger-only-parent` | action targets only |
+| `wf:attribute` | a bare attribute name (`"data-thing"`) is accepted and stored as `[data-thing]` |
+| `wf:id` | element DOM id |
+
+`wf:inst` and `wf:trigger-only` reject an *active* `filterContext`; the stamped
+`relationship: 'none'` placeholder is fine.
+
+### Caps
+
+Triggers per interaction **20** · timelines per interaction **5** · actions per
+timeline **200** · targets per action **20** · `canvasDuration` **≤ 12s** ·
+`groupId` **1–64 chars** · random-array sets **2–12 values** · IX3 value total
+**65,536 bytes**.
+
+**MCP applies these as Zod `.max()` on create *and* update.** The Designer host
+raises the ceiling for already-stored over-cap interactions; MCP does not. So
+reading a 200+-action timeline and resubmitting it to change one action **fails
+over MCP**.
+
+### Tool-schema errata
+
+The `data_interactions_tool` JSON Schema currently describes
+`conditionalPlayback` as `{"type": "object"}` with the example
+`{reducedMotion:"skip"}`. **Both are wrong.** The server validator requires an
+**array**; see the `conditionalPlayback` bullet below. Trust this skill over the
+tool description on that field.
+
+Also note `siteId`/`pageId` placement differs across the tool family: **top-level**
+for `data_interactions_tool`, `data_style_tool`, and `data_element_tool`; nested
+**`site_id` inside the action** for `data_pages_tool`, `data_assets_tool`, and
+`data_agent_instructions_tool`.
+
+### Everything else
 
 - **Object format only:** `{ extensionKey, value, filterContext? }`. Nested `filterBy` is a **2-tuple** `["wf:class", ["STYLE_BLOCK_ID"]]`, never an object.
 - **IDs:** omit timeline `id` on create (the host mints it). Every action needs a fresh unique `id`. Do not send trigger `id`.
@@ -358,7 +640,7 @@ Mouse-move is **standalone**. It validates without a target but never fires with
 - **No GSAP position operators** (`+=`, `<`, `>`) in `timing.position`. Use a finite number (seconds) or `'500ms'`.
 - **Duration is seconds.** `timing.duration: 0.4` is 400ms. `400` is 400 seconds. Use `"400ms"` if you think in milliseconds.
 - **From / FromTo (`tt: 1` / `2`) sit at the from-state until the trigger fires.** Prefer To (`tt: 0` or omit) when the element should be visible at rest.
-- **`splitText` needs a Heading, Paragraph, or Text that already has copy**, not a Div / Block.
+- **`splitText` needs a target that already contains copy** — in itself or a descendant. The element *type* is not the constraint: a Block / Div whose text is a child node splits fine (verified on a published page: a `.pg-card` Block containing "Card one" produced two `gsap_split_word` spans). What fails silently is a target with no text anywhere inside it — that saves and animates nothing.
 - **Roles live on `timelines[].triggerMetadata`**, not on the trigger. Mouse-move needs a unique `mouseX` / `mouseY` / `interval` per timeline.
 - On reject: read the error, look it up in [references/rejects-index.md](references/rejects-index.md), do not invent fields.
 

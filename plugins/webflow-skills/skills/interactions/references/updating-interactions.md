@@ -18,6 +18,71 @@ place agents most often make things worse.
 The DE method is `webflow.interactions.set`. The MCP action is
 `update_interaction`.
 
+## Worked payloads
+
+All four verified accepted against the live API.
+
+**There is no way to patch a single action.** `timelines` is the smallest unit you
+can replace, so changing one action's duration means re-sending every timeline the
+interaction owns, in full. Read the interaction first and carry over everything you
+are not changing — roles, `groupId`, `canvasDuration`, `settings`, and the other
+timelines — because anything you omit is gone. That replace also re-runs the
+cross-field guards against the stored triggers you did not send, so a
+single-action edit can be refused for a reason that has nothing to do with your
+edit.
+
+The identifier is `id`, inside the action body. `siteId` and `pageId` stay
+top-level tool arguments and must **not** be echoed into the body.
+
+**Rename, changing nothing else.** Send `name` alone.
+
+```js
+{id: 'i-42e7f215', name: 'New name'}
+```
+
+**Clear a nullable field.** `null` clears; omitting leaves the stored value.
+
+```js
+{id: 'i-42e7f215', conditionalPlayback: null}
+```
+
+**Replace every timeline.** `timelines` is a full replace when present. Omit the
+timeline `id`s — the host mints new ones and the old timelines are dropped, not
+edited in place. Confirmed: the replacement came back with a fresh
+`t-…` id and `version: 0` while the interaction's own `version` incremented.
+
+```js
+{
+  id: 'i-42e7f215',
+  timelines: [{
+    actions: [{
+      id: 'act-replacement', name: 'Fade', tt: 2,
+      timing: {duration: 0.4, ease: 2},
+      properties: {'wf:transform': {opacity: ['0%', '100%']}},
+      targets: [{extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]}],
+    }],
+  }],
+}
+```
+
+### Read-then-write: send the minimum, not the echo
+
+After a `get_interaction`, do **not** send the fetched object back wholesale. Send
+only the fields you are changing. To rename, that is `{id, name}` — nothing else.
+
+A full echo is accepted in practice (server-owned keys like top-level `pageId` and
+`version` are tolerated and ignored), but it is the wrong habit for four reasons
+this file already documents:
+
+- Echoing `triggers` or `timelines` **revalidates the whole replaced structure**,
+  so a value stored months ago can be refused now.
+- A fetched non-null `timelineDefaults` is `[REJECTED]` on update as well as
+  create, so it has to be dropped or nulled.
+- An over-cap `timelines` or `actions` list is refused by the MCP `.max()` even as
+  an unchanged resubmission — the host's grandfathering does not apply here.
+- Guards run only on fields you replace, so the smaller the payload, the fewer
+  ways it can fail.
+
 ## Guards run on replaced fields only
 
 This is the rule that matters most. Validation is scoped to what you are

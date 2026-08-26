@@ -95,9 +95,28 @@ both `1`. A much smaller duration is accepted and then occupies only that fracti
 the gesture, so the result looks like a no-op. See
 [`trigger-scroll.md`](trigger-scroll.md).
 
-`[REJECTED]` `canvasDuration` on a timeline that is neither scroll-scrub nor mouse
-X/Y, or on one that carries a role when the scrub percent timeline must be
-roleless.
+The role rule differs between the two, and the two clauses are easy to conflate:
+
+| Percent timeline | Role |
+| ---------------- | ---- |
+| Mouse X/Y | **must** carry `mouseX` / `mouseY` — that is what makes it a percent timeline |
+| Scroll scrub | must be **roleless** |
+
+So "the percent timeline must be roleless" is a scroll-scrub rule only. Mouse X/Y
+timelines always carry a role and `canvasDuration` is legal on them.
+
+`[REJECTED]` `canvasDuration` on any timeline that is neither of the two rows
+above. Guard: `findPercentTimelineError` · fragment:
+`sets a percentage canvasDuration, which is only valid on Mouse X/Y timelines`
+
+Both directions verified against the live API: `canvasDuration: 1` on a
+`mouseX`-roled mouse-move timeline is accepted; the same value on a scroll-scrub
+timeline that carries a role is refused with that message.
+
+Note the worked mouse-move examples omit `canvasDuration` and use a seconds
+`duration` instead, and that shape animates correctly. Whether adding a canvas
+changes how the pointer range maps onto the timeline is a runtime behaviour this
+file does not settle — legality is settled, mapping is not.
 Guard: `findPercentTimelineError`
 
 `[PANEL-TRAP]` A start plus duration that runs past 100% of the canvas. The panel
