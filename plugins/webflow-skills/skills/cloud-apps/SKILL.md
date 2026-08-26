@@ -104,8 +104,8 @@ unambiguous.
 1. Resolve the exact environment and call `get_runtime_logs`.
 2. Narrow by `since` and `q` before retrieving a broad window. Page completely
    when the conclusion depends on absence.
-3. Runtime logs are retained for approximately one hour on the base plan. An
-   empty result outside the retained window is expected.
+3. Runtime logs may be unavailable because of retention. Treat an empty result
+   as no retrievable logs and report the limitation.
 4. Correlate runtime evidence with the latest deployment record when useful,
    but do not claim causation from timing alone.
 5. Report the observed error pattern, affected interval, likely cause, evidence,

@@ -39,7 +39,7 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Webflow Skills",
-    "shortDescription": "Manage CMS, Cloud apps, Designer, components, and CLI workflows",
+    "shortDescription": "Manage CMS, Cloud apps, Designer, Code Components, and CLI workflows",
     "longDescription": "Use Webflow Skills in Codex to manage CMS content, inspect and operate Webflow Cloud apps, audit site health, optimize assets, check links, apply FlowKit naming, manage custom code, build and inspect Designer pages and components, create and deploy Code Components, run Webflow CLI workflows, and prepare safe publishing workflows with Webflow MCP.",
     "developerName": "Webflow",
     "category": "Productivity",
