@@ -101,9 +101,19 @@ the new model regardless.
 
 ## Accept — separate hover out
 
-Two shapes reach the runtime here and they are not equivalent. **Prefer the split
-form**, because it is the one the panel produces and the one the panel can edit
-afterwards.
+Two shapes reach the runtime here and they are not equivalent. Both are
+authorable and both round-trip intact, so **choose on editability, not
+correctness**:
+
+- **The user will maintain this in the Designer → split form.** Two `wf:hover`
+  triggers with `groupId` + `assignedGroupId`. This is what the panel writes, and
+  both action groups keep their remove control.
+- **Playback fidelity matters more than panel editing → role form.**
+  `multiTimeline: true` with `mouseEnter` / `mouseLeave`. The panel never writes
+  this shape and offers no remove button for either group.
+
+Say which one you picked, so the user is not surprised by a missing control. Do
+not present them as interchangeable.
 
 ### Split form — what the panel writes
 
@@ -174,8 +184,8 @@ So through MCP:
 | Goal                | Use                                                                                      |
 | ------------------- | ---------------------------------------------------------------------------------------- |
 | Enter only          | One trigger, `multiTimeline: false`, one timeline. Clean and works.                      |
-| Enter **and** leave | Either form. The role form below is the one verified end to end for this pack.           |
-| The split form      | Available. Match every `assignedGroupId` to a `groupId`, and confirm playback in Preview. |
+| Enter **and** leave, user will edit it in the Designer | Split form. Match every `assignedGroupId` to a `groupId`. |
+| Enter **and** leave, playback fidelity first           | Role form. Warn that neither group gets a remove button.  |
 
 Calling the Designer Extension API directly, the split form works as written above.
 `groupId` survives on both paths now.

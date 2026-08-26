@@ -251,6 +251,12 @@ random/additive wrapper.
 Guard: `validateActionPropertyShape` · fragment:
 `must not be a plain {from, to} object`
 
+**That rule is namespace-scoped, not global.** It holds for `wf:transform`,
+`wf:style`, and `wf:class`. It is inverted for two plugin namespaces:
+`wf:lottie.lottie` and every `wf:spline` channel **require** a `{from?, to?}`
+object and refuse an array. Read as an absolute, this rule makes both namespaces
+unauthorable. See the plugin value shapes below.
+
 ### `wf:style` value shapes
 
 Seven properties, in two groups. The three colours animate; the other four do not
@@ -307,11 +313,112 @@ Prefer the bare scalar on a Set: there is no from-state to express, so a pair
 invites the reader to think the first value does something. `display` takes a CSS
 display keyword as a string; `'none'` and `'block'` are both confirmed.
 
+## `wf:lottie` value shapes
+
+Two properties. Both are validated; neither takes the tuple form used everywhere
+else.
+
+| Property | Value |
+| -------- | ----- |
+| `lottie` | an **object**, not an array. `from` and `to` are **both required** and must be numbers (or variable references). May also carry `manualDuration`. |
+| `manualDuration` | **boolean** — a flag, not a duration |
+
+```js
+properties: {'wf:lottie': {lottie: {from: 0, to: 1}, manualDuration: true}}
+```
+
+Every rejection comes from `validateLottieNested`.
+
+`[REJECTED]` An array, or any non-object. Fragment:
+`value must be an object with from/to`
+
+`[REJECTED]` Only one of the two. Fragment:
+`must include both "from" and "to"`
+
+`[REJECTED]` A key other than `from` / `to` / `manualDuration`. Fragment:
+`supported keys: from, to, manualDuration`
+
+`[REJECTED]` A non-numeric `from` / `to`. Fragment:
+`from/to must be numbers or variable references`
+
+`[REJECTED]` A non-boolean `manualDuration`, at either level. Fragment:
+`must be a boolean`
+
+## `wf:spline` value shapes
+
+Three properties.
+
+| Property | Value |
+| -------- | ----- |
+| `spline` | an object of animatable **channels**, each channel its own `{from?, to?}` object |
+| `objectId` | string |
+| `animatingState` | **boolean** — the state *name* travels in the `stateName` channel, not here |
+
+The fourteen channels: `positionX` `positionY` `positionZ` `rotationX`
+`rotationY` `rotationZ` `scaleX` `scaleY` `scaleZ` `intensity` `opacity` `zoom`
+`color` `stateName`.
+
+```js
+properties: {'wf:spline': {
+  spline: {positionX: {from: 0, to: 10}, opacity: {from: 1, to: 0.5}},
+  objectId: 'my-object',
+  animatingState: true,
+}}
+```
+
+Note the asymmetry with `wf:lottie`: a spline channel takes `{from?, to?}` with
+**both optional**, while `lottie` requires both. Every rejection comes from
+`validateSplineNested`.
+
+`[REJECTED]` An array, or any non-object, for `spline`. Fragment:
+`value must be an object of animatable channels`
+
+`[REJECTED]` A channel name outside the fourteen. Fragment:
+`does not support channel` — the message then lists all fourteen, which is the
+only place that list appears at runtime.
+
+`[REJECTED]` A channel given a tuple or scalar instead of an object. Fragment:
+`must be a {from?, to?} object`
+
+`[REJECTED]` A field other than `from` / `to` inside a channel. Fragment:
+`only supports from/to fields`
+
 ## Random and additive
 
 The Designer stores Random and Relative wrappers as the `to` leaf of a
 `[from, to]` tuple, so capability checks run per authored leaf rather than only on
 a top-level wrapper.
+
+### Wrapper shapes
+
+Three wrappers. **The unit is always its own field — never baked into the value.**
+That is the one that costs attempts: `{type: 'ix3-additive', value: '40px'}` is
+refused, because `value` is numeric and `px` belongs in `unit`.
+
+| `type` | Fields |
+| ------ | ------ |
+| `ix3-random` | `min` (number, required), `max` (number, required), `step?` (number, snap increment), `unit?` (string) |
+| `ix3-additive` | `value` (**number**, or a nested `ix3-random` wrapper), `unit?` (string) |
+| `ix3-random-array` | `values` (array of numbers, or comma-free strings for colours), `unit?` (string) |
+
+```js
+// pick a value in a range each time it plays
+{type: 'ix3-random', min: -100, max: 100, unit: 'px'}
+
+// relative: the runtime emits GSAP `+=`, so re-firing accumulates
+{type: 'ix3-additive', value: 40, unit: 'px'}
+
+// pick from a fixed set; colours are value-set only
+{type: 'ix3-random-array', values: ['#1a1a2e', '#7a4de8'], unit: undefined}
+```
+
+`ix3-additive` composes: `{type: 'ix3-additive', value: {type: 'ix3-random',
+min: 0, max: 10}}` emits `+=random(0, 10)`.
+
+`[REJECTED]` A wrapper missing a required field. Fragments: `malformed
+ix3-random`, `malformed ix3-additive`, `malformed ix3-random-array`. These name
+the wrapper but not the missing field, so check the table above rather than
+guessing variants.
 
 `[REJECTED]` `ix3-random-array` on a property that does not support random values.
 Fragment: `does not support random values`
@@ -466,8 +573,11 @@ timing: {duration: 0.4, ease: 2}
 
 ### Advanced eases
 
-Objects discriminated on `type`, each `.strict()`. `[GATED]` behind
-`ff-styl-1612-ix3-advanced-easing` — check the flag before offering them.
+Objects discriminated on `type`, each `.strict()`. `[FLAG]` behind
+`ff-styl-1612-ix3-advanced-easing`. You cannot read that flag from the payload,
+so **attempt the write and handle a refusal** rather than refusing up front — a
+`{type: 'back', curve: 'out', power: 1.7}` ease was accepted and stored on a
+live site, so pre-emptively declining costs the user a capability that works.
 
 | `type` | Fields |
 | ------ | ------ |

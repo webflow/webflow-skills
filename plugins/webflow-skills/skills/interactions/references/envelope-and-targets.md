@@ -267,11 +267,25 @@ Fragment varies by key; the message names the expected shape.
 | `wf:inst` | **`[componentId, elementId]`** |
 | `wf:selector` | a CSS selector string, e.g. `'body'` |
 | `wf:id` | element DOM id string |
-| `wf:attribute` | attribute name or selector — a bare name (`'data-thing'`) is accepted and stored as `[data-thing]` |
+| `wf:attribute` | attribute name **or a full attribute selector** — see below |
 | `wf:body`, `wf:viewport` | `''` |
-| `wf:any-element`, `wf:trigger-only`, `wf:trigger-only-parent` | `''` |
+| `wf:any-element` | `'*'` — **not** `''` |
+| `wf:trigger-only`, `wf:trigger-only-parent` | `''` |
 
-Two of these are the ones agents get wrong.
+`wf:any-element` is the one target key whose value is a wildcard rather than a
+placeholder. The three action-only keys look interchangeable and are not: sending
+`''` on `wf:any-element` is refused with `"wf:any-element" value must be "*"`,
+while `wf:trigger-only` and `wf:trigger-only-parent` do take `''`. Because these
+keys are usually authored as a batch — one row per `filterContext` relationship —
+getting this wrong loses the whole batch at once rather than one row.
+
+**`wf:attribute` takes a bare name or a full selector.** A bare name
+(`'data-thing'`) is accepted and stored as `[data-thing]`, which matches **every**
+element carrying that attribute. Pass a full selector
+(`'[data-thing="x"]'`, stored verbatim) when several elements share the attribute
+and you mean one of them.
+
+Two more are the ones agents get wrong.
 
 **`wf:inst` is a 2-tuple, not a bare element id.** For an element that lives on a
 page rather than inside a component definition, the `componentId` slot is the
@@ -305,6 +319,19 @@ runtime reverses with `playInReverse` instead.
 
 Guard: `findTimingAutoReverseError` · fragment:
 `is not authored by the Designer; the runtime uses playInReverse`
+
+**`playInReverse` is the replacement, and it is a timeline-level boolean** — a
+sibling of `name` / `immediate` / `canvasDuration` on the timeline object, not an
+action `timing` field and not a trigger `config` field. It is on the MCP timeline
+input, so it survives the write:
+
+```js
+timelines: [{playInReverse: true, actions: [...]}]
+```
+
+The rejection message names `playInReverse` without saying where it lives, which
+reads as an instruction and sends agents guessing across three levels of the
+envelope. It is one level: the timeline.
 
 `[LEGACY-OK-ON-UPDATE]` An unchanged stored value on the same id passes. The panel
 has no control that clears one either, and `get()` returns it, so rejecting it

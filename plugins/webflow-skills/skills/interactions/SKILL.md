@@ -1,11 +1,29 @@
 ---
 name: webflow-mcp:interactions
-version: 2026.08.25
+version: 2026.08.26
 description: Create, update, list, and delete Webflow IX3 interactions (GSAP animations) through Webflow MCP. Use when the user wants click/hover/load/scroll/mouse-move animations, interaction timelines, or data_interactions_tool / create_interaction payloads. Requires beta MCP + ff-ix3-interaction-apis during dogfood.
 ---
 
 <!--
 CHANGELOG
+2026.08.26 — Corrections from a 135-interaction stress run (197 write attempts,
+31 browser assertions). The gaps were almost all in the positive direction —
+not "which payloads are refused", which measured 46/48 accurate, but "what
+shape does this accepted field take".
+  * `wf:any-element` value is `'*'`, not `''`. It does not share a value with the
+    other two action-only keys. Highest-cost error in the run: eight relationship
+    rows sent as a batch on the documented value, all refused.
+  * `wf:attribute` also takes a full selector. A bare name matches every element
+    carrying the attribute, which is ambiguous when several do.
+  * The hover recommendation is now one decision rule (editability, not
+    correctness) instead of opposite defaults here and in the pack.
+  * `webflow_guide_tool` returns nothing about interactions; said so rather than
+    letting the mandated first step imply otherwise.
+  * References re-published from the corrected pack, which also adds the
+    `wf:lottie` / `wf:spline` value shapes, the `ix3-*` wrapper shapes, the
+    `{from,to}` exception for plugin namespaces, `playInReverse`'s location, a
+    `[FLAG]` tag distinct from `[GATED]`, and the MCP-vs-host ordering on the
+    conditions guard.
 2026.08.25 — Dogfood corrections against Webflow MCP 2.0.1.
   * Added the silent-strip rule for unknown `config` keys (the single most
     expensive trap on this surface — it cost a dogfood run three misfiled bugs).
@@ -38,7 +56,7 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 
 **ALWAYS use Webflow MCP tools for all operations:**
 
-- Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call**
+- Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call** — it covers general MCP conventions and returns nothing about interactions; the IX3 contract lives in `references/`
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to find the target page by name or slug
 - Use Webflow MCP's `data_interactions_tool` for list / get / create / update / delete
@@ -65,7 +83,12 @@ These tools are **not on stable MCP**.
 
 ### Phase 1: Discovery
 
-1. **Call `webflow_guide_tool` first** — always the first MCP tool call
+1. **Call `webflow_guide_tool` first** — always the first MCP tool call. Be clear
+   about what it gives you: general MCP tool conventions, and **nothing about
+   interactions**. Its response contains no occurrence of `interaction`, `ix3`,
+   `wf:click`, or `scrollTrigger` today. Call it for the site/page/element
+   conventions, then get the IX3 contract from `references/` — do not read its
+   silence on interactions as "there is nothing to know."
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
 4. **Confirm the gate**: beta MCP endpoint and `ff-ix3-interaction-apis` covering the caller's identity. If `data_interactions_tool` is unregistered, stop and tell the user. The likely causes are the stable MCP endpoint instead of beta, or the flag not covering that identity. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. Do not work around it. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
@@ -355,8 +378,19 @@ trigger drives its own group and `eventMode` gates which event binds
 with `groupId: "grp-in"` / `"grp-out"` on the two timelines. `groupId` survives to
 the host, and an `assignedGroupId` matching no timeline group is rejected rather
 than stored inert. Note multi-timeline hover routes by timeline **role** first,
-then by group. The role form above is still the shape this skill recommends,
-because its playback is the one verified end to end here. See
+then by group.
+
+**Both forms work. Choose on editability, not correctness** — each was authored
+and round-tripped intact, so there is no "safer" one:
+
+- **The user will maintain this in the Designer → the split form above.** It is
+  what the panel writes, and both action groups keep their remove control.
+- **Playback fidelity matters more than panel editing → the role form** (Example
+  4). The panel never writes this shape and offers no remove button for either
+  group.
+
+Say which one you chose, so the user is not surprised by a missing control. Do
+not describe them as interchangeable. See
 [references/trigger-hover.md](references/trigger-hover.md).
 
 For enter only, send one trigger with `pluginConfig: { "multiTimeline": false }` and a single timeline.
@@ -586,9 +620,16 @@ string, or `{add: [...]}` are all rejected.
 | `wf:inst` | **`[componentId, elementId]`** — for a page-level element the componentId slot is the **page id** |
 | `wf:selector` | a CSS selector string, e.g. `"body"`. This is how you target the body from an action; `wf:body` is trigger-context-only |
 | `wf:body`, `wf:viewport` | `""` — **trigger targets only** |
-| `wf:any-element`, `wf:trigger-only`, `wf:trigger-only-parent` | action targets only |
-| `wf:attribute` | a bare attribute name (`"data-thing"`) is accepted and stored as `[data-thing]` |
+| `wf:any-element` | `"*"` — **not** `""`. Action targets only |
+| `wf:trigger-only`, `wf:trigger-only-parent` | `""`. Action targets only |
+| `wf:attribute` | an attribute name **or a full selector**. `"data-thing"` is stored as `[data-thing]` and matches every element carrying it; pass `'[data-thing="x"]'` when several elements share the attribute |
 | `wf:id` | element DOM id |
+
+**`wf:any-element` is the one key whose value is a wildcard, not a placeholder.**
+The three action-only keys look interchangeable and are not: `""` on
+`wf:any-element` is refused with `"wf:any-element" value must be "*"`. Because
+these are usually authored one row per `filterContext` relationship, getting it
+wrong loses the whole batch rather than one row.
 
 `wf:inst` and `wf:trigger-only` reject an *active* `filterContext`; the stamped
 `relationship: 'none'` placeholder is fine.

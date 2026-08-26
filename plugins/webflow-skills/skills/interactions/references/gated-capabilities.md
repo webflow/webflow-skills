@@ -59,7 +59,14 @@ mouse-move, described in [`trigger-mouse-move.md`](trigger-mouse-move.md).
 
 `CONDITIONS_DEFAULT_ON` is `false`, so `findConditionsCapabilityError` refuses
 trigger-level `conditionalLogic` outright and wins over any deeper
-outcome-shape message.
+outcome-shape message — **in the host**.
+
+Through MCP the argument schema runs first, so an incomplete `conditionalLogic`
+never reaches the capability check. Measured: `config: {conditionalLogic:
+{conditions: []}}` returns `triggers.0.config.conditionalLogic.ifTrue:
+Required`. Do not read that as "supply `ifTrue` and this will work" — it is a
+shape error in front of a closed door, and completing the shape only moves you to
+the capability refusal. The capability is off either way.
 
 This is **only** about trigger `conditionalLogic`. Interaction-level
 `conditionalPlayback` is a separate field and **is** authorable — see
