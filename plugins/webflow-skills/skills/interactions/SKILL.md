@@ -15,8 +15,11 @@ shape does this accepted field take".
     rows sent as a batch on the documented value, all refused.
   * `wf:attribute` also takes a full selector. A bare name matches every element
     carrying the attribute, which is ambiguous when several do.
-  * The hover recommendation is now one decision rule (editability, not
-    correctness) instead of opposite defaults here and in the pack.
+  * The hover recommendation is now one weak preference (prefer the split because
+    the panel writes it) instead of opposite defaults here and in the pack. A
+    Designer check then disproved the remove-button penalty the role form was
+    said to carry: both forms show a delete control on both action groups, so
+    there is no editability tradeoff to trade against.
   * `webflow_guide_tool` returns nothing about interactions; said so rather than
     letting the mandated first step imply otherwise.
   * References re-published from the corrected pack, which also adds the
@@ -336,7 +339,7 @@ Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and tw
 }
 ```
 
-**Tell the user one caveat:** the panel will animate this correctly but will not offer a remove button for either action group, because it never writes hover this way itself.
+**No caveat needed.** An earlier version of this skill warned that the panel would not offer a remove button for either action group. That was checked in the Designer and is false: a role-form hover authored through MCP animates correctly *and* shows a delete control on both Actions groups, the same as the split form.
 
 The two-trigger split the panel prefers **is** authorable, but the discriminator
 is **`config.pluginConfig.eventMode`**, with the values **`'enter'` / `'leave'`** —
@@ -380,17 +383,18 @@ the host, and an `assignedGroupId` matching no timeline group is rejected rather
 than stored inert. Note multi-timeline hover routes by timeline **role** first,
 then by group.
 
-**Both forms work. Choose on editability, not correctness** — each was authored
-and round-tripped intact, so there is no "safer" one:
+**Both forms work, and neither costs the user anything measurable.** Verified
+side by side in the Designer, both authored through MCP against the same element:
+identical playback (`y` `0 → -24` on enter, `-24 → 0` on leave) and a delete
+control on both action groups in **both** forms.
 
-- **The user will maintain this in the Designer → the split form above.** It is
-  what the panel writes, and both action groups keep their remove control.
-- **Playback fidelity matters more than panel editing → the role form** (Example
-  4). The panel never writes this shape and offers no remove button for either
-  group.
+So this is a weak preference: **prefer the split form above**, because it is the
+shape the panel writes itself and the user sees what they would have built by
+hand. The role form (Example 4) is equally valid — the panel does not write it,
+but it does edit it.
 
-Say which one you chose, so the user is not surprised by a missing control. Do
-not describe them as interchangeable. See
+Earlier versions of this skill told agents to trade playback fidelity against a
+missing remove button. There is no such tradeoff. See
 [references/trigger-hover.md](references/trigger-hover.md).
 
 For enter only, send one trigger with `pluginConfig: { "multiTimeline": false }` and a single timeline.

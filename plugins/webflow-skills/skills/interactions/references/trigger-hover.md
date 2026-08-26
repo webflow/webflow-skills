@@ -101,19 +101,21 @@ the new model regardless.
 
 ## Accept — separate hover out
 
-Two shapes reach the runtime here and they are not equivalent. Both are
-authorable and both round-trip intact, so **choose on editability, not
-correctness**:
+Two shapes reach the runtime here. **Both work, and as of the panel check below
+neither costs the user anything measurable**, so this is a weak preference rather
+than a real tradeoff:
 
-- **The user will maintain this in the Designer → split form.** Two `wf:hover`
-  triggers with `groupId` + `assignedGroupId`. This is what the panel writes, and
-  both action groups keep their remove control.
-- **Playback fidelity matters more than panel editing → role form.**
-  `multiTimeline: true` with `mouseEnter` / `mouseLeave`. The panel never writes
-  this shape and offers no remove button for either group.
+- **Split form** — two `wf:hover` triggers with `groupId` + `assignedGroupId`.
+  This is what the panel writes itself, so the user sees the shape they would have
+  produced by hand. Prefer it on that basis alone.
+- **Role form** — `multiTimeline: true` with `mouseEnter` / `mouseLeave`. The
+  panel does not write this shape, but it does edit it.
 
-Say which one you picked, so the user is not surprised by a missing control. Do
-not present them as interchangeable.
+Verified side by side in the Interactions panel on a published page, both
+authored through MCP against the same element: identical playback (`y` `0 → -24`
+on enter, `-24 → 0` on leave) and **both action groups carry a delete control in
+both forms**. This pack previously claimed the role form left groups the panel
+could not remove. That was wrong — see the correction below.
 
 ### Split form — what the panel writes
 
@@ -181,11 +183,10 @@ Guard: `findOrphanedGroupAssignmentError` · fragment: `matches no timeline grou
 
 So through MCP:
 
-| Goal                | Use                                                                                      |
-| ------------------- | ---------------------------------------------------------------------------------------- |
-| Enter only          | One trigger, `multiTimeline: false`, one timeline. Clean and works.                      |
-| Enter **and** leave, user will edit it in the Designer | Split form. Match every `assignedGroupId` to a `groupId`. |
-| Enter **and** leave, playback fidelity first           | Role form. Warn that neither group gets a remove button.  |
+| Goal                | Use                                                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Enter only          | One trigger, `multiTimeline: false`, one timeline. Clean and works.                                                           |
+| Enter **and** leave | Either form. Prefer the split, because it is the shape the panel writes itself. Match every `assignedGroupId` to a `groupId`. |
 
 Calling the Designer Extension API directly, the split form works as written above.
 `groupId` survives on both paths now.
@@ -204,17 +205,22 @@ timelines: [
 ],
 ```
 
-`[PANEL-TRAP]` The host accepts this and the runtime honors it, but the panel never
-writes it for hover and cannot fully edit the result. The remove control keys off
-`groupId` (absent here) or a `groupRoles` config, and hover declares `triggerSplit`
-instead of `groupRoles` — so neither action group offers a remove button.
+The host accepts this and the runtime honors it. The panel does not write this
+shape for hover, but it **does** render both action groups with a delete control.
 
-**Through MCP both forms reach the runtime** (see above). The tradeoff is now a real
-choice rather than a forced one: this form is the one verified end to end here and
-costs the user a remove button, while the split form is what the panel writes and
-stays fully editable but should have its playback confirmed in Preview rather than
-inferred from a successful write. Say which one you chose, so the user is not
-surprised by a missing control.
+**Correction (measured).** This form was tagged `[PANEL-TRAP]` here on the
+grounds that the remove control keys off `groupId` (absent in the role form) or a
+`groupRoles` config, and that hover declares `triggerSplit` instead of
+`groupRoles`, so neither role-based group would offer a remove button. **That was
+checked in the Designer and is false**: a role-form hover authored through MCP
+showed a delete button on both Actions groups, the same as the split form. The
+tag is withdrawn and the mechanism above is not reproduced here, because the
+reasoning that produced it did not survive contact with the panel.
+
+What is still unverified on the role form: renaming a group, editing a group's
+duration, and whether a panel save round-trips the role shape unchanged. Only the
+delete control was observed. Do not upgrade this to "fully editable" without
+checking those.
 
 `triggerMetadata` is in the MCP timeline input, so the roles survive the write.
 
