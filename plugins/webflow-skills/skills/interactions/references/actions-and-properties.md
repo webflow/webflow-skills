@@ -80,7 +80,7 @@ Three rules in this pack point different ways on this, so state it once:
   the panel's To editor is disabled, so the user can neither see nor clear it. See
   [`panel-traps.md`](panel-traps.md).
 - Use **FromTo (`tt: 2`)** when you genuinely want both endpoints pinned, and the
-  end state is *not* the element's resting style — a hover that lifts to `-8px`
+  end state is _not_ the element's resting style — a hover that lifts to `-8px`
   and returns, for instance.
 
 So "use `tt: 1` for a reveal" and "use `tt: 2` whenever the animation needs a
@@ -104,6 +104,13 @@ from the element's **live computed value** to `to`, not from the value you autho
 `opacity: ['20%', '100%']` on an element that is already opaque animates nothing at
 all. The write succeeds, `get_interaction` echoes both values back, and no error is
 raised.
+
+**The Designer panel does mark it, though.** Verified in the Interactions panel on
+an interaction stored with `tt` omitted and a `[from, to]` pair: the unused _from_
+field renders greyed out. So this is invisible to the API and to a read, but a
+human looking at the panel can see the discarded slot. If a user reports an
+animation that "does nothing", pointing them at a greyed field is faster than
+re-reading the payload.
 
 This is the most common reason a scroll-scrub payload looks inert: both endpoints are
 authored, one is used, and the visible delta is whatever sits between the element's
@@ -129,7 +136,7 @@ Verified on a published page with a two-trigger hover split: the leave action wa
 
 So authoring the out-direction as a FromTo mirror of the in-direction is safe
 inside one interaction, and does not leave the element visibly displaced before
-the user interacts. Two *separate* interactions have no such ordering
+the user interacts. Two _separate_ interactions have no such ordering
 relationship — there, prefer a To for the out-direction.
 
 ### A from-state that collapses the element can make it unclickable
@@ -198,7 +205,7 @@ a no-op) or an object carrying **both** keys:
 `operation` is `addClass` / `removeClass` / `toggleClass`. `selectors` is an array
 of non-empty style-block id strings.
 
-**`selectors` is not combo-expanded.** Unlike a `wf:class` *target* value, where
+**`selectors` is not combo-expanded.** Unlike a `wf:class` _target_ value, where
 the host walks the chain and adds the combo's parents for you, a `selectors` entry
 applies exactly the one class it names. Verified on a published page: passing the
 combo leaf id for `is-featured` turned `class="pg-card"` into
@@ -262,15 +269,15 @@ unauthorable. See the plugin value shapes below.
 Seven properties, in two groups. The three colours animate; the other four do not
 and are Set-only (`tt: 3`).
 
-| Property | Animatable | Value |
-| -------- | ---------- | ----- |
-| `backgroundColor` | yes | `'#rrggbb'` |
-| `borderColor` | yes | `'#rrggbb'` |
-| `color` | yes | `'#rrggbb'` |
-| `zIndex` | **no** | unitless number, e.g. `10` |
-| `position` | **no** | `static` \| `relative` \| `absolute` \| `fixed` \| `sticky` (default `static`) |
-| `overflow` | **no** | `visible` \| `hidden` \| `scroll` \| `auto` \| `clip` (default `visible`) |
-| `pointerEvents` | **no** | `auto` \| `none` (default `auto`) |
+| Property          | Animatable | Value                                                                          |
+| ----------------- | ---------- | ------------------------------------------------------------------------------ |
+| `backgroundColor` | yes        | `'#rrggbb'`                                                                    |
+| `borderColor`     | yes        | `'#rrggbb'`                                                                    |
+| `color`           | yes        | `'#rrggbb'`                                                                    |
+| `zIndex`          | **no**     | unitless number, e.g. `10`                                                     |
+| `position`        | **no**     | `static` \| `relative` \| `absolute` \| `fixed` \| `sticky` (default `static`) |
+| `overflow`        | **no**     | `visible` \| `hidden` \| `scroll` \| `auto` \| `clip` (default `visible`)      |
+| `pointerEvents`   | **no**     | `auto` \| `none` (default `auto`)                                              |
 
 ```js
 // Set the four non-animatable ones together
@@ -318,10 +325,10 @@ display keyword as a string; `'none'` and `'block'` are both confirmed.
 Two properties. Both are validated; neither takes the tuple form used everywhere
 else.
 
-| Property | Value |
-| -------- | ----- |
-| `lottie` | an **object**, not an array. `from` and `to` are **both required** and must be numbers (or variable references). May also carry `manualDuration`. |
-| `manualDuration` | **boolean** — a flag, not a duration |
+| Property         | Value                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lottie`         | an **object**, not an array. `from` and `to` are **both required** and must be numbers (or variable references). May also carry `manualDuration`. |
+| `manualDuration` | **boolean** — a flag, not a duration                                                                                                              |
 
 ```js
 properties: {'wf:lottie': {lottie: {from: 0, to: 1}, manualDuration: true}}
@@ -348,11 +355,11 @@ Every rejection comes from `validateLottieNested`.
 
 Three properties.
 
-| Property | Value |
-| -------- | ----- |
-| `spline` | an object of animatable **channels**, each channel its own `{from?, to?}` object |
-| `objectId` | string |
-| `animatingState` | **boolean** — the state *name* travels in the `stateName` channel, not here |
+| Property         | Value                                                                            |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `spline`         | an object of animatable **channels**, each channel its own `{from?, to?}` object |
+| `objectId`       | string                                                                           |
+| `animatingState` | **boolean** — the state _name_ travels in the `stateName` channel, not here      |
 
 The fourteen channels: `positionX` `positionY` `positionZ` `rotationX`
 `rotationY` `rotationZ` `scaleX` `scaleY` `scaleZ` `intensity` `opacity` `zoom`
@@ -395,11 +402,11 @@ Three wrappers. **The unit is always its own field — never baked into the valu
 That is the one that costs attempts: `{type: 'ix3-additive', value: '40px'}` is
 refused, because `value` is numeric and `px` belongs in `unit`.
 
-| `type` | Fields |
-| ------ | ------ |
-| `ix3-random` | `min` (number, required), `max` (number, required), `step?` (number, snap increment), `unit?` (string) |
-| `ix3-additive` | `value` (**number**, or a nested `ix3-random` wrapper), `unit?` (string) |
-| `ix3-random-array` | `values` (array of numbers, or comma-free strings for colours), `unit?` (string) |
+| `type`             | Fields                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| `ix3-random`       | `min` (number, required), `max` (number, required), `step?` (number, snap increment), `unit?` (string) |
+| `ix3-additive`     | `value` (**number**, or a nested `ix3-random` wrapper), `unit?` (string)                               |
+| `ix3-random-array` | `values` (array of numbers, or comma-free strings for colours), `unit?` (string)                       |
 
 ```js
 // pick a value in a range each time it plays
@@ -553,19 +560,19 @@ The integer indexes `EASING_NAMES` in
 `packages/systems/ix3/runtime/src/utils.ts`. The panel's "Linear" is `0`; its
 "Power 1 out" is `2`.
 
-| Index | Name | Index | Name | Index | Name |
-| ----- | ---- | ----- | ---- | ----- | ---- |
-| 0 | `none` (panel "Linear") | 11 | `power4.out` | 22 | `elastic.in` |
-| 1 | `power1.in` | 12 | `power4.inOut` | 23 | `elastic.out` |
-| 2 | `power1.out` | 13 | `back.in` | 24 | `elastic.inOut` |
-| 3 | `power1.inOut` | 14 | `back.out` | 25 | `expo.in` |
-| 4 | `power2.in` | 15 | `back.inOut` | 26 | `expo.out` |
-| 5 | `power2.out` | 16 | `bounce.in` | 27 | `expo.inOut` |
-| 6 | `power2.inOut` | 17 | `bounce.out` | 28 | `sine.in` |
-| 7 | `power3.in` | 18 | `bounce.inOut` | 29 | `sine.out` |
-| 8 | `power3.out` | 19 | `circ.in` | 30 | `sine.inOut` |
-| 9 | `power3.inOut` | 20 | `circ.out` | | |
-| 10 | `power4.in` | 21 | `circ.inOut` | | |
+| Index | Name                    | Index | Name           | Index | Name            |
+| ----- | ----------------------- | ----- | -------------- | ----- | --------------- |
+| 0     | `none` (panel "Linear") | 11    | `power4.out`   | 22    | `elastic.in`    |
+| 1     | `power1.in`             | 12    | `power4.inOut` | 23    | `elastic.out`   |
+| 2     | `power1.out`            | 13    | `back.in`      | 24    | `elastic.inOut` |
+| 3     | `power1.inOut`          | 14    | `back.out`     | 25    | `expo.in`       |
+| 4     | `power2.in`             | 15    | `back.inOut`   | 26    | `expo.out`      |
+| 5     | `power2.out`            | 16    | `bounce.in`    | 27    | `expo.inOut`    |
+| 6     | `power2.inOut`          | 17    | `bounce.out`   | 28    | `sine.in`       |
+| 7     | `power3.in`             | 18    | `bounce.inOut` | 29    | `sine.out`      |
+| 8     | `power3.out`            | 19    | `circ.in`      | 30    | `sine.inOut`    |
+| 9     | `power3.inOut`          | 20    | `circ.out`     |       |                 |
+| 10    | `power4.in`             | 21    | `circ.inOut`   |       |                 |
 
 ```js
 timing: {duration: 0.4, ease: 2}
@@ -579,17 +586,17 @@ so **attempt the write and handle a refusal** rather than refusing up front — 
 `{type: 'back', curve: 'out', power: 1.7}` ease was accepted and stored on a
 live site, so pre-emptively declining costs the user a capability that works.
 
-| `type` | Fields |
-| ------ | ------ |
-| `back` | `curve`, `power` |
-| `elastic` | `curve`, `amplitude`, `period` |
-| `steps` | `stepCount` (int) |
-| `rough` | `templateCurve`, `points` (int), `strength`, `taper`, `randomizePoints`, `clampPoints` |
-| `slowMo` | `linearRatio`, `power`, `yoyoMode` |
-| `expoScale` | `startingScale`, `endingScale`, `templateCurve` |
-| `customWiggle` | `wiggles` (int), `wiggleType` |
-| `customBounce` | `strength`, `squash`, `endAtStart` |
-| `customEase` | `bezierCurve` (string) |
+| `type`         | Fields                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------- |
+| `back`         | `curve`, `power`                                                                       |
+| `elastic`      | `curve`, `amplitude`, `period`                                                         |
+| `steps`        | `stepCount` (int)                                                                      |
+| `rough`        | `templateCurve`, `points` (int), `strength`, `taper`, `randomizePoints`, `clampPoints` |
+| `slowMo`       | `linearRatio`, `power`, `yoyoMode`                                                     |
+| `expoScale`    | `startingScale`, `endingScale`, `templateCurve`                                        |
+| `customWiggle` | `wiggles` (int), `wiggleType`                                                          |
+| `customBounce` | `strength`, `squash`, `endAtStart`                                                     |
+| `customEase`   | `bezierCurve` (string)                                                                 |
 
 `curve` is `in` / `out` / `inOut`. `taper` is `none` / `in` / `out` / `both`.
 `wiggleType` is `easeOut` / `easeInOut` / `anticipate` / `uniform` / `random`.
@@ -609,14 +616,14 @@ Set, so a stored value is invisible and uneditable.
 
 `staggerConfigSchema` is an object. A bare number is rejected.
 
-| Field | Shape |
-| ----- | ----- |
-| `each` | seconds or an `"Nms"` string — the panel's "Offset time" |
-| `amount` | seconds or an `"Nms"` string — total spread, alternative to `each` |
-| `axis` | `'x'` / `'y'` |
-| `ease` | same union as `timing.ease` |
-| `from` | `'start'` / `'center'` / `'end'` / `'edges'` / `'random'`, a number, or `null` |
-| `grid` | `'auto'`, a `[columns, rows]` number pair, or `null` |
+| Field    | Shape                                                                          |
+| -------- | ------------------------------------------------------------------------------ |
+| `each`   | seconds or an `"Nms"` string — the panel's "Offset time"                       |
+| `amount` | seconds or an `"Nms"` string — total spread, alternative to `each`             |
+| `axis`   | `'x'` / `'y'`                                                                  |
+| `ease`   | same union as `timing.ease`                                                    |
+| `from`   | `'start'` / `'center'` / `'end'` / `'edges'` / `'random'`, a number, or `null` |
+| `grid`   | `'auto'`, a `[columns, rows]` number pair, or `null`                           |
 
 `[REJECTED]` A bare number for `stagger`. Layer: Zod · fragment:
 `Expected object, received number`
