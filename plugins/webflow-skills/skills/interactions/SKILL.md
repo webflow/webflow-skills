@@ -81,6 +81,7 @@ These tools are **not on stable MCP**.
 - `siteId` and `pageId` are **top-level** tool arguments (page context / create bookkeeping). They are **not** inside `create_interaction` args.
 - **The `guide` action and the `webflow://guides/interactions` resource are not live yet.** They are in review as `mcp-remote-cloudflare-server` #399. Until that ships, the `references/` files in this skill are the contract — do not try to call `guide` and do not wait for it. Once it is live, prefer it for payload shapes and use this skill for the workflow around them.
 - `create_interaction` args: `name` (required), `scope` (optional, default site), `triggers` (required array), `timelines` (required array), optional `timelineDefaults`, optional `conditionalPlayback`
+- **Component and variant scope work.** `{type:"component", componentId, variants?}` is accepted on create and update. `variants` holds variant **option ids** from `data_component_variants_tool` — omitting it or passing `[]` both mean every variant. Do not set `libraryProfileId`; it marks the interaction library-owned. A component or variant id that does not exist is rejected. See [references/envelope-and-targets.md](references/envelope-and-targets.md).
 
 ## Instructions
 
@@ -621,7 +622,7 @@ string, or `{add: [...]}` are all rejected.
 | Key | Value |
 | --- | --- |
 | `wf:class` | style-block id array, or a class name string |
-| `wf:inst` | **`[componentId, elementId]`** — for a page-level element the componentId slot is the **page id** |
+| `wf:inst` | **`[componentId, elementId]`** — for a page-level element the componentId slot is the **page id**. Which form is legal follows `scope`: component scope takes the component-definition id, site and pages scope require the page id |
 | `wf:selector` | a CSS selector string, e.g. `"body"`. This is how you target the body from an action; `wf:body` is trigger-context-only |
 | `wf:body`, `wf:viewport` | `""` — **trigger targets only** |
 | `wf:any-element` | `"*"` — **not** `""`. Action targets only |

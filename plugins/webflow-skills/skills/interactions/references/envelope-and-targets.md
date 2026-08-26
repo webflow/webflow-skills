@@ -97,7 +97,57 @@ Fragment: `actions.0.id: Required`
 ```
 
 Component and variant existence is checked by the host, not by the pure guards,
-so a bad id fails at the responder rather than in schema validation.
+so a bad id fails at the responder rather than in schema validation. On update
+that check only runs when the call actually sends `scope`.
+
+`[REJECTED]` A `componentId` no component on the site matches.
+Guard: `findComponentScopeError` · fragment: `does not exist on this site`
+
+`[REJECTED]` A variant id that is not one of the component's variant options.
+Guard: `findComponentScopeError` · fragment: `has no variant option(s)`
+
+`[REJECTED]` A non-string `componentId`, or `variants` that is not an array.
+Guard: `findScopeError` · fragments:
+`Component-scoped interactions must provide a component id` /
+`Component-scoped interaction variants must be an array`
+
+### `variants` narrows playback, and empty means all
+
+`variants` holds variant **option ids**, not names — the ids from the component's
+variant options. Omitting the key and passing `[]` behave identically: the runtime
+reads `componentScope?.variants?.length ? … : null`, and the existence guard only
+walks a non-empty list. A non-empty list makes `IX3Engine.resolveTargets` apply
+`filterByVariant` on top of the component scope selector, so only instances on
+those variants animate.
+
+Deleting a variant in the Designer cascades: an interaction scoped to that variant
+alone is deleted, and one scoped to it plus others is rewritten without it.
+
+### Do not set `libraryProfileId`
+
+It is provenance, not an authoring option — `isLibraryInteraction` treats a scope
+carrying it as library-owned, and `libraryDetach` strips it when a library is
+detached. Nothing validates it, so a hand-set value silently mislabels the
+interaction. There is also a known bug where the field is dropped on a server
+round trip, which is why `isLibraryInteraction` falls back to asking whether the
+component itself came from a library.
+
+### `wf:inst` target parity follows scope
+
+Under `scope.type === 'component'`, a `wf:inst` target is
+`[componentDefinitionId, elementId]` and the element must exist in that
+definition. Under `site` or `pages`, it must be `[pageId, elementId]`.
+
+`[REJECTED]` A component-definition path on a non-component scope. Fragment:
+`valid on component-scoped interactions`
+
+`[REJECTED]` A component-scoped path whose element is missing from the
+definition. Fragment: `does not exist on this site`
+
+Scope-only updates deliberately skip this check for targets they retain, so a
+stored `[componentDefinitionId, elementId]` survives a component-to-site flip.
+Replacing triggers or timelines re-runs it, but only on **new** inst paths — you
+cannot invent a component-definition path on a site-scoped interaction.
 
 ## Target shape
 
@@ -296,6 +346,9 @@ page rather than inside a component definition, the `componentId` slot is the
 ```
 
 `[REJECTED]` A bare string. Fragment: `wf:inst value must be [componentId, elementId]`
+
+Which of the two forms is legal is not a free choice — it follows `scope`. See
+[`wf:inst` target parity follows scope](#wfinst-target-parity-follows-scope).
 
 **`wf:selector` is how you reach the body from an action.** `wf:body` is
 trigger-context-only, so an action target has to use a selector instead:
