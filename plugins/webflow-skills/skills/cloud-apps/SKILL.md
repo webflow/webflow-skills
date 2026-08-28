@@ -126,49 +126,55 @@ unambiguous.
    URL, and latest deployment status.
 2. Compare the current branch and mount with the user's intended mapping. If
    the request is only diagnostic, stop after reporting the mismatch.
-3. For a correction, show the exact before-and-after mapping. Explain that
+3. If the correction changes the mount, call `get_app` and apply the live mount
+   guidance before previewing the mutation. Stop before confirmation when the
+   proposed mount is invalid.
+4. For a correction, show the exact before-and-after mapping. Explain that
    `update_environment` is immediate, has no dry run, and does not deploy code.
-4. Require `confirm`, call `update_environment` once, and report the returned
+5. Require `confirm`, call `update_environment` once, and report the returned
    environment and `mountRefreshStatus`.
-5. If the response is unreadable or the outcome is uncertain, reconcile with
+6. If the response is unreadable or the outcome is uncertain, reconcile with
    `list_environments`, filtering by the expected new branch when available and
    keeping the selected filters unchanged while paging, before considering a
    retry.
-6. A failed or unknown mount refresh does not mean the environment update was
+7. A failed or unknown mount refresh does not mean the environment update was
    rolled back. Report routing as uncertain and do not retry the update solely
    because the refresh failed.
-7. If the branch changed and the user wants its code deployed, treat
+8. If the branch changed and the user wants its code deployed, treat
    `trigger_deployment` as a separate previewed and confirmed mutation.
 
 #### Create an isolated environment for a branch and deploy it
 
-1. Resolve the existing app. Page through `list_environments` to check whether
-   the requested branch or mount is already in use.
-2. Show the proposed branch and mount. Explain that `create_environment` is
+1. Resolve the existing app, call `get_app`, and apply the live mount guidance
+   before previewing the mutation. Stop before confirmation when the proposed
+   mount is invalid.
+2. Page through `list_environments` to check whether the requested branch or
+   mount is already in use.
+3. Show the proposed branch and mount. Explain that `create_environment` is
    immediate, has no dry run, and creates a mapping without deploying code.
-3. Generate one stable `idempotency_key`, require `confirm`, and call
+4. Generate one stable `idempotency_key`, require `confirm`, and call
    `create_environment`. Reuse that key for retries of the same creation.
-4. Report the returned environment and `mountRefreshStatus`. A failed refresh
+5. Report the returned environment and `mountRefreshStatus`. A failed refresh
    means creation succeeded but routing may be incomplete; do not retry the
    creation. If the environment is null or the outcome is otherwise uncertain,
    reconcile through a complete `list_environments` search before retrying.
-5. Determine whether configuration is required before deployment. Use only
+6. Determine whether configuration is required before deployment. Use only
    user-identified keys, a protected local file, or keys inspected from a
    user-selected reference environment. Never copy values returned by MCP.
-6. If values are required, switch to the installed Webflow CLI and inspect
+7. If values are required, switch to the installed Webflow CLI and inspect
    `webflow apps env-vars --help`. Pass the resolved app and environment IDs
    explicitly. Use `set` with stdin or a hidden prompt, or `import` with a
    protected `.env` file. A secret import marks every key in that file secret,
    so use separate inputs when secrecy is mixed.
-7. Run the CLI operation with `--dry-run` first. Show only target IDs, keys, and
+8. Run the CLI operation with `--dry-run` first. Show only target IDs, keys, and
    intended secrecy, then require a separate `confirm` before executing it.
-8. Verify the required keys and secrecy through paginated `list_variables`.
+9. Verify the required keys and secrecy through paginated `list_variables`.
    Never quote or report plaintext values. If a write or import partially
    fails, stop before deployment and leave the environment intact.
-9. Call `trigger_deployment` with its default dry run. If supported, show the
+10. Call `trigger_deployment` with its default dry run. If supported, show the
    branch, explain that branch HEAD rather than local files will deploy, and
    require a separate `confirm`.
-10. Execute with `dry_run: false` and a stable deployment `idempotency_key`.
+11. Execute with `dry_run: false` and a stable deployment `idempotency_key`.
     Reuse that key for retries of the same deployment request, then monitor the
     new deployment as described below.
 
@@ -323,10 +329,12 @@ failure from empty MCP logs.
 **User:** "Production is serving the preview branch at `/app`. Point it back to
 `main` at `/`."
 
-Resolve production, show its current and proposed branch and mount, explain
-that the update does not deploy `main`, and require `confirm`. Apply the update,
-reconcile the environment, and preview a separate branch-HEAD deployment only
-if the user also asked to deploy it.
+Resolve production and call `get_app` because the mount would change. Apply the
+live mount guidance to the proposed `main` at `/` mapping. Continue to the
+before-and-after preview and require `confirm` only when the mapping is valid;
+otherwise stop before confirmation and report the required correction. Apply
+and reconcile only a valid, confirmed mapping; preview a separate branch-HEAD
+deployment only if the user also asked to deploy it.
 
 ### Provision, configure, and deploy a branch environment
 
