@@ -105,6 +105,8 @@ git remote get-url origin 2>/dev/null
 > | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
 > | `apps init` (site-attached)               | `--no-input --app-name <3–39 chars> --framework <astro\|nextjs> --mount <path> --site-id <id>`   |
 > | `apps init --new` (app)                   | `--no-input --app-name <3–39 chars> --framework <astro\|nextjs> --workspace-id <id>`             |
+> | `apps init --import` (site-attached)      | `--no-input --import <repo-url> --site-id <id> --mount <non-root path> --idempotency-key <key>`  |
+> | `apps init --import --new` (project app)  | `--no-input --import <repo-url> --new --idempotency-key <key>` — **no `--mount`**                |
 > | `apps deploy` (site-attached)             | `--no-input --mount <path> --environment <env> --site-id <id>` plus `--app-name` on first deploy |
 > | `apps deploy` (project app, first deploy) | `--no-input --mount <path> --environment <env> --workspace-id <id> --app-name <name>`            |
 >
@@ -112,7 +114,7 @@ git remote get-url origin 2>/dev/null
 >
 > **Multi-workspace tokens used to be an agent-fatal hang** because workspace selection had no non-TTY path. Now pass `--workspace-id` to skip the picker. **The workspace ID is not surfaced anywhere in the Webflow dashboard UI** — users can't look it up by hand. If the agent doesn't have it, ask the user to run `webflow apps deploy` interactively once from inside their project. The preflight prompts for workspace selection and writes `cloud.workspace_id` to `webflow.json`; from that point the agent can read it from the manifest and pass `--workspace-id` on subsequent runs. Do **not** suggest `apps init --new` for ID discovery — on an existing project it creates a discarded scratch directory. **Exception:** in Path A2 (empty directory) it _is_ safe to try `apps init --new` without `--workspace-id` to auto-resolve a single-workspace token — see [Path A2](#path-a2-empty-directory-scaffold-from-scratch).
 >
-> **Site IDs are visible in the dashboard.** When `--site-id` is needed but unknown, do not ask the user for a raw `site_XXXX` value — use [`webflow sites list`](#picking-a-site-id-from-a-list) to fetch their sites and present a picker keyed by display name. Users can still check their dashboard to fetch it.
+> **Site IDs are visible in the dashboard.** When `--site-id` is needed but unknown, do not ask the user for a raw `site_XXXX` value — use [`webflow sites list`](#picking-a---site-id-from-a-list) to fetch their sites and present a picker keyed by display name. Users can still check their dashboard to fetch it.
 >
 > **Read/manage commands don't need `--workspace-id`.** The `apps list` / `get` / `domains` / `environments` / `deployments` / `logs` / `env-vars` commands derive the workspace server-side from the OAuth token — they have **no** `--workspace-id` flag and never prompt for a workspace. See [Managing apps](#managing-apps).
 
@@ -120,16 +122,22 @@ git remote get-url origin 2>/dev/null
 
 ### Path A: No `app_id` — new project
 
-The project has not been deployed yet. **Before doing anything else, ask the user one question:**
+The project has not been deployed yet. **Before doing anything else, ask the user two questions:**
 
-> "Do you already have source code for this project (an existing Next.js or Astro codebase), or are you starting from an empty directory and want a Webflow starter scaffold?"
+> 1. "Do you already have source code for this project (an existing Next.js or Astro codebase), or are you starting from an empty directory and want a Webflow starter scaffold?"
+> 2. If they have code: **"Is it already pushed to a GitHub repository, and do you want Webflow to build from that repo (rather than from your local files)?"**
 
-That answer chooses the branch — and they're meaningfully different:
+Those answers choose the branch — and the three are meaningfully different:
 
-| User has...                                           | Branch      | Init step                                                                                                                               |
-| ----------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Existing code** (their own Next.js / Astro project) | **Path A1** | **Skip `apps init`.** It would create a `./<app-name>/` subfolder with a hello-world scaffold inside their repo, which they don't want. |
-| **Empty directory** or wants a Webflow starter        | **Path A2** | Run `apps init` to scaffold from `Webflow-Examples/hello-world-*`.                                                                      |
+| User has...                                                                         | Branch      | Init step                                                                                                                                                      |
+| ----------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Existing code**, deploying from **local files**                                   | **Path A1** | **Skip `apps init`.** It would create a `./<app-name>/` subfolder with a hello-world scaffold inside their repo, which they don't want.                        |
+| **Empty directory** or wants a Webflow starter                                      | **Path A2** | Run `apps init` to scaffold from `Webflow-Examples/hello-world-*`.                                                                                             |
+| **Existing code already on GitHub**, wants Webflow to **build from the repository** | **Path A3** | Run `apps init --import <repo-url>` — creates a **GitHub-connected** app bound to the repo. Beta (`@next`) and `apps`-only; there is no `cloud init --import`. |
+
+**The A1 vs A3 choice is not cosmetic — it decides what the app can do later.** A GitHub-connected app (A3) can use `apps deployments trigger` / `redeploy`, and is the only kind eligible for dashboard push-to-deploy. An app first created by a local `apps deploy` (A1) is **not** GitHub-connected, so `trigger` / `redeploy` refuse it. If the user's code is already on GitHub and they say anything about CI, automatic deploys, rollbacks, or "deploy when I push", route to **A3**, not A1.
+
+Recoverable either way: an A1 app can be pointed at a repo afterwards with `apps update --github-source <repo-url>` (see [apps update](#apps-update-appid)) — but choosing A3 up front avoids the extra step.
 
 After the branch decision, also ask **site-attached vs app** (only relevant before the first deploy):
 
@@ -142,7 +150,9 @@ If the user is ambiguous on either question, **ask**. Do not default.
 
 ---
 
-#### Path A1: existing codebase, no Webflow Cloud config yet
+#### Path A1: existing codebase, deploying from local files
+
+> **Check A3 first if the code is on GitHub.** This path uploads and builds **local files**, producing an app that is **not** GitHub-connected — `apps deployments trigger` / `redeploy` and dashboard push-to-deploy will all refuse it. If the repo is on GitHub and the user wants Webflow to build from it, use [Path A3](#path-a3-existing-github-repository-github-connected-app) instead.
 
 The user has working source. `apps deploy` handles everything — framework detection runs against `package.json`, and the preflight phase resolves identity from flags or prompts the user. No `apps init` needed, no `webflow.json` to hand-write up front.
 
@@ -169,7 +179,7 @@ webflow apps deploy --no-input \
 
 `--framework` is optional if `package.json` has the framework's Cloudflare adapter (`@opennextjs/cloudflare`, `@astrojs/cloudflare`). Pass it explicitly for monorepos or when auto-detection is unreliable.
 
-If the agent doesn't know the user's `--site-id`, do **not** ask for a raw `site_XXXX` value — use [`webflow sites list`](#picking-a-site-id-from-a-list) to fetch the user's sites and present readable display names to pick from.
+If the agent doesn't know the user's `--site-id`, do **not** ask for a raw `site_XXXX` value — use [`webflow sites list`](#picking-a---site-id-from-a-list) to fetch the user's sites and present readable display names to pick from.
 
 **A1-b — Project app, `--workspace-id` is known:**
 
@@ -237,9 +247,63 @@ With no `--no-input` and no identity flags, the preflight prompts: _"This projec
    - **Single-workspace tokens:** the CLI auto-selects the only workspace, writes `cloud.workspace_id` to `webflow.json`, and exits 0. Read it back from the manifest and pass it as `--workspace-id` to `apps deploy` in step 2.
    - **Multi-workspace tokens:** the workspace picker fires and the command hangs (no TTY). **Set a 30-second timeout on the Bash call** (or wrap the command in `timeout 30s ...`) — a successful single-workspace init completes in 10–20 seconds (OAuth check + `GET /v2/workspaces` + scaffold download from GitHub), so anything past 30s with no output is the picker hanging. Once the timeout fires, ask the user for the workspace ID directly and re-run with `--workspace-id`.
 
-   For **site-attached** in Path A2, there is no equivalent auto-discovery — `--site-id` is always required up front. Use the [site picker](#picking-a-site-id-from-a-list) pattern below to help the user pick.
+   For **site-attached** in Path A2, there is no equivalent auto-discovery — `--site-id` is always required up front. Use the [site picker](#picking-a---site-id-from-a-list) pattern below to help the user pick.
 
    **Path A1 (existing codebase) does not get this trick.** Running `apps init --new` in an existing project creates a discarded scratch subdirectory. The Path A1 workspace-ID discovery path stays as documented in Path A1-c.
+
+---
+
+#### Path A3: existing GitHub repository, GitHub-connected app
+
+The user's code is already on GitHub and they want Webflow to build **from the repository** rather than from local files. `apps init --import <repo-url>` creates the app bound to that repo and clones it locally.
+
+> **Beta, `apps`-only.** `--import` exists only on `@webflow/webflow-cli@next`, and only under `apps init` — there is deliberately no `cloud init --import`. If the user is on `@latest`, either move them to `@next` or fall back to [Path A1](#path-a1-existing-codebase-deploying-from-local-files) and attach the repo later with `apps update --github-source`.
+
+**Step 0: Prerequisite — the Webflow GitHub App.** It must be installed on the repository owner and connected to the workspace. **The CLI cannot do this**; it's dashboard/GitHub-side setup. If the import fails on permissions, this is the first thing to check.
+
+**Step 1: One-time auth (human-only).** Same as A1 — agents cannot drive the browser flow:
+
+```bash
+webflow auth login
+```
+
+**Step 2: Import.** Exactly one of `--site-id` or `--new` is required — the CLI will **not** infer the target from anything inside the repo.
+
+**A3-a — Site-attached** (`--mount` is **required** and must be non-root):
+
+```bash
+webflow apps init --import https://github.com/acme/site \
+  --site-id 6234abc --mount /app --dry-run
+
+webflow apps init --import https://github.com/acme/site \
+  --site-id 6234abc --mount /app
+```
+
+**A3-b — Project app** (`--mount` is **not allowed** — a project app owns the root of its own domain):
+
+```bash
+webflow apps init --import https://github.com/acme/site --new
+```
+
+**A3-c — Non-interactive / CI.** `--idempotency-key` is **required** here. Use a retry-stable key unique to this repo + target (e.g. `$GITHUB_RUN_ID-$REPOSITORY-$SITE_ID`) so a retry replays the original app instead of creating a second one:
+
+```bash
+webflow apps init --import https://github.com/acme/site --new --no-input \
+  --idempotency-key "$GITHUB_RUN_ID-acme-site" \
+  --branch main --json
+```
+
+Add `--skip-clone` to register the app without writing anything to the filesystem — the app and environment IDs are printed instead. Useful when the repo is already checked out, or when running somewhere you don't want a clone.
+
+`--branch` picks which branch builds; it defaults to the repository's default branch.
+
+**Step 3: Enable push-to-deploy (dashboard, manual).** The import connects the app to the repo, but **pushing does not deploy until the dashboard wiring is done** — see the [full workflow example](#full-workflow-scaffold--github--dashboard-connection--push-to-deploy-recommended), steps 3 onward. Until then, build on demand:
+
+```bash
+webflow apps deployments trigger --json
+```
+
+**Do not run `apps deploy` on an A3 app to "push an update".** That uploads local files and is the A1 model; for a GitHub-connected app the equivalents are `deployments trigger` (build current HEAD) and `deployments redeploy <depId>` (re-run a past commit, i.e. roll back).
 
 #### Picking a `--site-id` from a list
 
@@ -633,7 +697,7 @@ Steps 2–4 cannot be scripted. If the user wants push-to-deploy, they have to c
 
 **Option 2: GitHub Actions (manual CI/CD)**
 
-Use when you need custom build steps, environment-specific secrets, or deploy gates not supported by the native GitHub integration. See the [GitHub Actions example](#github-actions-cicd-pipeline) in the Examples section.
+Use when you need custom build steps, environment-specific secrets, or deploy gates not supported by the native GitHub integration. See the [GitHub Actions example](#github-actions-cicd-pipeline-when-custom-steps-are-needed) in the Examples section.
 
 **Option 3: Local / manual deploy**
 
@@ -678,7 +742,10 @@ Commands for inspecting and operating **existing** Cloud apps. They complement `
 
 - **Workspace is server-side.** Every read command derives the workspace from the OAuth token — there is **no `--workspace-id` flag** on any of them, and they never prompt for a workspace.
 - **ID resolution.** `appId` and `envId` resolve via the shared resolver: **explicit arg/flag → env var (`WEBFLOW_APP_ID` / `WEBFLOW_APP_ENVIRONMENT_ID`) → `webflow.json` (`cloud.app_id` / `cloud.environment_id`, legacy `cloud.project_id` fallback) → interactive TTY prompt**. Running inside the app directory (so `webflow.json` resolves the IDs) is the common case, not a requirement.
-- **Auto-select vs. `--no-input` contract.** When the ID isn't given, the picker auto-selects a workspace's single app / an app's single environment, so single-app/single-env setups work non-interactively (including CI). When several exist and the command can't prompt (`--no-input`, `CI=true`, no TTY, or `--json`), it exits non-zero with a **machine-readable `missingFlag`** on the error (`appId`, `environmentId`, or `yes` for `delete`) so an agent can recover by re-running with the flag. The human-readable form is e.g. `Missing required appId. Pass --app-id, set WEBFLOW_APP_ID, or add it to webflow.json.`
+- **Auto-select vs. `--no-input` contract.** When the ID isn't given, the picker auto-selects a workspace's single app / an app's single environment, so single-app/single-env setups work non-interactively (including CI). When several exist and the command can't prompt (`--no-input`, `CI=true`, no TTY, or `--json`), it exits non-zero with a **machine-readable `missingFlag`** on the error so an agent can recover by re-running with the flag. The human-readable form is e.g. `Missing required appId. Pass --app-id, set WEBFLOW_APP_ID, or add it to webflow.json.`
+
+  **`missingFlag` comes in two shapes — match on both.** Resolver failures name a **bare key** (`appId`, `environmentId`, `depId`, `yes`); flag-compatibility refusals on `apps init` name a **flag spelling** (`--import`, `--site-id`, `--mount`, `--new`). Normalize before matching (strip a leading `--`, compare case-insensitively) rather than assuming one form. In both cases the value names **the flag to add or drop** — for a mutually-exclusive pair it names the one to **remove**, so retrying by adding the flag the error reports would loop forever.
+
 - **`--json`.** Every command supports `--json`, which prints the raw API response and **ignores `--fields`**. Use it for programmatic parsing. `--json` also suppresses the `Using … from webflow.json` info lines.
 - **`--fields <comma-list>`.** Read commands render a table; `--fields` projects which columns show (invalid field names fail fast before the network call). Each command's default and full field set are listed below.
 
@@ -732,7 +799,9 @@ webflow apps domains app_abc123 --limit 50 --cursor "$NEXT_CURSOR" --json
 
 #### apps environments list [appId]
 
-Lists an app's environments. `--fields` default `id,branch,deployUrl,latestDeploymentStatus,createdAt`.
+Lists an app's environments. `--fields` default `id,branch,deployUrl,latestDeploymentStatus,createdAt` (all: `id,branch,mount,deployUrl,latestDeploymentStatus,lastDeploymentSucceededAt,lastVariableModifiedAt,createdAt,updatedAt`).
+
+> **`mount` is not in the table default.** To read an environment's mount path, either use `--json` (which returns the full API shape and ignores `--fields`) or ask for it explicitly with `--fields id,branch,mount`. A default `environments list` table will not show it.
 
 Filters: `--branch <branch>` (exact, case-sensitive — resolves to at most one environment, since a branch is unique per app) and `--q <text>` (case-insensitive substring on the branch, for discovery).
 
@@ -1151,7 +1220,7 @@ fi
 ### Mount path
 
 - `--mount` is **always required** with `--no-input`. The CLI does not read a saved mount path from `webflow.json`.
-- **Never assume a default.** Assuming `/` or `/app` will cause `ENVIRONMENT_MOUNT_MISMATCH` if the app uses a different path. Check the Webflow dashboard under the environment settings, or run `webflow apps environments list --json` and read the `mount` field.
+- **Never assume a default.** Assuming `/` or `/app` will cause `ENVIRONMENT_MOUNT_MISMATCH` if the app uses a different path. Check the Webflow dashboard under the environment settings, or run `webflow apps environments list --json` and read the `mount` field (`mount` is omitted from the default table — with `--fields` you must ask for it: `--fields id,branch,mount`).
 
 ### Do not add confirmation gates
 
@@ -1197,7 +1266,7 @@ Commit all changes before deploying to production.
 ### Known limitations
 
 - **The whole `apps` namespace is beta (`@next`)** — see [the beta banner](#beta-webflow-apps-requires-next). On `@latest` only `cloud init` / `deploy` / `create` / `list` exist.
-- **Deploy has no `--dry-run`** — a build validation always triggers a real deployment. Every other write _does_ support `--dry-run`: `apps init --import`, `link`, `update`, `delete`, `environments create` / `update` / `delete`, `deployments redeploy` / `trigger`, and all four `env-vars` subcommands.
+- **Deploy has no `--dry-run`** — a build validation always triggers a real deployment. Every other write _does_ support `--dry-run`: `apps init` (**both** paths — the scaffold and `--import`), `link`, `update`, `delete`, `environments create` / `update` / `delete`, `deployments redeploy` / `trigger`, and all four `env-vars` subcommands. Note `--dry-run` is registered on `apps init` only, not on the `cloud init` alias.
 - **Deploy has no `--json`** — the deploy URL and app ID must be parsed from stdout. The read/management commands (`list`, `get`, `domains`, `environments`, `deployments`, `logs`, `env-vars`) all support `--json`.
 - **No `--watch` on logs** — the log endpoints are pollable but do not stream; poll on an interval to follow a build. Deployments are the exception: `apps deployments get --wait` blocks to a terminal status for you.
 - **`apps logs build` requires a deployment ID** — it does not default to the latest deployment. Get one from `apps deployments list` first.
@@ -1285,7 +1354,7 @@ The workspace ID (from `--workspace-id` flag, or `cloud.workspace_id` in `webflo
 
 ### `ENVIRONMENT_MOUNT_MISMATCH`
 
-The `--mount` value does not match the path registered for that environment. Check the correct mount path via `webflow apps environments list --json` (read the `mount` field) or the Webflow dashboard, and pass it explicitly.
+The `--mount` value does not match the path registered for that environment. Check the correct mount path via `webflow apps environments list --json` (read the `mount` field), or `--fields id,branch,mount` for the table form — `mount` is not in the default field set — or the Webflow dashboard, and pass it explicitly.
 
 ### Framework cannot be detected / explicit framework required
 
