@@ -16,7 +16,7 @@ Initialize new projects from templates or an existing GitHub repository, deploy 
 npm install -g @webflow/webflow-cli@next
 
 # Confirm the beta channel is installed — a beta version carries a `-next.` suffix
-# (e.g. 1.14.0-next.3). A bare semver (e.g. 1.13.1) is the stable channel.
+# (e.g. 2.8.0-next.0). A bare semver (e.g. 2.7.0) is the stable channel.
 webflow --version
 ```
 
@@ -71,7 +71,7 @@ npm install -g @webflow/webflow-cli@next
 
 If the user only needs `webflow cloud init` / `cloud deploy`, `@latest` is sufficient — swap `@next` for `@latest` above.
 
-A beta install reports a `-next.` version suffix (`1.14.0-next.3`); a stable install reports a bare semver (`1.13.1`). If `webflow --version` shows a bare semver and the user asks for an `apps` command, reinstall from `@next` before doing anything else — every `apps` invocation will otherwise fail as an unknown command.
+A beta install reports a `-next.` version suffix (`2.8.0-next.0` at time of writing); a stable install reports a bare semver (`2.7.0`). **Match on the `-next.` suffix, not on these numbers** — both channels move. If `webflow --version` shows a bare semver and the user asks for an `apps` command, reinstall from `@next` before doing anything else — every `apps` invocation will otherwise fail as an unknown command.
 
 Then proceed to state detection.
 
