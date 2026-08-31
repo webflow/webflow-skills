@@ -1,7 +1,7 @@
 {
   "name": "webflow",
-  "version": "1.0.8",
-  "description": "Production-ready agent skills for Webflow - CMS management, Cloud app operations, site auditing, Designer tools, Code Components, CLI workflows, and safe publishing",
+  "version": "1.0.7",
+  "description": "Production-ready agent skills for Webflow - CMS management, site auditing, Designer tools, Code Components, CLI workflows, and safe publishing",
   "author": {
     "name": "Webflow",
     "email": "developers@webflow.com",
