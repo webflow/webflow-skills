@@ -1,18 +1,18 @@
 ---
 name: webflow-mcp:cloud-apps
-description: Monitor, troubleshoot, and manage environments for existing Webflow Cloud apps through Webflow MCP. Use when identifying apps or environments, checking domains or deployed versions, diagnosing failures, verifying environment-variable keys, correcting branch or mount mappings, provisioning branch environments, or previewing a retry, rollback, or GitHub branch deployment. Do not use for design/CSS variables, creating Cloud apps, deploying local source, or passing environment-variable values through MCP.
+description: Create GitHub-source Webflow Cloud apps and monitor, troubleshoot, or manage existing apps through Webflow MCP. Use when creating a standalone or site-attached app from GitHub; identifying apps or environments; checking public URLs, domains, configuration keys, or deployed versions; diagnosing failures; changing a GitHub source, branch, or mount; provisioning environments; or previewing a deployment, retry, or rollback. Do not use for Designer/CSS variables, CLI/local-source app creation or deployment, or passing environment-variable values through MCP.
 ---
 
 # Webflow Cloud Apps
 
-Use `data_apps_tool` to answer operational questions and manage environments for
-existing Webflow Cloud apps. Start from the user's outcome, gather only the
-evidence needed, and distinguish observations from conclusions.
+Use `data_apps_tool` to create GitHub-source apps, answer operational questions,
+and manage environments for Webflow Cloud apps. Start from the user's outcome,
+gather only the evidence needed, and distinguish observations from conclusions.
 
-Use the `webflow-cli:cloud` skill when the task requires creating an app,
-building or deploying local source, or creating or updating environment
-variables. Client-side build output is not sent to Webflow and cannot be
-recovered through MCP.
+Use the `webflow-cli:cloud` skill when the task requires CLI/local-source app
+creation or deployment, or creating or updating environment variables.
+Client-side build output is not sent to Webflow and cannot be recovered through
+MCP.
 
 ## Instructions
 
@@ -24,12 +24,12 @@ recovered through MCP.
 3. Include the required `context` parameter in every tool call. Write 15-25
    words in third-person perspective.
 4. Route by the capability the task requires:
-   - Use `data_apps_tool` to inspect existing apps, environments, domains,
-     deployment records, available server-side logs, and variable metadata; to
-     create, update, or delete environments; and to enqueue deployments.
+   - Use `data_apps_tool` to create GitHub-source apps; inspect apps,
+     environments, domains, deployment records, logs, and variable metadata;
+     manage GitHub sources and environments; and enqueue GitHub deployments.
    - Use `data_variable_tool` for Designer color, size, font, and CSS variables.
-   - Use `webflow-cli:cloud` for app creation, local builds and deployments, or
-     creating and updating environment-variable values.
+   - Use `webflow-cli:cloud` for CLI/local-source apps, local builds and
+     deployments, or creating and updating environment-variable values.
 5. If `data_apps_tool` is unavailable, report that the Cloud Apps MCP
    capability is not enabled. Do not bypass it with a direct API request.
 
@@ -48,22 +48,53 @@ list_environments(app_id) -> env_id
 list_deployments(app_id, env_id) -> deployment_id
 ```
 
-Use an identifier supplied by the user only after verifying it through the
-corresponding get or list action. Use exact filters when available. If a list
-action returns `nextCursor`, pass it back as `cursor` until `nextCursor` is null
-whenever absence or completeness matters.
-
-If multiple resources match, present distinguishing metadata and require the
-user to select one before any mutation. Auto-select only when one resource is
-unambiguous.
+App names are unique only within a site, so resolve a named app with
+`site_id + name`. If multiple resources match, present distinguishing metadata
+and require the user to select one before any mutation. Use the live guide for
+filter, pagination, cursor, and action-batching mechanics.
 
 ### 3. Follow the matching user story
 
+#### Create a GitHub-source app
+
+1. Establish the app name, canonical GitHub repository URL, branch, optional
+   description, and whether it is standalone or attached to an existing site.
+2. For a site-attached app, resolve the site ID. Omit `site_id` for standalone.
+3. Apply the mount contract before previewing:
+   - A standalone app always mounts at `/`; omit `mount` or use `/`.
+   - A site-attached app defaults to `/app`, rejects `/`, and requires a valid
+     non-root mount when overriding the default.
+4. Explain that standalone creation requires a workspace-scoped user token.
+   Webflow derives the GitHub installation and validates repository access; do
+   not request an installation ID.
+5. Call `create_app` with its default dry run. Show the repository, branch,
+   attachment, site when applicable, mount, and initial-deployment attempt.
+6. Require `confirm`. Immediately after confirmation and before execution,
+   record the start time and generate one stable `idempotency_key`; execute with
+   `dry_run: false`, then record the completion time. Reuse that key only for
+   exact retries of this creation.
+7. Treat creation and initial deployment as separate outcomes. A returned app
+   means creation succeeded even if `deployStatus` is `skipped` or `failed`.
+   For `triggered`, inspect the environment and deployment; for `skipped`, check
+   the branch or push a commit; for `failed`, preserve the app and inspect or
+   retry deployment separately.
+8. If the app or outcome is unreadable, reconcile before retrying:
+   - For a site-attached app, collect candidates with `site_id + name`; for a
+     standalone app, collect candidates by name.
+   - In both cases, compare each candidate's name, `sourceUrl`, and `createdAt`
+     with the requested repository and recorded execution window.
+   - Continue to environments and deployments only when exactly one candidate
+     matches. Do not retry while the created app remains ambiguous.
+9. Never delete a created app automatically because deployment failed. Do not
+   treat an initial deployment dashboard link as the environment's public URL.
+
 #### Which app and environment am I looking at?
 
-1. Use `list_apps` to find the app and `get_app` for its metadata.
-2. Use `list_environments` to report the branch, mount, deploy URL, and latest
-   deployment status exposed by the live response.
+1. Use `list_apps` to find the app and `get_app` for its metadata, including
+   `sourceUrl` and `siteAttached`.
+2. Use `list_environments` to report the branch, mount, `publicUrl`, and latest
+   deployment status. If `publicUrl` is null, report that no user-facing
+   environment address is available; do not construct one.
 3. Use `get_app_domains` when the user asks where the app is reachable.
 4. Explain that custom-domain results exclude the default `*.webflow.io`
    hostname. Domains for an app attached to a regular Webflow site may belong
@@ -233,9 +264,17 @@ These operations are supported but are not the skill's primary workflow.
 For `update_app`:
 
 1. Fetch the current app with `get_app`.
-2. Show the exact name or description change and require `confirm`.
-3. Call `update_app`, then verify with `get_app`.
-4. Pass `description: null` to clear a description. Do not use an empty string.
+2. For a name or description change, prepare and show the exact change. Pass
+   `description: null` to clear a description.
+3. For `source_url`, compare the current `sourceUrl` with the requested canonical
+   GitHub repository URL. Explain that the immediate update requires a
+   user-authorized token; machine tokens return `403`.
+4. Require `confirm`, call `update_app` once, and verify with `get_app`. An
+   unreadable response requires reconciliation before retrying.
+5. A source update does not change an environment branch or deploy code. Treat
+   those as separate confirmed mutations.
+6. Renaming a standalone app also attempts to rename its backing site; a sync
+   failure can leave the old site name. Site-attached parent names are unchanged.
 
 For `delete_variable`:
 
@@ -360,7 +399,7 @@ value outside chat.
 - Start from the user's operational question, not the action inventory.
 - Prefer observable evidence over assumptions about how an app was built.
 - Use mutation previews and returned errors as capability checks.
-- Use CLI for app creation, local builds and deployments, and variable values.
+- Use CLI for local-source apps and deployments, and for variable values.
 - Never use `data_apps_tool` for Designer variables.
 - Never expose secrets from variables, logs, errors, or URLs.
 - Never mutate without an exact preview and explicit `confirm`.
