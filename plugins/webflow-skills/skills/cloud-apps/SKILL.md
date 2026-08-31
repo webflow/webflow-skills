@@ -18,7 +18,8 @@ MCP.
 
 ### 1. Establish scope
 
-1. Call `webflow_guide_tool` before any other Webflow MCP tool.
+1. Call `webflow_guide_tool` before any other Webflow MCP tool. The live guide
+   and action schemas are authoritative for current arguments and responses.
 2. Use Webflow MCP tools for Webflow operations except the explicit CLI handoff
    for environment-variable values. Never call Webflow APIs directly.
 3. Include the required `context` parameter in every tool call. Write 15-25
@@ -34,9 +35,8 @@ MCP.
    capability is not enabled. Do not bypass it with a direct API request.
 
 Never ask the user to paste an environment-variable value or secret into chat.
-For a create or update, use the installed Webflow CLI's `apps env-vars` help and
-require a hidden prompt, stdin, or protected file. Never pass a secret as a
-positional argument.
+For a create or update, delegate to `webflow-cli:cloud` and require a hidden
+prompt, stdin, or protected file. Never pass a secret as a positional argument.
 
 ### 2. Resolve the target
 
@@ -270,10 +270,6 @@ For a new deployment from the connected branch or a prior exact commit:
   output. Inspect for tokens, credentials, cookies, authorization headers, and
   presigned URLs before quoting or saving them.
 - Quote only the minimum log evidence needed. Redact sensitive values and URLs.
-- Never conclude that a paginated resource is absent after one page.
-- Never translate an empty list into a tool failure.
-- The live action schema is authoritative for arguments and response fields.
-  Never fabricate IDs, fields, statuses, branches, commits, or live URLs.
 - A request to inspect, diagnose, or preview does not authorize a mutation.
 - Require an itemized preview and the exact word `confirm` before every
   mutation.
@@ -335,14 +331,6 @@ For `delete_app`:
 
 ### 6. Handle errors and report
 
-- `401` or `403`: report the authentication or permission problem; do not
-  retry.
-- `404`: verify the complete app -> environment -> deployment chain; do not
-  silently switch targets.
-- `429`: honor the backoff signal before a bounded retry.
-- `5xx` on a read: retry a bounded number of times.
-- `5xx` on a mutation: treat the outcome as uncertain and reconcile it before
-  considering a retry.
 - Duplicate environment branch or mount: report the conflicting environment;
   do not silently update or delete it.
 - Partial CLI variable write: report failed keys without values and stop before
@@ -352,73 +340,45 @@ For `delete_app`:
 - An unsupported deployment preview is a capability boundary, not a reason to
   bypass MCP with a direct API call.
 
-Final reports must state the selected app and environment, evidence inspected,
-observed status, inferred cause when supported, confidence or limitations, any
-remediation performed, and the next required user action only when blocked.
+For each final-report field below, include it only when applicable: the selected
+app; a resolved environment; evidence inspected; observed status; supported
+cause; limitations; mutations performed; partial state; and, when blocked, the
+next required user action.
 
 ## Examples
+
+### Create a site-attached GitHub app
+
+**User:** "Create `search-app` from `https://github.com/acme/search` on the
+`main` branch and attach it to my marketing site at `/search`."
+
+Resolve the site, preview `create_app` with its site ID and non-root mount, and
+use the GitHub-source creation workflow. Report creation separately from the
+automatic initial-deployment outcome.
 
 ### Diagnose a failed deployment
 
 **User:** "Why did the latest production deployment fail?"
 
-1. Resolve the app and production environment.
-2. Fetch the latest deployment and inspect its status and timeline.
-3. If `logsAvailable` is true, retrieve narrowly filtered build/deploy logs.
-4. Redact sensitive content and report the failed phase, evidence, likely root
-   cause, and limitations.
-5. If the logs are empty, report that no matching server-side logs are
-   retrievable; do not call that evidence of success.
-
-### Diagnose a known CLI build failure
-
-**User:** "I deployed with the CLI and the build failed. What went wrong?"
-
-Explain that the client-side build output is not sent to Webflow. Inspect the
-deployment record and any available server-side deployment evidence, then use
-the originating CLI output for the local build failure. Do not infer the local
-failure from empty MCP logs.
-
-### Retry a failed deployment
-
-**User:** "Retry the failed production deployment."
-
-1. Resolve the exact failed deployment.
-2. Preview `redeploy` with its default dry run.
-3. If supported, show the exact commit and require `confirm` before executing.
-4. If unsupported, make no mutation and route to a fresh CLI deployment.
-5. After execution, poll and report the new deployment's status.
+Use the deployment-diagnostics workflow for the latest production deployment.
+Retrieve logs only when available and report empty results as unavailable
+evidence, not success.
 
 ### Correct an environment mapping
 
 **User:** "Production is serving the preview branch at `/app`. Point it back to
 `main` at `/`."
 
-Resolve production and call `get_app` because the mount would change. Apply the
-live mount guidance to the proposed `main` at `/` mapping. Continue to the
-before-and-after preview and require `confirm` only when the mapping is valid;
-otherwise stop before confirmation and report the required correction. Apply
-and reconcile only a valid, confirmed mapping; preview a separate branch-HEAD
-deployment only if the user also asked to deploy it.
+Use the environment-mapping workflow and validate `/` against `siteAttached`.
+Treat a requested deployment as a separate mutation.
 
 ### Provision, configure, and deploy a branch environment
 
 **User:** "Create a `/preview` environment for `feature/search` and deploy it.
 It needs the variables in `.env.preview`."
 
-Check for branch and mount conflicts, confirm and create the environment, then
-use the CLI to dry-run and import the protected file without displaying values.
-Confirm the import separately, verify its keys through MCP, and only then
-preview and confirm the branch-HEAD deployment. Stop before deployment if any
-required variable fails and leave the environment in place.
-
-### Check or set configuration
-
-**User:** "Is `DATABASE_URL` configured in production?"
-
-List variable metadata and report whether the key exists without exposing a
-value. If the user then asks to set it, route to `webflow-cli:cloud` and keep the
-value outside chat.
+Use the new-environment workflow, then apply its mandatory configuration gate
+before routing to deployment. Preserve the environment if a later step fails.
 
 ## Guidelines
 
