@@ -1,0 +1,394 @@
+---
+name: webflow-mcp:cloud-apps
+description: Create GitHub-source Webflow Cloud apps and monitor, troubleshoot, or manage existing apps through Webflow MCP. Use when creating a standalone or site-attached app from GitHub; identifying apps or environments; checking public URLs, domains, configuration keys, or deployed versions; diagnosing failures; changing a GitHub source, branch, or mount; provisioning environments; or previewing a deployment, retry, or rollback. Do not use for Designer/CSS variables, CLI/local-source app creation or deployment, or passing environment-variable values through MCP.
+---
+
+# Webflow Cloud Apps
+
+Use `data_apps_tool` to create GitHub-source apps, answer operational questions,
+and manage environments for Webflow Cloud apps. Start from the user's outcome,
+gather only the evidence needed, and distinguish observations from conclusions.
+
+Use the `webflow-cli:cloud` skill when the task requires CLI/local-source app
+creation or deployment, or creating or updating environment variables.
+Client-side build output is not sent to Webflow and cannot be recovered through
+MCP.
+
+## Instructions
+
+### 1. Establish scope
+
+1. Call `webflow_guide_tool` before any other Webflow MCP tool. The live guide
+   and action schemas are authoritative for current arguments and responses.
+2. Use Webflow MCP tools for Webflow operations except the explicit CLI handoff
+   for environment-variable values. Never call Webflow APIs directly.
+3. Include the required `context` parameter in every tool call. Write 15-25
+   words in third-person perspective.
+4. Route by the capability the task requires:
+   - Use `data_apps_tool` to create GitHub-source apps; inspect apps,
+     environments, domains, deployment records, logs, and variable metadata;
+     manage GitHub sources and environments; and enqueue GitHub deployments.
+   - Use `data_variable_tool` for Designer color, size, font, and CSS variables.
+   - Use `webflow-cli:cloud` for CLI/local-source apps, local builds and
+     deployments, or creating and updating environment-variable values.
+5. If `data_apps_tool` is unavailable, report that the Cloud Apps MCP
+   capability is not enabled. Do not bypass it with a direct API request.
+
+Never ask the user to paste an environment-variable value or secret into chat.
+For a create or update, delegate to `webflow-cli:cloud` and require a hidden
+prompt, stdin, or protected file. Never pass a secret as a positional argument.
+
+### 2. Resolve the target
+
+Discover identifiers in this order:
+
+```text
+list_apps -> app_id
+list_environments(app_id) -> env_id
+list_deployments(app_id, env_id) -> deployment_id
+```
+
+App names are unique only within a site, so resolve a named app with
+`site_id + name`. If multiple resources match, present distinguishing metadata
+and require the user to select one before any mutation. Use the live guide for
+filter, pagination, cursor, and action-batching mechanics.
+
+### 3. Follow the matching user story
+
+#### Create a GitHub-source app
+
+1. Establish the app name, canonical GitHub repository URL, branch, optional
+   description, and whether it is standalone or attached to an existing site.
+2. For a site-attached app, resolve the site ID. Omit `site_id` for standalone.
+3. Apply the mount contract before previewing:
+   - A standalone app always mounts at `/`; omit `mount` or use `/`.
+   - A site-attached app defaults to `/app`, rejects `/`, and requires a valid
+     non-root mount when overriding the default.
+4. Explain that standalone creation requires a workspace-scoped user token.
+   Webflow derives the GitHub installation and validates repository access; do
+   not request an installation ID.
+5. Call `create_app` with its default dry run. Show the repository, branch,
+   attachment, site when applicable, mount, and initial-deployment attempt.
+6. Require `confirm`. Immediately after confirmation and before execution,
+   record the start time and generate one stable `idempotency_key`; execute with
+   `dry_run: false`, then record the completion time. Reuse that key only for
+   exact retries of this creation.
+7. Treat creation and initial deployment as separate outcomes. A returned app
+   means creation succeeded even if `deployStatus` is `skipped` or `failed`.
+   For `triggered`, inspect the environment and deployment; for `skipped`, check
+   the branch or push a commit; for `failed`, preserve the app and inspect or
+   retry deployment separately.
+8. If the app or outcome is unreadable, reconcile before retrying:
+   - For a site-attached app, collect candidates with `site_id + name`; for a
+     standalone app, collect candidates by name.
+   - In both cases, compare each candidate's name, `sourceUrl`, and `createdAt`
+     with the requested repository and recorded execution window.
+   - Continue to environments and deployments only when exactly one candidate
+     matches. Do not retry while the created app remains ambiguous.
+9. Never delete a created app automatically because deployment failed. Do not
+   treat an initial deployment dashboard link as the environment's public URL.
+
+#### Which app and environment am I looking at?
+
+1. Use `list_apps` to find the app and `get_app` for its metadata, including
+   `sourceUrl` and `siteAttached`.
+2. Use `list_environments` to report the branch, mount, `publicUrl`, and latest
+   deployment status. If `publicUrl` is null, report that no user-facing
+   environment address is available; do not construct one.
+3. Use `get_app_domains` when the user asks where the app is reachable.
+4. Explain that custom-domain results exclude the default `*.webflow.io`
+   hostname. Domains for an app attached to a regular Webflow site may belong
+   to the parent site and be shared by sibling apps.
+
+#### What is deployed, and is it healthy?
+
+1. Use `list_environments` for the environment's latest deployment status.
+2. Use `list_deployments`, newest first, then `get_deployment` for the selected
+   deployment's detailed timeline and version metadata.
+3. Treat `starting`, `building`, and `deploying` as active states. Report any
+   other status exactly rather than guessing its meaning.
+4. A failed phase sets `buildFailedAt` or `deployFailedAt` while its matching
+   finished timestamp remains null. A null finished timestamp by itself does
+   not prove the phase is still running.
+5. Report what is observable: selected app and environment, deployment status,
+   version or commit metadata if returned, phase timestamps, and evidence gaps.
+
+#### Why did the deployment fail?
+
+1. Fetch the deployment with `get_deployment` and identify the failed phase
+   from its status and timestamps.
+2. Call `get_build_logs` only when `logsAvailable` is true. Start with a narrow
+   `since` window or `q` filter, then broaden only if needed.
+3. Page until `nextCursor` is null when a complete result is required.
+4. Treat `logsAvailable` as a retention and retrieval signal, not proof that
+   every phase produced log entries.
+5. Treat an empty result as "no matching retrievable server-side logs," not as
+   proof that the build succeeded or produced no errors.
+6. Build output produced on a user's machine is outside MCP. Mention this only
+   when the user says the deployment was built with the CLI; direct them to the
+   originating CLI output for local build failures.
+7. Report the failed phase, relevant timestamps, the smallest useful evidence,
+   the inferred cause, and any uncertainty. Do not merely restate raw logs.
+
+#### Why is the running app failing?
+
+1. Resolve the exact environment and call `get_runtime_logs`.
+2. Narrow by `since` and `q` before retrieving a broad window. Page completely
+   when the conclusion depends on absence.
+3. Runtime logs may be unavailable because of retention. Treat an empty result
+   as no retrievable logs and report the limitation.
+4. Correlate runtime evidence with the latest deployment record when useful,
+   but do not claim causation from timing alone.
+5. Report the observed error pattern, affected interval, likely cause, evidence,
+   and limitations.
+
+#### Is required configuration present?
+
+1. Establish the required key set from an authoritative source: a user-provided
+   key list, a project configuration schema or documented requirement, or a
+   reference environment the user explicitly designates as complete.
+2. If the source is a protected file containing values, run deterministic
+   key-only extraction locally and emit only key names. Never open the source
+   through a model-visible read or include its values in chat or tool output.
+3. Obtain an authoritative secrecy designation for every required key from the
+   user, a project schema or documented requirement, or a reference environment
+   explicitly designated as authoritative for secrecy. An `.env` file or plain
+   key list establishes names only; never infer secrecy from key names.
+4. Resolve the environment, call `list_variables`, and compare its keys and
+   secrecy metadata with the established requirements. It proves what is
+   configured, not what is required. Exhaust pagination before concluding that
+   a key is missing.
+5. Report keys and metadata only. Secret entries have `isSecret: true` and no
+   value; a missing secret value is expected.
+6. If the required set or any secrecy designation is unresolved, stop before a
+   CLI mutation or dependent deployment unless the user explicitly establishes
+   that no configuration is required.
+7. For missing or misclassified keys, route to `webflow-cli:cloud` without
+   requesting values in chat. After the write, verify required keys and secrecy
+   with `list_variables`. If it partially fails, report failed keys without
+   values and stop before deployment; preserve successful keys and the
+   environment.
+
+#### Why is this environment serving the wrong branch or route?
+
+1. Resolve the exact environment and report its current branch, mount,
+   `publicUrl`, and latest deployment status. Report a null `publicUrl` without
+   constructing an address.
+2. Compare the current branch and mount with the user's intended mapping. If
+   the request is only diagnostic, stop after reporting the mismatch.
+3. If the correction changes the mount, call `get_app` and use `siteAttached`:
+   `/` is valid only when false; a site-attached app requires a non-root mount.
+   Do not infer attachment from `siteId`.
+4. For a correction, show the exact before-and-after mapping. Explain that
+   `update_environment` is immediate, has no dry run, and does not deploy code.
+5. Require `confirm`, call `update_environment` once, and report the returned
+   environment, `publicUrl`, and `mountRefreshStatus`.
+6. For an unreadable or uncertain result, locate the original `env_id`. If using
+   the expected new branch as a filter, accept a returned environment only when
+   its ID equals that original `env_id`, then compare its branch and mount with
+   the requested values. A different ID or no uniquely matched original target
+   is ambiguous: do not continue or retry. Never reuse the old branch filter
+   after a branch-changing update.
+7. A failed or unknown mount refresh does not mean the environment update was
+   rolled back. Report routing as uncertain and do not retry solely because the
+   refresh failed.
+8. If the branch changed and the user wants its code deployed, treat
+   `trigger_deployment` as a separate previewed and confirmed mutation.
+
+#### Create an isolated environment for a branch and deploy it
+
+1. Resolve the existing app, call `get_app`, and validate the proposed mount
+   with `siteAttached` before previewing the mutation.
+2. Page through `list_environments` to check whether the requested branch or
+   mount is already in use.
+3. Show the proposed branch and mount. Explain that `create_environment` is
+   immediate, has no dry run, and creates a mapping without deploying code.
+4. Generate one stable `idempotency_key`, require `confirm`, and call
+   `create_environment`. Reuse that key only for exact retries.
+5. Report the returned environment, `publicUrl`, and `mountRefreshStatus`. If the
+   result is uncertain, search for the expected branch and compare the
+   environment ID, branch, and mount; use a returned ID to distinguish concurrent
+   creations. Do not retry while the created environment remains ambiguous.
+6. A failed refresh means creation succeeded but routing may be incomplete. Do
+   not retry creation or delete the environment automatically.
+7. Before deploying this new environment, follow "Is required configuration
+   present?" as a mandatory gate. Continue only after requirements and secrecy
+   are verified, or the user explicitly establishes that none are required.
+   Then use the deployment workflow below for preview, confirmation,
+   attribution, and monitoring.
+
+#### Can this deployment be retried, rolled back, or rebuilt from branch HEAD?
+
+Use the mutation's default dry run as the capability check. Do not infer
+eligibility from missing logs, app metadata, or deployment metadata.
+
+For a new deployment from the connected branch or a prior exact commit:
+
+1. Resolve the environment. For a retry or rollback, also resolve the exact
+   prior deployment.
+2. Perform configuration discovery only when the user requests it, deployment
+   evidence indicates missing or misclassified variables, the selected commit
+   has documented configuration requirements, or the server rejects the
+   deployment for configuration reasons. Follow "Is required configuration
+   present?" when one of these conditions applies. If a preview or execution
+   rejection creates the condition, resolve it before retrying. Otherwise add
+   no configuration prerequisite.
+3. Preview `trigger_deployment` for branch HEAD or `redeploy` for a prior commit.
+   If preview rejects the source, make no mutation and route local-source
+   deployment to `webflow-cli:cloud`.
+4. For `redeploy`, explain that the older commit runs with the environment's
+   current configuration, so compatibility is not guaranteed.
+5. Show the returned branch or commit and explain that execution creates a new
+   GitHub build, not a deployment of local files.
+6. Require `confirm`. Immediately after confirmation, record the newest
+   deployment as the correlation baseline, then execute with `dry_run: false`
+   and one stable `idempotency_key`. Reuse the key only for exact retries of this
+   request.
+7. Interpret the execution result before monitoring:
+   - `queued`: this call enqueued a deployment.
+   - `skipped` from `trigger_deployment`: the branch has no commit, so no
+     deployment was enqueued.
+   - `processing`: an earlier call with this key is already in flight; this call
+     did not enqueue a duplicate.
+   - An unknown or unreadable status leaves the outcome uncertain.
+8. The action returns no deployment ID. For `queued` or an existing in-flight
+   request, poll `list_deployments` and `get_deployment` for a record appearing
+   above the baseline captured before the first execution attempt. If that
+   baseline is unavailable, report that attribution may be ambiguous. Do not
+   assume the newest record belongs to this request when deployments are
+   concurrent.
+9. Stop when the attributed deployment leaves an active state or the bounded
+   monitoring period ends. If monitoring ends first, report the last status and
+   timestamp; do not call it failed or enqueue a replacement for that reason.
+10. For a retry or rollback, preview the prior deployment's exact commit hash
+    and message. A rollback creates a new build at that commit; it does not move
+    the environment branch.
+
+### 4. Apply shared evidence and safety rules
+
+- Treat build, deploy, and runtime logs as potentially sensitive customer
+  output. Inspect for tokens, credentials, cookies, authorization headers, and
+  presigned URLs before quoting or saving them.
+- Quote only the minimum log evidence needed. Redact sensitive values and URLs.
+- A request to inspect, diagnose, or preview does not authorize a mutation.
+- Require an itemized preview and the exact word `confirm` before every
+  mutation.
+- Reconcile an uncertain mutation through observable state before retrying it.
+- Reuse an idempotency key only for exact retries of the same logical request.
+- Never delete a newly created app or environment automatically when
+  configuration or deployment fails. Report the partial state.
+
+### 5. Handle explicit administrative requests
+
+These operations are supported but are not the skill's primary workflow.
+
+For `update_app`:
+
+1. Fetch the current app with `get_app`.
+2. For a name or description change, prepare and show the exact change. Pass
+   `description: null` to clear a description.
+3. For `source_url`, compare the current `sourceUrl` with the requested canonical
+   GitHub repository URL. Explain that the immediate update requires a
+   user-authorized token; machine tokens return `403`.
+4. Require `confirm`, call `update_app` once, and verify with `get_app`. An
+   unreadable response requires reconciliation before retrying.
+5. A source update does not change an environment branch or deploy code. Treat
+   those as separate confirmed mutations.
+6. Renaming a standalone app also attempts to rename its backing site; a sync
+   failure can leave the old site name. Site-attached parent names are unchanged.
+
+For `delete_variable`:
+
+1. Preview with the default dry run.
+2. If `exists` is false, report that nothing was deleted and stop.
+3. If `exists` is true, show the app, environment, and key; warn that deletion
+   is permanent and require `confirm`.
+4. Call once with `dry_run: false`. Treat `deleted: true` as success. Reconcile
+   an uncertain response with an exact key lookup before retrying.
+
+For `delete_environment`:
+
+1. Preview with the default dry run. Identify the app, environment, branch, and
+   mount, and explain that its worker, KV/D1/R2 storage, deployments, and
+   variables will be permanently removed.
+2. Explain that deletion is irreversible and is rejected for the app's last
+   environment. Require `confirm`.
+3. Call once with `dry_run: false`. Treat `deleted: true` as success.
+4. A failed or null `mountRefreshStatus` means deletion succeeded but routing
+   cleanup is failed or uncertain. Report it and never retry the delete.
+5. For an uncertain response, page until the original `env_id` is found or the
+   listing ends. Do not use a branch filter whose value may have changed.
+
+For `delete_app`:
+
+1. Preview with the default dry run and report `deletionMode`.
+2. Explain that `archive` unpublishes the app and removes it from the dashboard,
+   while `hard_delete` permanently deletes the app and all its environments and
+   cannot be undone.
+3. Require `confirm`, then call once with `dry_run: false`.
+4. Treat `deleted: true` as success. Reconcile uncertainty with `get_app` or the
+   app's exact site-and-name lookup before retrying.
+
+### 6. Handle errors and report
+
+- Duplicate environment branch or mount: report the conflicting environment;
+  do not silently update or delete it.
+- Partial CLI variable write: report failed keys without values and stop before
+  deployment. Do not roll back successful keys or delete the environment.
+- `GITHUB_APP_NOT_INSTALLED` or `GITHUB_REPO_NOT_CONNECTED`: provide the returned
+  `installUrl` and retry only after the user completes the connection.
+- An unsupported deployment preview is a capability boundary, not a reason to
+  bypass MCP with a direct API call.
+
+For each final-report field below, include it only when applicable: the selected
+app; a resolved environment; evidence inspected; observed status; supported
+cause; limitations; mutations performed; partial state; and, when blocked, the
+next required user action.
+
+## Examples
+
+### Create a site-attached GitHub app
+
+**User:** "Create `search-app` from `https://github.com/acme/search` on the
+`main` branch and attach it to my marketing site at `/search`."
+
+Resolve the site, preview `create_app` with its site ID and non-root mount, and
+use the GitHub-source creation workflow. Report creation separately from the
+automatic initial-deployment outcome.
+
+### Diagnose a failed deployment
+
+**User:** "Why did the latest production deployment fail?"
+
+Use the deployment-diagnostics workflow for the latest production deployment.
+Retrieve logs only when available and report empty results as unavailable
+evidence, not success.
+
+### Correct an environment mapping
+
+**User:** "Production is serving the preview branch at `/app`. Point it back to
+`main` at `/`."
+
+Use the environment-mapping workflow and validate `/` against `siteAttached`.
+Treat a requested deployment as a separate mutation.
+
+### Provision, configure, and deploy a branch environment
+
+**User:** "Create a `/preview` environment for `feature/search` and deploy it.
+It needs the variables in `.env.preview`."
+
+Use the new-environment workflow, then apply its mandatory configuration gate
+before routing to deployment. Preserve the environment if a later step fails.
+
+## Guidelines
+
+- Start from the user's operational question, not the action inventory.
+- Prefer observable evidence over assumptions about how an app was built.
+- Use mutation previews and returned errors as capability checks.
+- Use CLI for local-source apps and deployments, and for variable values.
+- Never use `data_apps_tool` for Designer variables.
+- Never expose secrets from variables, logs, errors, or URLs.
+- Never mutate without an exact preview and explicit `confirm`.
+- Never retry an uncertain mutation before reconciling observable state.
+- Keep repository, environment, configuration, and deployment changes separate.
+- Preserve partial resources unless the user explicitly requests deletion.

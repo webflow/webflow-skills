@@ -29,6 +29,8 @@
     "cli",
     "devlink",
     "webflow-cloud",
+    "cloud-apps",
+    "deployments",
     "designer-extensions",
     "page-structure",
     "flowkit"
