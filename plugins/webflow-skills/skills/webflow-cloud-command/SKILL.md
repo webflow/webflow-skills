@@ -659,15 +659,18 @@ webflow apps init --import https://github.com/acme/site --new --skip-clone --jso
 
 **Preflight phase: identity resolution.** Before any backend call, `apps deploy` runs a preflight step that resolves whether this is a site-attached deploy or a project-app first deploy. Resolution order (first match wins):
 
-| #   | Source                                  | Result                                                                            |
-| --- | --------------------------------------- | --------------------------------------------------------------------------------- |
-| 1   | `--site-id <id>` flag                   | Site-attached, overrides manifest                                                 |
-| 2   | `--workspace-id <id>` flag              | Project-app first deploy, overrides manifest. Mutually exclusive with `--site-id` |
-| 3   | `manifest.siteId` (from `webflow.json`) | Site-attached                                                                     |
-| 4   | `manifest.cloud.workspace_id`           | Project-app first deploy                                                          |
-| 5   | `WEBFLOW_SITE_ID` env var               | Site-attached (used at runtime only; not persisted back to `webflow.json`)        |
-| 6   | Interactive picker (no `--no-input`)    | Choose: create a new app / attach to existing site / cancel                       |
-| 7   | No match + `--no-input`                 | Hard error listing required flags                                                 |
+| #   | Source                                  | Result                                                                                    |
+| --- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1   | `--site-id <id>` flag                   | Site-attached, overrides env and manifest                                                 |
+| 2   | `--workspace-id <id>` flag              | Project-app first deploy, overrides env and manifest. Mutually exclusive with `--site-id` |
+| 3   | `WEBFLOW_SITE_ID` env var               | Site-attached (read-only; never persisted back to `webflow.json`)                         |
+| 4   | `manifest.siteId` (from `webflow.json`) | Site-attached                                                                             |
+| 5   | `WEBFLOW_WORKSPACE_ID` env var          | Project-app first deploy (read-only; never persisted)                                     |
+| 6   | `manifest.cloud.workspace_id`           | Project-app first deploy                                                                  |
+| 7   | No match + `--no-input`                 | Hard error listing required flags                                                         |
+| 8   | No match, interactive                   | Picker: create a new app / attach to existing site / cancel                               |
+
+> **Env vars beat the manifest, and site beats workspace.** Both halves matter: an exported `WEBFLOW_SITE_ID` overrides `manifest.siteId`, and any resolved site short-circuits before workspace resolution is even attempted — so a stale `WEBFLOW_SITE_ID` in the environment silently wins over a manifest configured for a project-app deploy. Unset it, or pass `--workspace-id` explicitly, when that isn't what you want.
 
 This preflight phase exists to prevent the project-app deploy path from running and provisioning a Cloud app before identity is locked in — earlier versions could orphan a new Webflow site if any later step failed.
 
@@ -717,7 +720,7 @@ All `apps deploy` flags:
 | Flag                      | Short | Description                                                                                                                                                                                              |
 | ------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--no-input`              | —     | CI mode. Disables most prompts but **not** the project-select prompt — see callout below.                                                                                                                |
-| `--mount <path>`          | `-m`  | Mount path. **Always required with `--no-input`.** Not auto-read from `webflow.json`.                                                                                                                    |
+| `--mount <path>`          | `-m`  | Mount path. **Always pass it with `--no-input` — it is not enforced.** Omitting it does not error; it silently deploys at root (`/`). Not auto-read from `webflow.json`. See the warning below.          |
 | `--environment <env>`     | `-e`  | Environment name. Creates if it does not exist. Must be passed with `--mount`.                                                                                                                           |
 | `--app-name <name>`       | `-n`  | Required on first deploy with `--no-input` when no `cloud.app_id` in `webflow.json`. **Must be 3–39 characters** for project-app first deploy.                                                           |
 | `--project-name <name>`   | —     | **Deprecated alias** of `--app-name`. Still accepted.                                                                                                                                                    |
@@ -733,6 +736,8 @@ All `apps deploy` flags:
 | `--skip-update-check`     | —     | Skip @webflow package update check.                                                                                                                                                                      |
 
 > **Agents: pass `--mount` AND `--environment` together, every time.** The deploy prompts (select existing app, name a new app, pick an environment) are gated on whether `--mount` and `--environment` are _both_ set — not on `--no-input`. Pass `--no-input` without both and the app-select prompt still fires and hangs in non-TTY contexts. The minimum agent-safe deploy flag set is `--no-input --mount <path> --environment <env> --site-id <id>` (or `--workspace-id <id>` for project-app first deploy), plus `--app-name` whenever `cloud.app_id` is absent from `webflow.json`.
+
+> **⚠️ Omitting `--mount` under `--no-input` deploys to root, silently.** This is a wrong-deploy risk, not a hard failure — nothing errors and nothing warns. The mount prompt supplies a `/app` default but no validator, and the no-input path only returns a default that passes validation; with no validator it returns nothing at all, which normalizes to `/`. Root is a valid mount, so the deploy proceeds there. **Never rely on the `/app` default in a non-interactive run** — pass `--mount` explicitly every time. This is also why "assume the default mount" is called out as a cause of `ENVIRONMENT_MOUNT_MISMATCH` further down: the failure surfaces later, at a different layer, far from the flag that caused it.
 
 ### Managing apps
 
