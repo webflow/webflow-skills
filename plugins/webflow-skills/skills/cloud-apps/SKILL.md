@@ -144,101 +144,125 @@ filter, pagination, cursor, and action-batching mechanics.
 
 #### Is required configuration present?
 
-1. Resolve the environment and call `list_variables`.
-2. Report keys and metadata only. Secret entries have `isSecret: true` and no
+1. Establish the required key set from an authoritative source: a user-provided
+   key list, a project configuration schema or documented requirement, or a
+   reference environment the user explicitly designates as complete.
+2. If the source is a protected file containing values, run deterministic
+   key-only extraction locally and emit only key names. Never open the source
+   through a model-visible read or include its values in chat or tool output.
+3. Obtain an authoritative secrecy designation for every required key from the
+   user, a project schema or documented requirement, or a reference environment
+   explicitly designated as authoritative for secrecy. An `.env` file or plain
+   key list establishes names only; never infer secrecy from key names.
+4. Resolve the environment, call `list_variables`, and compare its keys and
+   secrecy metadata with the established requirements. It proves what is
+   configured, not what is required. Exhaust pagination before concluding that
+   a key is missing.
+5. Report keys and metadata only. Secret entries have `isSecret: true` and no
    value; a missing secret value is expected.
-3. If a key is absent, exhaust pagination before concluding it is missing.
-4. If the value must be created or changed, stop the MCP workflow and route to
-   `webflow-cli:cloud` without requesting the value in chat.
+6. If the required set or any secrecy designation is unresolved, stop before a
+   CLI mutation or dependent deployment unless the user explicitly establishes
+   that no configuration is required.
+7. For missing or misclassified keys, route to `webflow-cli:cloud` without
+   requesting values in chat. After the write, verify required keys and secrecy
+   with `list_variables`. If it partially fails, report failed keys without
+   values and stop before deployment; preserve successful keys and the
+   environment.
 
 #### Why is this environment serving the wrong branch or route?
 
-1. Resolve the exact environment and report its current branch, mount, deploy
-   URL, and latest deployment status.
+1. Resolve the exact environment and report its current branch, mount,
+   `publicUrl`, and latest deployment status. Report a null `publicUrl` without
+   constructing an address.
 2. Compare the current branch and mount with the user's intended mapping. If
    the request is only diagnostic, stop after reporting the mismatch.
-3. If the correction changes the mount, call `get_app` and apply the live mount
-   guidance before previewing the mutation. Stop before confirmation when the
-   proposed mount is invalid.
+3. If the correction changes the mount, call `get_app` and use `siteAttached`:
+   `/` is valid only when false; a site-attached app requires a non-root mount.
+   Do not infer attachment from `siteId`.
 4. For a correction, show the exact before-and-after mapping. Explain that
    `update_environment` is immediate, has no dry run, and does not deploy code.
 5. Require `confirm`, call `update_environment` once, and report the returned
-   environment and `mountRefreshStatus`.
-6. If the response is unreadable or the outcome is uncertain, reconcile with
-   `list_environments`, filtering by the expected new branch when available and
-   keeping the selected filters unchanged while paging, before considering a
-   retry.
+   environment, `publicUrl`, and `mountRefreshStatus`.
+6. For an unreadable or uncertain result, locate the original `env_id`. If using
+   the expected new branch as a filter, accept a returned environment only when
+   its ID equals that original `env_id`, then compare its branch and mount with
+   the requested values. A different ID or no uniquely matched original target
+   is ambiguous: do not continue or retry. Never reuse the old branch filter
+   after a branch-changing update.
 7. A failed or unknown mount refresh does not mean the environment update was
-   rolled back. Report routing as uncertain and do not retry the update solely
-   because the refresh failed.
+   rolled back. Report routing as uncertain and do not retry solely because the
+   refresh failed.
 8. If the branch changed and the user wants its code deployed, treat
    `trigger_deployment` as a separate previewed and confirmed mutation.
 
 #### Create an isolated environment for a branch and deploy it
 
-1. Resolve the existing app, call `get_app`, and apply the live mount guidance
-   before previewing the mutation. Stop before confirmation when the proposed
-   mount is invalid.
+1. Resolve the existing app, call `get_app`, and validate the proposed mount
+   with `siteAttached` before previewing the mutation.
 2. Page through `list_environments` to check whether the requested branch or
    mount is already in use.
 3. Show the proposed branch and mount. Explain that `create_environment` is
    immediate, has no dry run, and creates a mapping without deploying code.
 4. Generate one stable `idempotency_key`, require `confirm`, and call
-   `create_environment`. Reuse that key for retries of the same creation.
-5. Report the returned environment and `mountRefreshStatus`. A failed refresh
-   means creation succeeded but routing may be incomplete; do not retry the
-   creation. If the environment is null or the outcome is otherwise uncertain,
-   reconcile through a complete `list_environments` search before retrying.
-6. Determine whether configuration is required before deployment. Use only
-   user-identified keys, a protected local file, or keys inspected from a
-   user-selected reference environment. Never copy values returned by MCP.
-7. If values are required, switch to the installed Webflow CLI and inspect
-   `webflow apps env-vars --help`. Pass the resolved app and environment IDs
-   explicitly. Use `set` with stdin or a hidden prompt, or `import` with a
-   protected `.env` file. A secret import marks every key in that file secret,
-   so use separate inputs when secrecy is mixed.
-8. Run the CLI operation with `--dry-run` first. Show only target IDs, keys, and
-   intended secrecy, then require a separate `confirm` before executing it.
-9. Verify the required keys and secrecy through paginated `list_variables`.
-   Never quote or report plaintext values. If a write or import partially
-   fails, stop before deployment and leave the environment intact.
-10. Call `trigger_deployment` with its default dry run. If supported, show the
-   branch, explain that branch HEAD rather than local files will deploy, and
-   require a separate `confirm`.
-11. Execute with `dry_run: false` and a stable deployment `idempotency_key`.
-    Reuse that key for retries of the same deployment request, then monitor the
-    new deployment as described below.
+   `create_environment`. Reuse that key only for exact retries.
+5. Report the returned environment, `publicUrl`, and `mountRefreshStatus`. If the
+   result is uncertain, search for the expected branch and compare the
+   environment ID, branch, and mount; use a returned ID to distinguish concurrent
+   creations. Do not retry while the created environment remains ambiguous.
+6. A failed refresh means creation succeeded but routing may be incomplete. Do
+   not retry creation or delete the environment automatically.
+7. Before deploying this new environment, follow "Is required configuration
+   present?" as a mandatory gate. Continue only after requirements and secrecy
+   are verified, or the user explicitly establishes that none are required.
+   Then use the deployment workflow below for preview, confirmation,
+   attribution, and monitoring.
 
 #### Can this deployment be retried, rolled back, or rebuilt from branch HEAD?
 
 Use the mutation's default dry run as the capability check. Do not infer
 eligibility from missing logs, app metadata, or deployment metadata.
 
-For a new deployment from the connected branch:
+For a new deployment from the connected branch or a prior exact commit:
 
-1. Resolve the environment and call `trigger_deployment` with its default dry
-   run.
-2. If preview rejects the target as unsupported, make no mutation and route the
-   user to a fresh CLI deployment.
-3. If preview succeeds, show the returned branch and explain that execution
-   deploys its latest commit, not local files.
-4. Require the user to type `confirm`.
-5. Generate one stable `idempotency_key`, execute with `dry_run: false`, and
-   reuse that key for every retry.
-6. The action returns no deployment ID. Poll `list_deployments`, identify the
-   new record, and use `get_deployment` until it leaves an active state or the
-   bounded monitoring period ends.
-
-For a retry or rollback:
-
-1. Select the exact prior deployment and call `redeploy` with its default dry
-   run.
-2. If preview rejects the target as unsupported, make no mutation and route the
-   user to a fresh CLI deployment.
-3. If preview succeeds, show the returned commit hash and message. Explain that
-   this creates a fresh build at that commit.
-4. Require `confirm`, execute with `dry_run: false` and a stable
-   `idempotency_key`, then poll as described above.
+1. Resolve the environment. For a retry or rollback, also resolve the exact
+   prior deployment.
+2. Perform configuration discovery only when the user requests it, deployment
+   evidence indicates missing or misclassified variables, the selected commit
+   has documented configuration requirements, or the server rejects the
+   deployment for configuration reasons. Follow "Is required configuration
+   present?" when one of these conditions applies. If a preview or execution
+   rejection creates the condition, resolve it before retrying. Otherwise add
+   no configuration prerequisite.
+3. Preview `trigger_deployment` for branch HEAD or `redeploy` for a prior commit.
+   If preview rejects the source, make no mutation and route local-source
+   deployment to `webflow-cli:cloud`.
+4. For `redeploy`, explain that the older commit runs with the environment's
+   current configuration, so compatibility is not guaranteed.
+5. Show the returned branch or commit and explain that execution creates a new
+   GitHub build, not a deployment of local files.
+6. Require `confirm`. Immediately after confirmation, record the newest
+   deployment as the correlation baseline, then execute with `dry_run: false`
+   and one stable `idempotency_key`. Reuse the key only for exact retries of this
+   request.
+7. Interpret the execution result before monitoring:
+   - `queued`: this call enqueued a deployment.
+   - `skipped` from `trigger_deployment`: the branch has no commit, so no
+     deployment was enqueued.
+   - `processing`: an earlier call with this key is already in flight; this call
+     did not enqueue a duplicate.
+   - An unknown or unreadable status leaves the outcome uncertain.
+8. The action returns no deployment ID. For `queued` or an existing in-flight
+   request, poll `list_deployments` and `get_deployment` for a record appearing
+   above the baseline captured before the first execution attempt. If that
+   baseline is unavailable, report that attribution may be ambiguous. Do not
+   assume the newest record belongs to this request when deployments are
+   concurrent.
+9. Stop when the attributed deployment leaves an active state or the bounded
+   monitoring period ends. If monitoring ends first, report the last status and
+   timestamp; do not call it failed or enqueue a replacement for that reason.
+10. For a retry or rollback, preview the prior deployment's exact commit hash
+    and message. A rollback creates a new build at that commit; it does not move
+    the environment branch.
 
 ### 4. Apply shared evidence and safety rules
 
@@ -254,8 +278,9 @@ For a retry or rollback:
 - Require an itemized preview and the exact word `confirm` before every
   mutation.
 - Reconcile an uncertain mutation through observable state before retrying it.
-- Never delete a newly created environment automatically when configuration or
-  deployment fails. Report the partial state and wait for an explicit request.
+- Reuse an idempotency key only for exact retries of the same logical request.
+- Never delete a newly created app or environment automatically when
+  configuration or deployment fails. Report the partial state.
 
 ### 5. Handle explicit administrative requests
 
@@ -282,8 +307,8 @@ For `delete_variable`:
 2. If `exists` is false, report that nothing was deleted and stop.
 3. If `exists` is true, show the app, environment, and key; warn that deletion
    is permanent and require `confirm`.
-4. Call once with `dry_run: false`. Treat `deleted: true` as success even if the
-   backend message is absent.
+4. Call once with `dry_run: false`. Treat `deleted: true` as success. Reconcile
+   an uncertain response with an exact key lookup before retrying.
 
 For `delete_environment`:
 
@@ -295,6 +320,8 @@ For `delete_environment`:
 3. Call once with `dry_run: false`. Treat `deleted: true` as success.
 4. A failed or null `mountRefreshStatus` means deletion succeeded but routing
    cleanup is failed or uncertain. Report it and never retry the delete.
+5. For an uncertain response, page until the original `env_id` is found or the
+   listing ends. Do not use a branch filter whose value may have changed.
 
 For `delete_app`:
 
@@ -303,8 +330,8 @@ For `delete_app`:
    while `hard_delete` permanently deletes the app and all its environments and
    cannot be undone.
 3. Require `confirm`, then call once with `dry_run: false`.
-4. Treat `deleted: true` as success even when the resource cannot be fetched
-   afterward.
+4. Treat `deleted: true` as success. Reconcile uncertainty with `get_app` or the
+   app's exact site-and-name lookup before retrying.
 
 ### 6. Handle errors and report
 
@@ -318,11 +345,10 @@ For `delete_app`:
   considering a retry.
 - Duplicate environment branch or mount: report the conflicting environment;
   do not silently update or delete it.
-- Partial CLI variable import: report the failed keys without values and stop
-  before deployment. Do not roll back successful keys or delete the environment.
-- Rejected cursor: restart that listing without the cursor and page again.
-- `GITHUB_APP_NOT_INSTALLED`: provide the returned `installUrl`, require the
-  user to reconnect GitHub, and retry only after reconnection.
+- Partial CLI variable write: report failed keys without values and stop before
+  deployment. Do not roll back successful keys or delete the environment.
+- `GITHUB_APP_NOT_INSTALLED` or `GITHUB_REPO_NOT_CONNECTED`: provide the returned
+  `installUrl` and retry only after the user completes the connection.
 - An unsupported deployment preview is a capability boundary, not a reason to
   bypass MCP with a direct API call.
 
@@ -404,5 +430,5 @@ value outside chat.
 - Never expose secrets from variables, logs, errors, or URLs.
 - Never mutate without an exact preview and explicit `confirm`.
 - Never retry an uncertain mutation before reconciling observable state.
-- Never deploy a newly created environment until required configuration has
-  been verified or the user has established that none is needed.
+- Keep repository, environment, configuration, and deployment changes separate.
+- Preserve partial resources unless the user explicitly requests deletion.
