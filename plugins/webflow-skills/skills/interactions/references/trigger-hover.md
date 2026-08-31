@@ -208,14 +208,21 @@ timelines: [
 The host accepts this and the runtime honors it. The panel does not write this
 shape for hover, but it **does** render both action groups with a delete control.
 
-**Correction (measured).** This form was tagged `[PANEL-TRAP]` here on the
-grounds that the remove control keys off `groupId` (absent in the role form) or a
-`groupRoles` config, and that hover declares `triggerSplit` instead of
-`groupRoles`, so neither role-based group would offer a remove button. **That was
-checked in the Designer and is false**: a role-form hover authored through MCP
-showed a delete button on both Actions groups, the same as the split form. The
-tag is withdrawn and the mechanism above is not reproduced here, because the
-reasoning that produced it did not survive contact with the panel.
+**This was a real trap, and [#117817](https://github.com/webflow/webflow/pull/117817)
+closed it on 2026-08-19.** The `[PANEL-TRAP]` tag was correct when written: the
+remove control keyed off `groupId` (absent in the role form) or a `groupRoles`
+config, and hover declares `triggerSplit` instead of `groupRoles`, so neither
+role-based group offered a remove button. That PR's summary states it directly —
+"a hover authored as `multiTimeline: true` with enter/leave timelines and no
+`groupId` already plays, but the Interactions panel never offered Remove … Remove
+now shows for that shape when a Hover owner exists."
+
+Confirmed in the Designer after the fix: a role-form hover authored through MCP
+shows a delete control on both Actions groups, the same as the split form. The tag
+is withdrawn as of that merge.
+
+The mechanism is kept above rather than deleted because it still explains data
+stored before #117817, which is the case where the history matters.
 
 What is still unverified on the role form: renaming a group, editing a group's
 duration, and whether a panel save round-trips the role shape unchanged. Only the

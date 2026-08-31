@@ -37,11 +37,13 @@ table. A standard trigger routed to a group takes `control` from the trigger, so
 a stored value there has no effect. See
 [`timelines-and-groups.md`](timelines-and-groups.md).
 
-The role-based hover shape used to have a row here, on the grounds that neither
-role-based action group offered a remove button. **That was checked in the
-Designer and is false** — a role-form hover authored through MCP renders a delete
-control on both Actions groups, the same as the split form. The row is withdrawn
-rather than reworded, because its only claim was the missing control.
+The role-based hover shape had a row here, on the grounds that neither role-based
+action group offered a remove button. That was true, and
+[#117817](https://github.com/webflow/webflow/pull/117817) fixed it on 2026-08-19 —
+Remove now renders for that shape when a Hover owner exists. Confirmed in the
+Designer afterwards: a role-form hover authored through MCP shows a delete control
+on both Actions groups, the same as the split form. The row is withdrawn as of that
+merge, rather than reworded, because the missing control was its only claim.
 
 Both hover forms are now expressible through MCP: the timeline input carries
 `groupId`, so the trigger split the panel prefers is authorable, and an unmatched

@@ -580,11 +580,16 @@ timing: {duration: 0.4, ease: 2}
 
 ### Advanced eases
 
-Objects discriminated on `type`, each `.strict()`. `[FLAG]` behind
-`ff-styl-1612-ix3-advanced-easing`. You cannot read that flag from the payload,
-so **attempt the write and handle a refusal** rather than refusing up front — a
-`{type: 'back', curve: 'out', power: 1.7}` ease was accepted and stored on a
-live site, so pre-emptively declining costs the user a capability that works.
+Objects discriminated on `type`, each `.strict()`. **Authorable — just write one.**
+A `{type: 'back', curve: 'out', power: 1.7}` ease was accepted and stored on a live
+site, and no guard rejects an advanced ease at the write boundary.
+
+An earlier version of this file tagged these `[FLAG]` behind
+`ff-styl-1612-ix3-advanced-easing` and said to expect a possible refusal. That was
+wrong twice: no write-boundary guard exists, and the gate is public at 100% in
+production and classified `STALE_ALL_TRUE`, so it does not vary by caller. The flag
+gates the panel's Adaptive Easing control, not the API. Nothing to check, nothing
+to handle.
 
 | `type`         | Fields                                                                                 |
 | -------------- | -------------------------------------------------------------------------------------- |

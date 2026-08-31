@@ -6,6 +6,14 @@ description: Create, update, list, and delete Webflow IX3 interactions (GSAP ani
 
 <!--
 CHANGELOG
+2026.08.30 — Three corrections found by re-reading our own claims against merged PRs.
+  * The role-form hover remove-button warning was true when written and was fixed by
+    webflow#117817 on 2026-08-19. Reattributed to that PR rather than called false.
+  * `playInReverse` is not an authorable replacement for `autoReverse`. webflow#118489
+    rejects it; there is no API-side replacement. The earlier entry below is wrong.
+  * Advanced eases are simply authorable. No write-boundary guard exists and the gate
+    is 100% public and stale, so the `[FLAG]` framing promised a refusal that cannot
+    happen.
 2026.08.26 — Corrections from a 135-interaction stress run (197 write attempts,
 31 browser assertions). The gaps were almost all in the positive direction —
 not "which payloads are refused", which measured 46/48 accurate, but "what
@@ -340,7 +348,7 @@ Use the **role form**: one `wf:hover` trigger with `multiTimeline: true`, and tw
 }
 ```
 
-**No caveat needed.** An earlier version of this skill warned that the panel would not offer a remove button for either action group. That was checked in the Designer and is false: a role-form hover authored through MCP animates correctly *and* shows a delete control on both Actions groups, the same as the split form.
+**No caveat needed any more.** An earlier version of this skill warned that the panel would not offer a remove button for either action group. That was true when written, and [webflow#117817](https://github.com/webflow/webflow/pull/117817) fixed it on 2026-08-19 — Remove now renders for this shape when a Hover owner exists. Confirmed in the Designer afterwards: a role-form hover authored through MCP animates correctly *and* shows a delete control on both Actions groups, the same as the split form.
 
 The two-trigger split the panel prefers **is** authorable, but the discriminator
 is **`config.pluginConfig.eventMode`**, with the values **`'enter'` / `'leave'`** —
@@ -566,8 +574,10 @@ The panel's "Power 1 out" is `2`; its "Linear" is `0`.
 "timing": { "duration": 0.4, "ease": 2 }
 ```
 
-Advanced eases are objects discriminated on `type`, and are gated behind
-`ff-styl-1612-ix3-advanced-easing`:
+Advanced eases are objects discriminated on `type`. **Just write one** — no guard
+rejects an advanced ease at the write boundary, and
+`ff-styl-1612-ix3-advanced-easing` is public at 100% and classified stale, so it
+gates the panel's Adaptive Easing control rather than the API:
 `back {curve,power}`, `elastic {curve,amplitude,period}`, `steps {stepCount}`,
 `rough {templateCurve,points,strength,taper,randomizePoints,clampPoints}`,
 `slowMo {linearRatio,power,yoyoMode}`, `expoScale {startingScale,endingScale,templateCurve}`,

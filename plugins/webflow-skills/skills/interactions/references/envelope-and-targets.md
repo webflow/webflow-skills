@@ -373,18 +373,20 @@ runtime reverses with `playInReverse` instead.
 Guard: `findTimingAutoReverseError` · fragment:
 `is not authored by the Designer; the runtime uses playInReverse`
 
-**`playInReverse` is the replacement, and it is a timeline-level boolean** — a
-sibling of `name` / `immediate` / `canvasDuration` on the timeline object, not an
-action `timing` field and not a trigger `config` field. It is on the MCP timeline
-input, so it survives the write:
+**Do not read that message as an instruction.** It names `playInReverse` because
+that is what the *runtime* reads, not because it is something to author.
+`playInReverse` is a timeline-level boolean the Designer does not write, and
+[#118489](https://github.com/webflow/webflow/pull/118489) rejects it on create and
+on a timeline-replacing update with `playInReverse is not authored by the
+Designer`, grandfathering an unchanged stored value the same way `autoReverse` is.
 
-```js
-timelines: [{playInReverse: true, actions: [...]}]
-```
+So there is **no API-side replacement for `autoReverse`**. Author the reverse as
+its own tween, or use a trigger `control` that plays backwards. Do not reach for a
+timeline flag.
 
-The rejection message names `playInReverse` without saying where it lives, which
-reads as an instruction and sends agents guessing across three levels of the
-envelope. It is one level: the timeline.
+This is the trap the message sets: "the runtime uses X" reads as "use X", and X
+sits at a level the sentence never names, so an agent guesses across the trigger,
+the action, and the timeline before finding that none of them accept it.
 
 `[LEGACY-OK-ON-UPDATE]` An unchanged stored value on the same id passes. The panel
 has no control that clears one either, and `get()` returns it, so rejecting it
