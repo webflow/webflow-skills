@@ -1,0 +1,104 @@
+<!-- Published from the Webflow monorepo: packages/systems/ix3/schema/agent-pack/references/trigger-click.md
+     Do not edit here. Edit the source and re-publish. -->
+
+# `wf:click`
+
+Read with [`envelope-and-targets.md`](envelope-and-targets.md).
+
+|             |                                                    |
+| ----------- | -------------------------------------------------- |
+| controlType | `standard` (omit and the host stamps it)           |
+| Standalone  | No — may share an interaction with other triggers  |
+| Target      | `[REQUIRED]` — class, selector, attribute, or inst |
+| Roles       | None                                               |
+| Playback    | `control`, `delay`, `jump`, `speed` allowed        |
+
+## Accept
+
+```js
+{
+  pageId,
+  name: 'Click',
+  triggers: [{
+    extensionKey: 'wf:click',
+    config: {control: 'play'},
+    target: {extensionKey: 'wf:class', value: [STYLE_BLOCK_ID]},
+  }],
+  timelines: [{actions: [ACTION]}],
+}
+```
+
+Action targets may use `wf:trigger-only` here, unlike load and custom.
+
+## Control
+
+The allowed set depends on `pluginConfig.click`. Generated table:
+[`capabilities.generated.md`](capabilities.generated.md) → Triggers.
+
+`none` is never offered — a click always does something.
+
+When `pluginConfig.click` is anything other than `'each'` (first, odd, even, or a
+count), the trigger fires at most once per state, so the toggle controls have
+nothing to alternate between and are also dropped.
+
+`[REJECTED]` A control outside the trigger's allowed set.
+Guard: `findTriggerControlAllowedError`
+
+### `reverse` does nothing on the first click
+
+`control: 'reverse'` is legal and the write succeeds. The runtime calls GSAP
+`reverse()` on a playhead that starts at 0, so the first click has nothing to rewind
+and the user sees a button that does nothing.
+
+For a reverse the user can actually try, send `togglePlayReverse` — allowed while
+`pluginConfig.click` is omitted or `'each'`. The first click plays forward and the
+second reverses. Keep `control: 'reverse'` only when another trigger has already
+played the same timeline, or when the user explicitly asked for that control to be
+stored.
+
+Do not reach for `togglePlayReverse` when `pluginConfig.click` is `first`, `odd`,
+`even`, or a count: those drop the toggle controls, per the paragraph above.
+
+## Rejected
+
+`[REJECTED]` No target. Enforced by the missing-target branch in
+`findTriggerInvariantError`, which checks `TRIGGER_REQUIRES_TARGET_KEYS` when a
+trigger arrives with no target at all. `findTriggerTargetContextError` is a
+different check: it only inspects targets that are already present.
+Fragment: `requires a target element`
+
+`[REJECTED]` Target `wf:body` or `wf:viewport` — those are trigger-context keys
+for other triggers, not click.
+
+`[REJECTED]` `scrollTriggerConfig` on a click trigger. Guard:
+`findScrollTriggerError` · fragment: `must not set "scrollTriggerConfig"`
+
+`[REJECTED]` `jump` when `control` is `none`, `restart`, `resume`,
+`togglePlayReverse`, or `togglePlayReverseFlipEase` — the panel clears it for
+those. Guard: `findTriggerJumpError` · fragment: `must not set a jump when control is`
+
+`[REJECTED]` `speed` when `control` is `pause`, `stop`, or `none`.
+Guard: `findTriggerSpeedError`
+
+`[REJECTED]` Any `control` other than `play` once the interaction has two or more
+grouped timelines. The panel offers only Play there.
+Guard: `findGroupedTriggerControlError` · fragment:
+`must use control "play" when the interaction has multiple action groups`
+
+See [`timelines-and-groups.md`](timelines-and-groups.md) for what counts as a
+group.
+
+## Adaptive Easing writes a flip-ease control
+
+`reverseFlipEase` and `togglePlayReverseFlipEase` are values the panel authors, not
+values to avoid. Two controls write the one field: the Control dropdown renders
+`reverse` for a stored `reverseFlipEase`, and the Adaptive Easing toggle is what
+turns `reverse` into `reverseFlipEase`.
+
+So a stored flip-ease variant is a real authored state. Preserve it on a
+read-then-write rather than normalizing it back to the base control, which would
+silently turn Adaptive Easing off.
+
+The separate point about `STANDARD_TRIGGER_ALLOWED_CONTROLS` being the opt-in
+complete set rather than the default dropdown only matters where a surface narrows
+the allowed set and drops the flip variants, as conditional outcomes do.
