@@ -638,7 +638,11 @@ string, or `{add: [...]}` are all rejected.
 | `wf:any-element` | `"*"` — **not** `""`. Action targets only |
 | `wf:trigger-only`, `wf:trigger-only-parent` | `""`. Action targets only |
 | `wf:attribute` | an attribute name **or a full selector**. `"data-thing"` is stored as `[data-thing]` and matches every element carrying it; pass `'[data-thing="x"]'` when several elements share the attribute |
-| `wf:id` | element DOM id |
+
+**`wf:id` is not a target key.** It is refused in every context with
+`target type "wf:id" is not offered by the Designer (shouldShow: false in all contexts). Use wf:selector, wf:class, or wf:inst instead.`
+To target by DOM id, use `wf:selector` with `'#the-id'`. There are seven
+authorable target keys, not eight.
 
 **`wf:any-element` is the one key whose value is a wildcard, not a placeholder.**
 The three action-only keys look interchangeable and are not: `""` on
