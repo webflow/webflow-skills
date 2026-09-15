@@ -734,6 +734,16 @@ All `apps deploy` flags:
 | `--skip-mount-path-check` | —     | Skip domain manifest validation. Required in CI. Can also be set in `webflow.json` as `cloud.skipMountPathCheck: true`.                                                                                  |
 | `--auto-publish`          | —     | Publish the Webflow **site** to sync mount path routing. Does not affect app deployment.                                                                                                                 |
 | `--skip-update-check`     | —     | Skip @webflow package update check.                                                                                                                                                                      |
+| `--dry-run`               | —     | **`apps deploy` only — not on the `cloud deploy` alias.** Resolves everything from flags/env vars/`webflow.json`, makes no network calls, and reports which of `create` / `select` / `deploy` the real run would take.  |
+| `--json`                  | —     | **`apps deploy` only — not on the `cloud deploy` alias.** Emits one document instead of build/upload progress text: `{appId, environmentId, deploymentId, deployUrl}` on success (`deployUrl` is `null` on older backends), an error document on failure, or the dry-run plan when combined with `--dry-run`. |
+
+```bash
+# Preview what a deploy would do, no side effects
+webflow apps deploy --no-input --mount /app --environment main --site-id site_abc123 --dry-run --json
+
+# Deploy and parse the result instead of scraping progress output
+webflow apps deploy --no-input --mount /app --environment main --site-id site_abc123 --json
+```
 
 > **Agents: pass `--mount` AND `--environment` together, every time.** The deploy prompts (select existing app, name a new app, pick an environment) are gated on whether `--mount` and `--environment` are _both_ set — not on `--no-input`. Pass `--no-input` without both and the app-select prompt still fires and hangs in non-TTY contexts. The minimum agent-safe deploy flag set is `--no-input --mount <path> --environment <env> --site-id <id>` (or `--workspace-id <id>` for project-app first deploy), plus `--app-name` whenever `cloud.app_id` is absent from `webflow.json`.
 
@@ -853,9 +863,14 @@ Re-runs an existing deployment **at its same commit**, enqueuing a fresh build. 
 
 `--idempotency-key <key>` sends an `Idempotency-Key` header so a retried enqueue is deduped rather than queuing a second build. When passed it must be non-empty printable ASCII (no control characters, newlines, or non-ASCII); omit the flag entirely to run without deduplication.
 
+**`--wait` (same contract as `deployments get --wait`).** Enqueuing a build only returns a 202 with no deployment ID to poll, so `--wait` identifies the new deployment itself first (by diffing the environment's deployment list before/after the enqueue), then blocks on it until it reaches a terminal status, exiting `0` on success and `1` otherwise. `--interval <seconds>` (floored at 5s) and `--timeout <seconds>` (capped at 30 minutes) tune the poll, same as `get`. Use it to gate CI on the outcome of a redeploy in one command instead of enqueueing and separately polling `deployments get`.
+
 ```bash
 webflow apps deployments redeploy dep_abc123 --dry-run --json
 webflow apps deployments redeploy dep_abc123 --idempotency-key "$GITHUB_RUN_ID-redeploy" --json
+
+# Roll back and block until the new build finishes; non-zero exit fails the CI step
+webflow apps deployments redeploy dep_abc123 --wait --interval 10 --timeout 900 --json
 
 # Roll back: find the last success, then redeploy it
 webflow apps deployments list --status success --limit 1 --fields id --json
@@ -869,9 +884,14 @@ Builds the resolved environment's **current HEAD** on demand — same as `redepl
 
 It builds **the branch the environment is configured for**, not your checked-out branch. If those differ the CLI warns but does **not** block — check `apps environments list --fields id,branch` first if you're unsure which branch will actually build.
 
+Same `--wait`/`--interval`/`--timeout` contract as `redeploy` and `deployments get` — since `trigger` also only returns a 202, `--wait` identifies the enqueued deployment itself before polling it to a terminal status.
+
 ```bash
 webflow apps deployments trigger --dry-run --json
 webflow apps deployments trigger --json
+
+# Build current HEAD and block until it finishes; non-zero exit fails the CI step
+webflow apps deployments trigger --wait --interval 10 --timeout 900 --json
 ```
 
 #### apps logs build \<depId\>
@@ -1271,9 +1291,8 @@ Commit all changes before deploying to production.
 ### Known limitations
 
 - **The whole `apps` namespace is beta (`@next`)** — see [the beta banner](#beta-webflow-apps-requires-next). On `@latest` only `cloud init` / `deploy` / `create` / `list` exist.
-- **Deploy has no `--dry-run`** — a build validation always triggers a real deployment. Every other write _does_ support `--dry-run`: `apps init` (**both** paths — the scaffold and `--import`), `link`, `update`, `delete`, `environments create` / `update` / `delete`, `deployments redeploy` / `trigger`, and all four `env-vars` subcommands. Note `--dry-run` is registered on `apps init` only, not on the `cloud init` alias.
-- **Deploy has no `--json`** — the deploy URL and app ID must be parsed from stdout. The read/management commands (`list`, `get`, `domains`, `environments`, `deployments`, `logs`, `env-vars`) all support `--json`.
-- **No `--watch` on logs** — the log endpoints are pollable but do not stream; poll on an interval to follow a build. Deployments are the exception: `apps deployments get --wait` blocks to a terminal status for you.
+- **`apps deploy` has `--dry-run` and `--json`, but only on the `apps` form** — `cloud deploy` (the deprecated alias) has neither. See [the deploy flags table](#webflow-apps-deploy) for the exact output shapes. Every other write also supports `--dry-run`: `apps init` (**both** paths — the scaffold and `--import`), `link`, `update`, `delete`, `environments create` / `update` / `delete`, `deployments redeploy` / `trigger`, and all four `env-vars` subcommands. Note `--dry-run` on `init` is registered on `apps init` only, not on the `cloud init` alias.
+- **No `--watch` on logs** — the log endpoints are pollable but do not stream; poll on an interval to follow a build. Deployments are the exception: `apps deployments get` / `redeploy` / `trigger` all take `--wait` to block to a terminal status for you.
 - **`apps logs build` requires a deployment ID** — it does not default to the latest deployment. Get one from `apps deployments list` first.
 - **`deployments redeploy` / `trigger` need a GitHub-connected app** — apps deployed from local files via `apps deploy` are not eligible.
 - **`--q` never searches values or IDs** — only the resource's primary name field (app name, environment branch, variable key).
