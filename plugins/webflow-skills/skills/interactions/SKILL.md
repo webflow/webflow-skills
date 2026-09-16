@@ -1,11 +1,17 @@
 ---
 name: webflow-mcp:interactions
-version: 2026.08.26
+version: 2026.09.16
 description: Create, update, list, and delete Webflow IX3 interactions (GSAP animations) through Webflow MCP. Use when the user wants click/hover/load/scroll/mouse-move animations, interaction timelines, or data_interactions_tool / create_interaction payloads. Requires beta MCP + ff-ix3-interaction-apis during dogfood.
 ---
 
 <!--
 CHANGELOG
+2026.09.16 — Session 2 re-read against the live host.
+  * The `guide` action and `webflow://guides/interactions` are live (CF #461).
+    The "not live / in review as #399" sentence was false. Prefer
+    `data_interactions_tool` → `guide` for payload shapes; this skill is the
+    workflow around them. `references/` stay for set-pieces the guide does not
+    carry.
 2026.08.30 — Three corrections found by re-reading our own claims against merged PRs.
   * The role-form hover remove-button warning was true when written and was fixed by
     webflow#117817 on 2026-08-19. Reattributed to that PR rather than called false.
@@ -67,10 +73,10 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 
 **ALWAYS use Webflow MCP tools for all operations:**
 
-- Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call** — it covers general MCP conventions and returns nothing about interactions; the IX3 contract lives in `references/`
+- Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call** — it covers general MCP conventions and returns nothing about interactions. IX3 payload shapes come from `data_interactions_tool` action `guide`
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to find the target page by name or slug
-- Use Webflow MCP's `data_interactions_tool` for list / get / create / update / delete
+- Use Webflow MCP's `data_interactions_tool` for guide / list / get / create / update / delete
 - Use Webflow MCP's `data_style_tool` to resolve class **style-block ids** before targeting `wf:class`
 - DO NOT use any other tools or methods for Webflow interaction CRUD
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
@@ -85,9 +91,9 @@ These tools are **not on stable MCP**.
 - **Flag:** `ff-ix3-interaction-apis`
 - **Scopes:** `pages:read` / `pages:write`
 - **Compound tool:** `data_interactions_tool`
-- **Actions:** `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`
+- **Actions:** `guide`, `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`
 - `siteId` and `pageId` are **top-level** tool arguments (page context / create bookkeeping). They are **not** inside `create_interaction` args.
-- **The `guide` action and the `webflow://guides/interactions` resource are not live yet.** They are in review as `mcp-remote-cloudflare-server` #399. Until that ships, the `references/` files in this skill are the contract — do not try to call `guide` and do not wait for it. Once it is live, prefer it for payload shapes and use this skill for the workflow around them.
+- **`guide` is live.** Call `data_interactions_tool` with action `guide`, or read `webflow://guides/interactions`. Same markdown either way. Prefer it for legal payload shapes. This skill is the workflow around those shapes; `references/` are the set-pieces the guide does not carry.
 - `create_interaction` args: `name` (required), `scope` (optional, default site), `triggers` (required array), `timelines` (required array), optional `timelineDefaults`, optional `conditionalPlayback`
 - **Component and variant scope work.** `{type:"component", componentId, variants?}` is accepted on create and update. `variants` holds variant **option ids** from `data_component_variants_tool` — omitting it or passing `[]` both mean every variant. Do not set `libraryProfileId`; it marks the interaction library-owned. A component or variant id that does not exist is rejected. See [references/envelope-and-targets.md](references/envelope-and-targets.md).
 
@@ -99,15 +105,15 @@ These tools are **not on stable MCP**.
    about what it gives you: general MCP tool conventions, and **nothing about
    interactions**. Its response contains no occurrence of `interaction`, `ix3`,
    `wf:click`, or `scrollTrigger` today. Call it for the site/page/element
-   conventions, then get the IX3 contract from `references/` — do not read its
-   silence on interactions as "there is nothing to know."
+   conventions, then get IX3 payload shapes from `data_interactions_tool` →
+   `guide` — do not read `webflow_guide_tool`'s silence as "there is nothing to know."
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
 4. **Confirm the gate**: beta MCP endpoint and `ff-ix3-interaction-apis` covering the caller's identity. If `data_interactions_tool` is unregistered, stop and tell the user. The likely causes are the stable MCP endpoint instead of beta, or the flag not covering that identity. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. Do not work around it. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
 
 ### Phase 2: Read the contract for what you are building
 
-5. **Read the reference file for your trigger, plus `references/envelope-and-targets.md`.** That pair is enough to author any single-trigger interaction. See the Reference map below. Do this before your first write on anything beyond the five inline examples in this file.
+5. **Call `data_interactions_tool` → `guide` for legal payload shapes.** Then read the `references/` file for your trigger when you need a set-piece the guide does not carry. See the Reference map below. Do this before your first write on anything beyond the five inline examples in this file.
 6. Do not invent `+=` / `<` / `>` `timing.position` strings or `{reducedMotion:"skip"}`. A bare number for `timing.duration` is seconds (`0.4`, not `400`).
 
 #### Reference map
@@ -168,7 +174,7 @@ Replace `STYLE_BLOCK_ID` with a style-block id. Mint a **fresh unique** `id` on 
 
 1. Call `webflow_guide_tool`
 2. `list_sites` → `list_pages` → resolve `STYLE_BLOCK_ID` via `data_style_tool`
-3. Read [references/trigger-click.md](references/trigger-click.md) and [references/envelope-and-targets.md](references/envelope-and-targets.md)
+3. Call `data_interactions_tool` → `guide` for payload shapes. Read [references/trigger-click.md](references/trigger-click.md) only if you need a set-piece the guide does not carry.
 4. Present the plan and wait for confirmation
 5. After confirmation, `create_interaction`:
 
