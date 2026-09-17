@@ -1,57 +1,27 @@
 ---
 name: webflow-cli:cloud
-description: Create, build, and deploy Webflow Cloud apps from the CLI (site-attached or project apps), and manage existing ones — apps, domains, environments, deployments, build/runtime logs, and environment variables including secrets. Use when initializing or deploying a Cloud app, importing an existing GitHub repository, setting up CI/CD (GitHub Actions or GitHub-linked deploys), setting or importing secrets, retrying or rolling back a deployment, diagnosing a failed build, or resolving app/environment/workspace IDs from webflow.json or env vars. The `webflow apps` namespace is beta and requires the CLI's `@next` channel.
+description: Create, build, and deploy Webflow Cloud apps from the CLI (site-attached or project apps), and manage existing ones — apps, domains, environments, deployments, build/runtime logs, and environment variables including secrets. Use when initializing or deploying a Cloud app, importing an existing GitHub repository, setting up CI/CD (GitHub Actions or GitHub-linked deploys), setting or importing secrets, retrying or rolling back a deployment, diagnosing a failed build, or resolving app/environment/workspace IDs from webflow.json or env vars.
 ---
 
 # Webflow Cloud
 
 Initialize new projects from templates or an existing GitHub repository, deploy to Webflow Cloud, and manage existing apps (list, inspect, logs, deployments, environments, environment variables). Deploys support two modes: **site-attached** (deploy to an existing Webflow site) and **project app** (deploy as an independent app, no existing site required).
 
-## Beta: `webflow apps` requires `@next`
+## Namespaces: `apps` (canonical) vs `cloud` (deprecated alias)
 
-**Every `webflow apps …` command in this skill ships only on the CLI's beta channel, `@webflow/webflow-cli@next`.** The whole namespace is gated behind the beta build; on the stable `@latest` build, `webflow apps` does not exist at all and any invocation fails with an unknown-command error.
+`webflow apps <command>` is the canonical namespace for Webflow Cloud. `webflow cloud <command>` still works — its `init` / `deploy` forms are **aliases of the same handler** — but is deprecated in favor of `apps`.
 
-```bash
-# Required for every `apps` command in this skill:
-npm install -g @webflow/webflow-cli@next
+| Canonical                                                                                                                             | Deprecated `cloud` alias      | Notes                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webflow apps init`                                                                                                                   | `webflow cloud init`          | Same options + handler — **except** `--import` and its repo-intake flags, which attach to `apps init` **only**.                                                 |
+| `webflow apps deploy`                                                                                                                 | `webflow cloud deploy`        | Same handler — **except** `--json` and `--dry-run`, which attach to `apps deploy` **only**.                                                                     |
+| —                                                                                                                                     | `webflow cloud create <name>` | Deprecated ahead of removal; prefer `apps init` (or `cloud init` if staying on the legacy namespace).                                                            |
+| —                                                                                                                                     | `webflow cloud list`          | Lists **scaffold templates**, not apps. Stays under `cloud`; there is **no** `apps` equivalent. Do not confuse with `apps list`, which lists workspace **apps**. |
+| `webflow apps list` / `get` / `domains` / `link` / `update` / `delete` / `environments …` / `deployments …` / `logs …` / `env-vars …` | —                              | **No `cloud` equivalent.** Canonical-only.                                                                                                                        |
 
-# Confirm the beta channel is installed — a beta version carries a `-next.` suffix
-# (e.g. 2.8.0-next.0). A bare semver (e.g. 2.7.0) is the stable channel.
-webflow --version
-```
+Running a command through `cloud init` / `cloud deploy` prints a one-time deprecation notice on stderr pointing at the `apps` form (suppressed with `--json`).
 
-**On stable (`@latest`), only the `cloud` namespace exists**, and it covers `init` / `deploy` / `create` / `list` — there is no stable equivalent for any of the management commands (`apps list`, `get`, `domains`, `link`, `update`, `delete`, `environments`, `deployments`, `logs`, `env-vars`). If the user is on `@latest` and asks for anything under "Managing apps" below, tell them it requires `@next` rather than guessing an alternative.
-
-A subset of the beta commands is gated a second time and will need its own promotion even after the namespace goes GA — see [Beta gating tiers](#beta-gating-tiers).
-
-## Namespaces: `apps` (beta, canonical) vs `cloud` (stable, being deprecated)
-
-`webflow apps <command>` is the **canonical** namespace Webflow Cloud is moving to, currently **beta-only**. `webflow cloud <command>` is what stable users have today; the `init` / `deploy` forms are **aliases of the same handler** and will be deprecated once `apps` reaches GA.
-
-| Canonical (`@next` only)                                                                                                              | Stable alias (`@latest` + `@next`) | Notes                                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `webflow apps init`                                                                                                                   | `webflow cloud init`               | Same options + handler — **except** `--import` and its repo-intake flags, which attach to `apps init` **only**, on `@next`.                                      |
-| `webflow apps deploy`                                                                                                                 | `webflow cloud deploy`             | Same options + handler.                                                                                                                                          |
-| —                                                                                                                                     | `webflow cloud create <name>`      | Deprecated on both channels; prefer `apps init` (or `cloud init` on stable).                                                                                     |
-| —                                                                                                                                     | `webflow cloud list`               | Lists **scaffold templates**, not apps. Stays under `cloud`; there is **no** `apps` equivalent. Do not confuse with `apps list`, which lists workspace **apps**. |
-| `webflow apps list` / `get` / `domains` / `link` / `update` / `delete` / `environments …` / `deployments …` / `logs …` / `env-vars …` | —                                  | **No stable equivalent.** Beta-only.                                                                                                                             |
-
-On a beta build, `cloud init` / `cloud deploy` print a one-time deprecation notice on stderr pointing at the `apps` form (suppressed with `--json`). On a stable build that notice is **not** printed — the CLI never advertises a namespace the user doesn't have.
-
-Prefer the `apps` forms in all new work when the user is on `@next`. This skill shows `apps` commands throughout; every `apps init` / `apps deploy` invocation can be run as `cloud init` / `cloud deploy`, with identical flags, apart from `--import`.
-
-### Beta gating tiers
-
-**Today this distinction changes nothing — everything below needs `@next`.** It matters only for what reaches stable first, so treat it as forward-looking context, not as a capability check.
-
-The beta commands sit behind two independent gates:
-
-| Tier               | Commands                                                                                                                                                                                                              | Reaches stable when                                                                  |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **Namespace gate** | `apps init` (incl. `--import`), `deploy`, `list`, `get`, `domains`, `environments list`, `deployments list` / `get` / `redeploy` / `trigger`, `logs build` / `runtime`, `env-vars list` / `set` / `delete` / `import` | The `apps` namespace is promoted.                                                    |
-| **Second gate**    | `apps link`, `apps update`, `apps delete`, `apps environments create` / `update` / `delete`                                                                                                                           | **Separately promoted** — removing the namespace gate alone does **not** ship these. |
-
-Until both are lifted, assume every `apps` command requires `@next`.
+Prefer the `apps` forms in all new work. This skill shows `apps` commands throughout; every `apps init` / `apps deploy` invocation can be run as `cloud init` / `cloud deploy` with identical flags, apart from `--import` (init) and `--json`/`--dry-run` (deploy).
 
 ## Instructions
 
@@ -61,17 +31,13 @@ Until both are lifted, assume every `apps` command requires `@next`.
 webflow --version
 ```
 
-If the command is not found, install it. **Install `@next`, not `@latest`, for anything in this skill under `webflow apps`** — the whole namespace is beta-only:
+If the command is not found, install it:
 
 ```bash
-npm install -g @webflow/webflow-cli@next
-# or yarn global add @webflow/webflow-cli@next
-# or pnpm add -g @webflow/webflow-cli@next
+npm install -g @webflow/webflow-cli@latest
+# or yarn global add @webflow/webflow-cli@latest
+# or pnpm add -g @webflow/webflow-cli@latest
 ```
-
-If the user only needs `webflow cloud init` / `cloud deploy`, `@latest` is sufficient — swap `@next` for `@latest` above.
-
-A beta install reports a `-next.` version suffix (`2.8.0-next.0` at time of writing); a stable install reports a bare semver (`2.7.0`). **Match on the `-next.` suffix, not on these numbers** — both channels move. If `webflow --version` shows a bare semver and the user asks for an `apps` command, reinstall from `@next` before doing anything else — every `apps` invocation will otherwise fail as an unknown command.
 
 Then proceed to state detection.
 
@@ -103,8 +69,8 @@ git remote get-url origin 2>/dev/null
 >
 > | Command                                   | Always pass                                                                                      |
 > | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
-> | `apps init` (site-attached)               | `--no-input --app-name <3–39 chars> --framework <astro\|nextjs> --mount <path> --site-id <id>`   |
-> | `apps init --new` (app)                   | `--no-input --app-name <3–39 chars> --framework <astro\|nextjs> --workspace-id <id>`             |
+> | `apps init` (site-attached)               | `--no-input --app-name <3–39 chars> --framework <astro\|nextjs\|vite> --mount <path> --site-id <id>` |
+> | `apps init --new` (app)                   | `--no-input --app-name <3–39 chars> --framework <astro\|nextjs\|vite\|static> --workspace-id <id>` |
 > | `apps init --import` (site-attached)      | `--no-input --import <repo-url> --site-id <id> --mount <non-root path> --idempotency-key <key>`  |
 > | `apps init --import --new` (project app)  | `--no-input --import <repo-url> --new --idempotency-key <key>` — **no `--mount`**                |
 > | `apps deploy` (site-attached)             | `--no-input --mount <path> --environment <env> --site-id <id>` plus `--app-name` on first deploy |
@@ -133,7 +99,7 @@ Those answers choose the branch — and the three are meaningfully different:
 | ----------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Existing code**, deploying from **local files**                                   | **Path A1** | **Skip `apps init`.** It would create a `./<app-name>/` subfolder with a hello-world scaffold inside their repo, which they don't want.                        |
 | **Empty directory** or wants a Webflow starter                                      | **Path A2** | Run `apps init` to scaffold from `Webflow-Examples/hello-world-*`.                                                                                             |
-| **Existing code already on GitHub**, wants Webflow to **build from the repository** | **Path A3** | Run `apps init --import <repo-url>` — creates a **GitHub-connected** app bound to the repo. Beta (`@next`) and `apps`-only; there is no `cloud init --import`. |
+| **Existing code already on GitHub**, wants Webflow to **build from the repository** | **Path A3** | Run `apps init --import <repo-url>` — creates a **GitHub-connected** app bound to the repo. `apps`-only; there is no `cloud init --import`. |
 
 **The A1 vs A3 choice is not cosmetic — it decides what the app can do later.** A GitHub-connected app (A3) can use `apps deployments trigger` / `redeploy`, and is the only kind eligible for dashboard push-to-deploy. An app first created by a local `apps deploy` (A1) is **not** GitHub-connected, so `trigger` / `redeploy` refuse it. If the user's code is already on GitHub and they say anything about CI, automatic deploys, rollbacks, or "deploy when I push", route to **A3**, not A1.
 
@@ -177,7 +143,7 @@ webflow apps deploy --no-input \
   --skip-update-check
 ```
 
-`--framework` is optional if `package.json` has the framework's Cloudflare adapter (`@opennextjs/cloudflare`, `@astrojs/cloudflare`). Pass it explicitly for monorepos or when auto-detection is unreliable.
+`--framework` is optional if `package.json` has a detectable signal: the Cloudflare adapter for `nextjs`/`astro` (`@opennextjs/cloudflare`, `@astrojs/cloudflare`), or the `vite` package itself for `vite`. Pass it explicitly for monorepos or when auto-detection is unreliable.
 
 If the agent doesn't know the user's `--site-id`, do **not** ask for a raw `site_XXXX` value — use [`webflow sites list`](#picking-a---site-id-from-a-list) to fetch the user's sites and present readable display names to pick from.
 
@@ -257,7 +223,7 @@ With no `--no-input` and no identity flags, the preflight prompts: _"This projec
 
 The user's code is already on GitHub and they want Webflow to build **from the repository** rather than from local files. `apps init --import <repo-url>` creates the app bound to that repo and clones it locally.
 
-> **Beta, `apps`-only.** `--import` exists only on `@webflow/webflow-cli@next`, and only under `apps init` — there is deliberately no `cloud init --import`. If the user is on `@latest`, either move them to `@next` or fall back to [Path A1](#path-a1-existing-codebase-deploying-from-local-files) and attach the repo later with `apps update --github-source`.
+> **`apps`-only.** `--import` exists only under `apps init` — there is deliberately no `cloud init --import`. If the user is on the `cloud` namespace for another reason, fall back to [Path A1](#path-a1-existing-codebase-deploying-from-local-files) and attach the repo later with `apps update --github-source`.
 
 **Step 0: Prerequisite — the Webflow GitHub App.** It must be installed on the repository owner and connected to the workspace. **The CLI cannot do this**; it's dashboard/GitHub-side setup. If the import fails on permissions, this is the first thing to check.
 
@@ -541,7 +507,7 @@ Projects created via `apps init` always land in case 1.
 webflow cloud list
 ```
 
-Lists available **scaffold templates** (used by `init`). Check this before `apps init --framework` to confirm valid scaffold IDs. This is distinct from `apps list` (which lists your deployed apps) and lives only under the `cloud` namespace.
+Lists available **scaffold templates** (used by `init`). Check this before `apps init --framework` to confirm valid scaffold IDs. This is distinct from `apps list` (which lists your deployed apps) and lives only under the `cloud` namespace. Deprecated ahead of removal — it still works but prints a warning; prefer `apps init --framework <bad-value>` or `--help` to see valid scaffold IDs.
 
 #### webflow apps init
 
@@ -568,7 +534,7 @@ Flags:
 | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `--app-name <name>`       | `-n`  | App name. **Must be 3–39 characters** — the CLI rejects anything outside this range at init and at the first project-app deploy.                 |
 | `--project-name <name>`   | —     | **Deprecated alias** of `--app-name`. Still accepted.                                                                                            |
-| `--framework <framework>` | `-f`  | Must match a scaffold ID from `cloud list`. Currently: `nextjs`, `astro`.                                                                        |
+| `--framework <framework>` | `-f`  | Must match a scaffold ID from `cloud list`. Currently: `nextjs`, `astro`, `vite`, `static` (`static` is standalone-only — see [Frameworks](#frameworks)).                                                                        |
 | `--mount <path>`          | `-m`  | Mount path (default `/` for new domain, `/app` for existing site). Substituted into config files at scaffold time. Not stored in `webflow.json`. |
 | `--site-id <id>`          | `-s`  | Required in non-interactive site-attached mode. Mutually exclusive with `--workspace-id`.                                                        |
 | `--workspace-id <id>`     | `-w`  | Skips the workspace picker for `--new` (app mode). Mutually exclusive with `--site-id`.                                                          |
@@ -600,7 +566,7 @@ webflow apps init --new
 | `WEBFLOW_SITE_ID` in `.env`            | Written at init               | Written **after first deploy** only   |
 | `WEBFLOW_API_TOKEN` in `.env`          | Written                       | Written                               |
 | `cloud.workspace_id` in `webflow.json` | Not set                       | Set at init (used by first deploy)    |
-| Scaffold                               | `astro`, `nextjs`             | `astro`, `nextjs`                     |
+| Scaffold                               | `astro`, `nextjs`, `vite`     | `astro`, `nextjs`, `vite`, `static`    |
 | Mount path                             | Configurable (default `/app`) | Always `/`                            |
 | DevLink sync                           | Runs after init               | Skipped                               |
 
@@ -608,11 +574,11 @@ webflow apps init --new
 
 **Agent caveat:** if the user's token sees more than one workspace and the agent can't pass `--workspace-id`, the picker fires and hangs in non-TTY contexts. The workspace ID is not visible in the Webflow dashboard UI, so the recovery is: **ask the user to run `webflow apps deploy` interactively once from inside their project.** The preflight prompt picks the workspace, completes a first deploy, and writes `cloud.workspace_id` (plus `siteId`, `app_id`, `environment_id`) to `webflow.json`. The agent can then read the workspace ID from the manifest and pass `--workspace-id` (or `--site-id`, now that the site exists) on subsequent runs. To target a different workspace later, delete `cloud.workspace_id` and have the user repeat the interactive deploy.
 
-#### webflow apps init --import \<repo-url\> (beta, `apps` only)
+#### webflow apps init --import \<repo-url\> (`apps` only)
 
 Creates a Cloud app **from an existing GitHub repository** instead of a starter template, and clones it locally. This is the intake path for a codebase that already exists on GitHub — no scaffold is generated and no framework is chosen.
 
-**This flag attaches to `apps init` only.** There is deliberately no `cloud init --import`: the repo-intake path creates real apps, so it stays on the beta-gated namespace rather than shipping through the stable alias.
+**This flag attaches to `apps init` only.** There is deliberately no `cloud init --import`: the repo-intake path creates real apps, so it stays on the canonical namespace rather than the deprecated alias.
 
 **Prerequisite:** the **Webflow GitHub App must be installed on the repository and connected to your workspace.** Without it the create fails — the CLI cannot install it for you, and this is dashboard-side setup.
 
@@ -728,20 +694,28 @@ All `apps deploy` flags:
 | `--workspace-id <id>`     | `-w`  | Workspace ID for project-app first deploys. Overrides `cloud.workspace_id` in `webflow.json`. Mutually exclusive with `--site-id`.                                                                       |
 | `--app-id <id>`           | `-a`  | Cloud app ID. Skips the app picker. Overrides `cloud.app_id` in `webflow.json`.                                                                                                                          |
 | `--project-id <id>`       | —     | **Deprecated alias** of `--app-id`. Still accepted.                                                                                                                                                      |
-| `--framework <fw>`        | `-f`  | Override framework detection. Must be `nextjs` or `astro`. Writes the value back into `webflow.json`. Use when auto-detection from `package.json` is unreliable (monorepos, missing dependencies, etc.). |
+| `--framework <fw>`        | `-f`  | Override framework detection. Must be `nextjs`, `astro`, `vite`, or `static`. Writes the value back into `webflow.json`. Use when auto-detection from `package.json` is unreliable (monorepos, missing dependencies, etc.). |
 | `--directory <path>`      | `-d`  | App directory (default: cwd). Use for monorepos.                                                                                                                                                         |
 | `--description <text>`    | —     | App description for the first deploy.                                                                                                                                                                    |
 | `--skip-mount-path-check` | —     | Skip domain manifest validation. Required in CI. Can also be set in `webflow.json` as `cloud.skipMountPathCheck: true`.                                                                                  |
 | `--auto-publish`          | —     | Publish the Webflow **site** to sync mount path routing. Does not affect app deployment.                                                                                                                 |
 | `--skip-update-check`     | —     | Skip @webflow package update check.                                                                                                                                                                      |
+| `--dry-run`               | —     | **`apps deploy` only — not on the `cloud deploy` alias.** Resolves everything from flags/env vars/`webflow.json`, makes no network calls, and reports which of `create` / `select` / `deploy` the real run would take.  |
+| `--json`                  | —     | **`apps deploy` only — not on the `cloud deploy` alias.** Emits one document instead of build/upload progress text: `{appId, environmentId, deploymentId, deployUrl}` on success (`deployUrl` is `null` on older backends), an error document on failure, or the dry-run plan when combined with `--dry-run`. |
+
+```bash
+# Preview what a deploy would do, no side effects
+webflow apps deploy --no-input --mount /app --environment main --site-id site_abc123 --dry-run --json
+
+# Deploy and parse the result instead of scraping progress output
+webflow apps deploy --no-input --mount /app --environment main --site-id site_abc123 --json
+```
 
 > **Agents: pass `--mount` AND `--environment` together, every time.** The deploy prompts (select existing app, name a new app, pick an environment) are gated on whether `--mount` and `--environment` are _both_ set — not on `--no-input`. Pass `--no-input` without both and the app-select prompt still fires and hangs in non-TTY contexts. The minimum agent-safe deploy flag set is `--no-input --mount <path> --environment <env> --site-id <id>` (or `--workspace-id <id>` for project-app first deploy), plus `--app-name` whenever `cloud.app_id` is absent from `webflow.json`.
 
 > **⚠️ Omitting `--mount` under `--no-input` deploys to root, silently.** This is a wrong-deploy risk, not a hard failure — nothing errors and nothing warns. The mount prompt supplies a `/app` default but no validator, and the no-input path only returns a default that passes validation; with no validator it returns nothing at all, which normalizes to `/`. Root is a valid mount, so the deploy proceeds there. **Never rely on the `/app` default in a non-interactive run** — pass `--mount` explicitly every time. This is also why "assume the default mount" is called out as a cause of `ENVIRONMENT_MOUNT_MISMATCH` further down: the failure surfaces later, at a different layer, far from the flag that caused it.
 
 ### Managing apps
-
-> **Beta — `@next` only.** Every command in this section requires `@webflow/webflow-cli@next`. None of them exist on `@latest`. See [the beta banner](#beta-webflow-apps-requires-next).
 
 Commands for inspecting and operating **existing** Cloud apps. They complement `init` / `deploy`:
 
@@ -765,7 +739,7 @@ Commands for inspecting and operating **existing** Cloud apps. They complement `
 
 #### apps list
 
-Lists all apps in your workspace. `--fields` default `id,name,siteId,createdAt` (all: `id,name,description,siteId,appPath,createdAt,siteName,shortName`).
+Lists all apps in your workspace. `--fields` default `id,name,siteId,createdAt` (all: `id,name,description,siteId,appPath,sourceUrl,createdAt,siteName,shortName`).
 
 Filters: `--site <site-id>` (exact site id), `--name <name>` (exact, case-sensitive), `--q <text>` (case-insensitive substring on the app name).
 
@@ -785,7 +759,7 @@ webflow apps list --q mark --json
 
 #### apps get [appId]
 
-Details for one app. `appId` defaults to `webflow.json` / `WEBFLOW_APP_ID`. `--fields` default `id,name,description,siteId,appPath,createdAt`.
+Details for one app. `appId` defaults to `webflow.json` / `WEBFLOW_APP_ID`. `--fields` default `id,name,description,siteId,appPath,createdAt` (all: `id,name,description,siteId,appPath,sourceUrl,createdAt,siteName,shortName` — same field set as `apps list`). `sourceUrl` is the connected GitHub repository, if any (see [`apps update --github-source`](#apps-update-appid)).
 
 ```bash
 webflow apps get app_abc123 --json
@@ -804,7 +778,7 @@ webflow apps domains app_abc123 --limit 50 --cursor "$NEXT_CURSOR" --json
 
 #### apps environments list [appId]
 
-Lists an app's environments. `--fields` default `id,branch,deployUrl,latestDeploymentStatus,createdAt` (all: `id,branch,mount,deployUrl,latestDeploymentStatus,lastDeploymentSucceededAt,lastVariableModifiedAt,createdAt,updatedAt`).
+Lists an app's environments. `--fields` default `id,branch,publicUrl,latestDeploymentStatus,createdAt` (all: `id,branch,mount,publicUrl,latestDeploymentStatus,lastDeploymentSucceededAt,lastVariableModifiedAt,createdAt,updatedAt`).
 
 > **`mount` is not in the table default.** To read an environment's mount path, either use `--json` (which returns the full API shape and ignores `--fields`) or ask for it explicitly with `--fields id,branch,mount`. A default `environments list` table will not show it.
 
@@ -814,7 +788,7 @@ Filters: `--branch <branch>` (exact, case-sensitive — resolves to at most one 
 webflow apps environments list app_abc123 --json
 
 # Resolve the environment that builds `main`
-webflow apps environments list --branch main --fields id,branch,deployUrl --json
+webflow apps environments list --branch main --fields id,branch,publicUrl --json
 ```
 
 #### apps deployments list
@@ -853,9 +827,14 @@ Re-runs an existing deployment **at its same commit**, enqueuing a fresh build. 
 
 `--idempotency-key <key>` sends an `Idempotency-Key` header so a retried enqueue is deduped rather than queuing a second build. When passed it must be non-empty printable ASCII (no control characters, newlines, or non-ASCII); omit the flag entirely to run without deduplication.
 
+**`--wait` (same contract as `deployments get --wait`).** Enqueuing a build only returns a 202 with no deployment ID to poll, so `--wait` identifies the new deployment itself first (by diffing the environment's deployment list before/after the enqueue), then blocks on it until it reaches a terminal status, exiting `0` on success and `1` otherwise. `--interval <seconds>` (floored at 5s) and `--timeout <seconds>` (capped at 30 minutes) tune the poll, same as `get`. Use it to gate CI on the outcome of a redeploy in one command instead of enqueueing and separately polling `deployments get`.
+
 ```bash
 webflow apps deployments redeploy dep_abc123 --dry-run --json
 webflow apps deployments redeploy dep_abc123 --idempotency-key "$GITHUB_RUN_ID-redeploy" --json
+
+# Roll back and block until the new build finishes; non-zero exit fails the CI step
+webflow apps deployments redeploy dep_abc123 --wait --interval 10 --timeout 900 --json
 
 # Roll back: find the last success, then redeploy it
 webflow apps deployments list --status success --limit 1 --fields id --json
@@ -869,9 +848,14 @@ Builds the resolved environment's **current HEAD** on demand — same as `redepl
 
 It builds **the branch the environment is configured for**, not your checked-out branch. If those differ the CLI warns but does **not** block — check `apps environments list --fields id,branch` first if you're unsure which branch will actually build.
 
+Same `--wait`/`--interval`/`--timeout` contract as `redeploy` and `deployments get` — since `trigger` also only returns a 202, `--wait` identifies the enqueued deployment itself before polling it to a terminal status.
+
 ```bash
 webflow apps deployments trigger --dry-run --json
 webflow apps deployments trigger --json
+
+# Build current HEAD and block until it finishes; non-zero exit fails the CI step
+webflow apps deployments trigger --wait --interval 10 --timeout 900 --json
 ```
 
 #### apps logs build \<depId\>
@@ -991,6 +975,8 @@ Update an app's `--name`, `--description`, and/or `--github-source` (at least on
 - It requires the **Webflow GitHub App installed on the repo owner and connected to this workspace** — the same prerequisite as `apps init --import`.
 - To change **which branch an environment builds**, use `apps environments update --branch`, not this flag. `--github-source` selects the repository; the environment selects the branch.
 
+**`--json` output:** on `--dry-run` it's the plan — only the keys actually being changed, plus `dryRun: true` — so a name-only update's plan has no `githubSource` key at all (not `null`); on a real run it's the **full updated app object** (same shape as `apps get --json`).
+
 ```bash
 webflow apps update app_abc123 --name "New Name" --description "Marketing site app" --json
 
@@ -1003,20 +989,27 @@ webflow apps deployments trigger --json
 
 Delete (or archive — the server decides by site kind) an app. Requires confirmation: pass `--yes` to skip the prompt. Non-interactively (`--no-input` / `--json`) without `--yes`, it refuses with `missingFlag: "yes"` rather than deleting. `--dry-run` previews the impact without deleting.
 
+**`--json` output:** the **same document shape on both the dry run and the real run** — `{ appId, name, action: "archive" | "hard_delete", siteId, siteName, permanent, dryRun, message }` — so one parser handles either. The dry run reads the app first to fill in `name` / `siteId` / `siteName` / `action` / `permanent`; a real `--json` run always requires `--yes` (see above) and skips that read entirely, so on a real run `name`, `siteId`, and `siteName` are always `null` and `action` comes from the delete response itself. `message` is `null` on the dry run and populated once the delete actually happens.
+
 ```bash
+webflow apps delete app_abc123 --dry-run --json
 webflow apps delete app_abc123 --yes --json
 ```
 
 ### Frameworks
 
-| Framework | Init scaffold | Deploy support | Detected via package     |
-| --------- | ------------- | -------------- | ------------------------ |
-| `nextjs`  | ✓             | ✓              | `@opennextjs/cloudflare` |
-| `astro`   | ✓             | ✓              | `@astrojs/cloudflare`    |
+| Framework | Init scaffold                | Deploy support | Detected via package     |
+| --------- | ----------------------------- | -------------- | ------------------------ |
+| `nextjs`  | ✓ (standalone + site-attached) | ✓              | `@opennextjs/cloudflare` |
+| `astro`   | ✓ (standalone + site-attached) | ✓              | `@astrojs/cloudflare`    |
+| `vite`    | ✓ (standalone + site-attached) | ✓              | `vite`                   |
+| `static`  | ✓ (standalone only)            | ✓              | n/a — see below           |
 
 Any other value in `cloud.framework` causes `apps deploy` to exit with code 1.
 
-> **Scaffolds are fetched from GitHub at init time.** The CLI downloads scaffold tarballs from `Webflow-Examples/hello-world-{astro,nextjs}*`, each pinned to a versioned (`vN`) branch that the installed CLI expects. `apps init` therefore requires network access to `github.com`. Old CLI installs keep working because each release stays pinned to a compatible scaffold branch.
+**`static` only scaffolds standalone apps** — `apps init --new --framework static` works; `apps init --site-id ... --framework static` (site-attached) does not, there is no site-attached static scaffold. For an existing static project (already built, or hand-written), deploy-time detection doesn't need a scaffold at all: a directory with a root `index.html` and **no** `package.json` is auto-detected as static (assets-only, no build, no worker); an explicit `{ "cloud": { "framework": "static" } }` in `webflow.json` also selects it and always wins even if build/runtime files are present. A directory that has `index.html` **and** build/runtime indicators but no explicit `framework` is rejected rather than guessed — declare `cloud.framework` explicitly to force one interpretation.
+
+> **Scaffolds are fetched from GitHub at init time.** The CLI downloads scaffold tarballs from `Webflow-Examples/hello-world-{astro,nextjs,vite,static-app}*` (site-attached scaffolds from the matching `*-devlink` repo), each pinned to a versioned (`vN`) branch that the installed CLI expects. `apps init` therefore requires network access to `github.com`. Old CLI installs keep working because each release stays pinned to a compatible scaffold branch.
 
 ### Global flags
 
@@ -1172,12 +1165,9 @@ jobs:
         with:
           node-version: 20
 
-      # `apps` is beta-only — @latest has no `apps` namespace and this job
-      # would fail with an unknown-command error. Use `webflow cloud deploy`
-      # with @latest if you need to stay on the stable channel.
-      # Pin an exact version in CI: the @next tag moves without notice.
+      # Pin an exact version in CI: the @latest tag moves without notice.
       - name: Install Webflow CLI
-        run: npm install -g @webflow/webflow-cli@next
+        run: npm install -g @webflow/webflow-cli@latest
 
       - name: Deploy
         run: |
@@ -1250,7 +1240,7 @@ If Astro is the framework and `@astrojs/react` is absent, the CLI runs `npm inst
 
 ### Cloudflare bindings (D1 / KV / R2)
 
-The CLI merges `wrangler.json` bindings at build time. Limits: **max 5 of each type**. For D1, set `migrations_dir` in the binding — the CLI copies migration files automatically.
+The CLI merges `wrangler.json` bindings at build time. **No fixed per-type limit** — storage is governed by the workspace's cloud-storage entitlement, not a hardcoded CLI count. For D1, set `migrations_dir` in the binding — the CLI copies migration files automatically.
 
 ### Error handling
 
@@ -1270,10 +1260,8 @@ Commit all changes before deploying to production.
 
 ### Known limitations
 
-- **The whole `apps` namespace is beta (`@next`)** — see [the beta banner](#beta-webflow-apps-requires-next). On `@latest` only `cloud init` / `deploy` / `create` / `list` exist.
-- **Deploy has no `--dry-run`** — a build validation always triggers a real deployment. Every other write _does_ support `--dry-run`: `apps init` (**both** paths — the scaffold and `--import`), `link`, `update`, `delete`, `environments create` / `update` / `delete`, `deployments redeploy` / `trigger`, and all four `env-vars` subcommands. Note `--dry-run` is registered on `apps init` only, not on the `cloud init` alias.
-- **Deploy has no `--json`** — the deploy URL and app ID must be parsed from stdout. The read/management commands (`list`, `get`, `domains`, `environments`, `deployments`, `logs`, `env-vars`) all support `--json`.
-- **No `--watch` on logs** — the log endpoints are pollable but do not stream; poll on an interval to follow a build. Deployments are the exception: `apps deployments get --wait` blocks to a terminal status for you.
+- **`apps deploy` has `--dry-run` and `--json`, but only on the `apps` form** — `cloud deploy` (the deprecated alias) has neither. See [the deploy flags table](#webflow-apps-deploy) for the exact output shapes. Every other write also supports `--dry-run`: `apps init` (**both** paths — the scaffold and `--import`), `link`, `update`, `delete`, `environments create` / `update` / `delete`, `deployments redeploy` / `trigger`, and all four `env-vars` subcommands. Note `--dry-run` on `init` is registered on `apps init` only, not on the `cloud init` alias.
+- **No `--watch` on logs** — the log endpoints are pollable but do not stream; poll on an interval to follow a build. Deployments are the exception: `apps deployments get` / `redeploy` / `trigger` all take `--wait` to block to a terminal status for you.
 - **`apps logs build` requires a deployment ID** — it does not default to the latest deployment. Get one from `apps deployments list` first.
 - **`deployments redeploy` / `trigger` need a GitHub-connected app** — apps deployed from local files via `apps deploy` are not eligible.
 - **`--q` never searches values or IDs** — only the resource's primary name field (app name, environment branch, variable key).
@@ -1381,7 +1369,7 @@ This writes `cloud.framework` back into `webflow.json` so subsequent deploys don
 }
 ```
 
-Valid values: `nextjs`, `astro`. Any other value exits with code 1.
+Valid values: `nextjs`, `astro`, `vite`, `static`. Any other value exits with code 1.
 
 ### Build fails, need full trace
 
