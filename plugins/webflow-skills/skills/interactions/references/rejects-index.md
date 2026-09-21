@@ -17,7 +17,7 @@ If a fragment below does not match your error exactly, check the other family:
 
 | Surface                      | Example wording                                                                                                                                                     |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Guard (`designerInvariants`) | `Action type "wf:rive" in timeline "t1" is not in the Designer's default capability set (it is gated behind a feature flag) and cannot be created through the API.` |
+| Guard (`designerInvariants`) | `Trigger "wf:navbar" is not in the Designer's default capability set (it is gated behind a feature flag) and cannot be created through the API.` |
 | MCP tool layer               | `Trigger type "wf:navbar" is not in the Designer's default capability set and cannot be used.`                                                                      |
 
 ## Fragment to cause

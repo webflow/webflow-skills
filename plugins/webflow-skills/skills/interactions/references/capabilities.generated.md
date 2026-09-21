@@ -20,8 +20,9 @@ pack's `references/` files and are maintained by hand.
 
 Authorable = the write path accepts it today. A `no` row is rejected for
 every caller; the guards take no flag or session parameter. This table
-cannot say *why* a row is unauthorable — some are gated pending GA and some
-have no Designer schema at all. See `references/gated-capabilities.md`.
+cannot say *why* a row is unauthorable — some are excluded from the default
+capability set and some have no Designer schema at all. See
+`references/gated-capabilities.md`.
 
 The Target column is probed against the write path rather than read from a
 single constant, because the policy is spread across several guards.
@@ -58,7 +59,9 @@ Conditions capability (trigger-level `conditionalLogic`): **not available**. Int
 
 ## Actions
 
-Authorable action keys: `wf:class`, `wf:lottie`, `wf:mouse-follow`, `wf:spline`, `wf:style`, `wf:transform`.
+Authorable action keys: `wf:animate-rive`, `wf:class`, `wf:lottie`, `wf:mouse-follow`, `wf:rive`, `wf:spline`, `wf:style`, `wf:transform`, `wf:variable`.
+
+`wf:variable`, `wf:rive`, and `wf:animate-rive` are default-on. Their property shapes are not in the table below; call `data_interactions_tool` action `guide` before writing one.
 
 Non-animatable properties are only valid inside a Set action (`tt: 3`).
 Plugin keys absent from the property table skip the property-name check.
