@@ -116,6 +116,11 @@ A reveal that plays but is never seen is a different problem with the same
 appearance: check `start` before assuming the interaction is broken. See
 [`trigger-scroll.md`](trigger-scroll.md).
 
+An empty read is a third case with the same quality of silence. `list_interactions`
+returning `{items: [], total: 0}` is neither a reject nor a silent write: the tool
+reads IX3 only, so a site whose interactions are IX2 reads exactly like a site
+with none. Confirm before building as though there is no existing motion.
+
 ## Ordering
 
 Only the **first** violation is reported. `findTriggerInvariantError` fixes the
