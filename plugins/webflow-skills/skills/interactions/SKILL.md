@@ -1,11 +1,17 @@
 ---
 name: webflow-mcp:interactions
-version: 2026.09.16
-description: Create, update, list, and delete Webflow IX3 interactions (GSAP animations) through Webflow MCP. Use when the user wants click/hover/load/scroll/mouse-move animations, interaction timelines, or data_interactions_tool / create_interaction payloads. Requires beta MCP + ff-ix3-interaction-apis during dogfood.
+version: 2026.09.20
+description: Create, update, list, and delete Webflow IX3 interactions (GSAP animations) through Webflow MCP. Use when the user wants click/hover/load/scroll/mouse-move animations, interaction timelines, or data_interactions_tool / create_interaction payloads.
 ---
 
 <!--
 CHANGELOG
+2026.09.20 — IX3 interaction APIs are GA. Removed the beta endpoint, the
+  `ff-ix3-interaction-apis` flag, and the gate-check step. `data_interactions_tool`
+  is on the stable MCP server for every caller now.
+  * An empty `list_interactions` result is not proof a site has no interactions: the tool
+    reads IX3 only, so an IX2 site reads as empty. Added as Phase 1 step 5 and to the
+    rejects index.
 2026.09.16 — Session 2 re-read against the live host.
   * The `guide` action and `webflow://guides/interactions` are live (CF #461).
     The "not live / in review as #399" sentence was false. Prefer
@@ -83,12 +89,8 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 - **No Designer or MCP Bridge required.** `data_interactions_tool` is headless, the same way `data_element_tool` is. Designer is only useful afterward, to inspect the Interactions panel or Preview. Do not ask the user to open the Bridge app in order to list or write interactions.
 - After Webflow monorepo PR #117284 ships: if the Webflow Filesystem (WFS) interactions lane is `built`, prefer `site/interactions/interactions.ix3.json` — `data_interactions_tool` is then unregistered. **Until that PR lands, the tool is still registered even in WFS sessions.** This skill is the MCP CRUD path.
 
-## Tool surface (beta dogfood)
+## Tool surface
 
-These tools are **not on stable MCP**.
-
-- **Server:** `https://mcp.webflow.com/beta/mcp`
-- **Flag:** `ff-ix3-interaction-apis`
 - **Scopes:** `pages:read` / `pages:write`
 - **Compound tool:** `data_interactions_tool`
 - **Actions:** `guide`, `list_interactions`, `get_interaction`, `create_interaction`, `update_interaction`, `delete_interaction`
@@ -109,7 +111,8 @@ These tools are **not on stable MCP**.
    `guide` — do not read `webflow_guide_tool`'s silence as "there is nothing to know."
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
-4. **Confirm the gate**: beta MCP endpoint and `ff-ix3-interaction-apis` covering the caller's identity. If `data_interactions_tool` is unregistered, stop and tell the user. The likely causes are the stable MCP endpoint instead of beta, or the flag not covering that identity. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. Do not work around it. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
+4. **Confirm the tool is registered**: if `data_interactions_tool` is unregistered, stop and tell the user rather than working around it. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
+5. **An empty list is not proof the site has none.** `data_interactions_tool` reads IX3 only. A site whose interactions are IX2 returns `{items: [], total: 0}` with no error, indistinguishable from a site that has none. Never conclude a site has no motion from an empty read: tell the user what you got and have them check the version selector at the bottom of the Interactions panel. A create still succeeds on an IX2 site, and the site then carries both runtimes.
 
 ### Phase 2: Read the contract for what you are building
 
@@ -710,14 +713,10 @@ for `data_interactions_tool`, `data_style_tool`, and `data_element_tool`; nested
 - **Roles live on `timelines[].triggerMetadata`**, not on the trigger. Mouse-move needs a unique `mouseX` / `mouseY` / `interval` per timeline.
 - On reject: read the error, look it up in [references/rejects-index.md](references/rejects-index.md), do not invent fields.
 
-## Install / gate
+## Install
 
 ```
 npx -y skills add webflow/webflow-skills --skill 'webflow-mcp:interactions' --yes
 ```
 
-Optional `--agent claude-code` (or cursor). Testers also need:
-
-- Beta MCP: `https://mcp.webflow.com/beta/mcp`
-- Flag: `ff-ix3-interaction-apis`
-- Scopes: `pages:read` / `pages:write`
+Optional `--agent claude-code` (or cursor). Callers need scopes `pages:read` / `pages:write`.
