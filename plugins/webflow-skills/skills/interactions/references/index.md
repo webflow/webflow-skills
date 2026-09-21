@@ -40,7 +40,8 @@ That pair is enough to author any single-trigger interaction.
 | Scroll, scroll scrub, parallax                | [`trigger-scroll.md`](trigger-scroll.md)         |
 | Mouse move, cursor follow                     | [`trigger-mouse-move.md`](trigger-mouse-move.md) |
 | Custom JS event                               | [`trigger-custom.md`](trigger-custom.md)         |
-| Navbar, dropdown, conditions, Rive, variables | [`gated-capabilities.md`](gated-capabilities.md) |
+| Navbar, dropdown, conditions                  | [`gated-capabilities.md`](gated-capabilities.md) |
+| Variable, Rive, Animate Rive                 | `data_interactions_tool` action `guide`          |
 
 | Also relevant                                         | Read                                                                       |
 | ----------------------------------------------------- | -------------------------------------------------------------------------- |

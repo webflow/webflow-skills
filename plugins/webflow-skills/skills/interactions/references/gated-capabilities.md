@@ -9,21 +9,21 @@ Statsig state — do not attempt these, and tell the user the capability is
 unavailable through the API rather than producing a payload that will be
 rejected.
 
+`wf:variable`, `wf:rive`, and `wf:animate-rive` are authorable. Call
+`data_interactions_tool` action `guide` for their shapes. They are not in the
+table below.
+
 Two different reasons are collapsed into one behavior, and the distinction
 matters for what you tell the user.
 
-## Gated pending GA
+## Not in the default capability set
 
-Registered in the Designer, excluded from the API's default capability set until
-the feature reaches general availability. These will become authorable.
+Registered in the Designer, and refused by the write path for every caller.
 
 | Capability                       | Kind           | Guard                           |
 | -------------------------------- | -------------- | ------------------------------- |
 | `wf:navbar`                      | trigger        | `findFlagGatedTriggerError`     |
 | `wf:dropdown`                    | trigger        | `findFlagGatedTriggerError`     |
-| `wf:variable`                    | action         | `findFlagGatedActionError`      |
-| `wf:rive`                        | action         | `findFlagGatedActionError`      |
-| `wf:animate-rive`                | action         | `findFlagGatedActionError`      |
 | Trigger-level `conditionalLogic` | trigger config | `findConditionsCapabilityError` |
 
 Fragment for triggers and actions:

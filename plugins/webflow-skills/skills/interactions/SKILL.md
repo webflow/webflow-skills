@@ -1,11 +1,15 @@
 ---
 name: webflow-mcp:interactions
-version: 2026.09.20
+version: 2026.09.21
 description: Create, update, list, and delete Webflow IX3 interactions (GSAP animations) through Webflow MCP. Use when the user wants click/hover/load/scroll/mouse-move animations, interaction timelines, or data_interactions_tool / create_interaction payloads.
 ---
 
 <!--
 CHANGELOG
+2026.09.21 — Stable GA follow-up. `webflow_guide_tool` includes a short
+  Interactions section; payload shapes still come from action `guide`.
+  Dropped the monorepo PR citation for WFS. `wf:variable`, `wf:rive`, and
+  `wf:animate-rive` are default-on; call `guide` for their shapes.
 2026.09.20 — IX3 interaction APIs are GA. Removed the beta endpoint, the
   `ff-ix3-interaction-apis` flag, and the gate-check step. `data_interactions_tool`
   is on the stable MCP server for every caller now.
@@ -40,8 +44,6 @@ shape does this accepted field take".
     Designer check then disproved the remove-button penalty the role form was
     said to carry: both forms show a delete control on both action groups, so
     there is no editability tradeoff to trade against.
-  * `webflow_guide_tool` returns nothing about interactions; said so rather than
-    letting the mandated first step imply otherwise.
   * References re-published from the corrected pack, which also adds the
     `wf:lottie` / `wf:spline` value shapes, the `ix3-*` wrapper shapes, the
     `{from,to}` exception for plugin namespaces, `playInReverse`'s location, a
@@ -79,7 +81,7 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 
 **ALWAYS use Webflow MCP tools for all operations:**
 
-- Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call** — it covers general MCP conventions and returns nothing about interactions. IX3 payload shapes come from `data_interactions_tool` action `guide`
+- Use Webflow MCP's `webflow_guide_tool` to get best practices **before any other tool call**. It includes a short Interactions section that names `data_interactions_tool` and tells you to call action `guide` before writing. Payload shapes come from that `guide` action, not from the short section.
 - Use Webflow MCP's `data_sites_tool` with action `list_sites` to identify the target site
 - Use Webflow MCP's `data_pages_tool` with action `list_pages` to find the target page by name or slug
 - Use Webflow MCP's `data_interactions_tool` for guide / list / get / create / update / delete
@@ -87,7 +89,7 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 - DO NOT use any other tools or methods for Webflow interaction CRUD
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
 - **No Designer or MCP Bridge required.** `data_interactions_tool` is headless, the same way `data_element_tool` is. Designer is only useful afterward, to inspect the Interactions panel or Preview. Do not ask the user to open the Bridge app in order to list or write interactions.
-- After Webflow monorepo PR #117284 ships: if the Webflow Filesystem (WFS) interactions lane is `built`, prefer `site/interactions/interactions.ix3.json` — `data_interactions_tool` is then unregistered. **Until that PR lands, the tool is still registered even in WFS sessions.** This skill is the MCP CRUD path.
+- If `data_interactions_tool` is absent from the tool list and the session contains `site/interactions/interactions.ix3.json`, edit that file. Otherwise use `data_interactions_tool`. This skill is the MCP path.
 
 ## Tool surface
 
@@ -103,15 +105,14 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 
 ### Phase 1: Discovery
 
-1. **Call `webflow_guide_tool` first** — always the first MCP tool call. Be clear
-   about what it gives you: general MCP tool conventions, and **nothing about
-   interactions**. Its response contains no occurrence of `interaction`, `ix3`,
-   `wf:click`, or `scrollTrigger` today. Call it for the site/page/element
-   conventions, then get IX3 payload shapes from `data_interactions_tool` →
-   `guide` — do not read `webflow_guide_tool`'s silence as "there is nothing to know."
+1. **Call `webflow_guide_tool` first** — always the first MCP tool call. It covers
+   general MCP conventions and includes a short Interactions section
+   (`data_interactions_tool`, its actions, top-level `siteId` and `pageId`).
+   That section is not the payload contract. Get legal shapes from
+   `data_interactions_tool` → `guide`.
 2. **Get the site**: `data_sites_tool` with `list_sites`. If only one site exists, use it.
 3. **Get the page**: `data_pages_tool` with `list_pages`. You need that page's ID as top-level `pageId` on every `data_interactions_tool` call.
-4. **Confirm the tool is registered**: if `data_interactions_tool` is unregistered, stop and tell the user rather than working around it. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. `ff-ix3-interaction-de-api` is a **different** flag, for the Designer Extension iframe surface; it is not what this tool needs.
+4. **Confirm the tool is registered**: if `data_interactions_tool` is unregistered, stop and tell the user rather than working around it. Do not treat a missing tool as a missing Bridge session, and do not ask the user to open Designer or the MCP Bridge. If the session contains `site/interactions/interactions.ix3.json`, edit that file instead.
 5. **An empty list is not proof the site has none.** `data_interactions_tool` reads IX3 only. A site whose interactions are IX2 returns `{items: [], total: 0}` with no error, indistinguishable from a site that has none. Never conclude a site has no motion from an empty read: tell the user what you got and have them check the version selector at the bottom of the Interactions panel. A create still succeeds on an IX2 site, and the site then carries both runtimes.
 
 ### Phase 2: Read the contract for what you are building
@@ -129,7 +130,8 @@ Create and edit IX3 interactions (GSAP animations) through Webflow MCP.
 | Scroll, scrub, parallax                       | [references/trigger-scroll.md](references/trigger-scroll.md)                 |
 | Mouse move, cursor follow                     | [references/trigger-mouse-move.md](references/trigger-mouse-move.md)         |
 | Custom JS event                               | [references/trigger-custom.md](references/trigger-custom.md)                 |
-| Navbar, dropdown, conditions, Rive, variables | [references/gated-capabilities.md](references/gated-capabilities.md)         |
+| Navbar, dropdown, conditions                  | [references/gated-capabilities.md](references/gated-capabilities.md)         |
+| Variable, Rive, Animate Rive                 | `data_interactions_tool` action `guide`                                      |
 | Envelope, IDs, scope, targets, filters        | [references/envelope-and-targets.md](references/envelope-and-targets.md)     |
 | Properties, values, `tt`, timing, splitText   | [references/actions-and-properties.md](references/actions-and-properties.md) |
 | Roles, groups, percent canvas                 | [references/timelines-and-groups.md](references/timelines-and-groups.md)     |
@@ -584,9 +586,7 @@ The panel's "Power 1 out" is `2`; its "Linear" is `0`.
 ```
 
 Advanced eases are objects discriminated on `type`. **Just write one** — no guard
-rejects an advanced ease at the write boundary, and
-`ff-styl-1612-ix3-advanced-easing` is public at 100% and classified stale, so it
-gates the panel's Adaptive Easing control rather than the API:
+rejects an advanced ease at the write boundary:
 `back {curve,power}`, `elastic {curve,amplitude,period}`, `steps {stepCount}`,
 `rough {templateCurve,points,strength,taper,randomizePoints,clampPoints}`,
 `slowMo {linearRatio,power,yoyoMode}`, `expoScale {startingScale,endingScale,templateCurve}`,
@@ -705,7 +705,7 @@ for `data_interactions_tool`, `data_style_tool`, and `data_element_tool`; nested
 - **A To tween reads only its `to` slot.** `[from, to]` on `tt: 0` is half discarded and GSAP animates from the element's live value, so `scale: [0.55, 1.15]` on an unscaled element goes 1 → 1.15 and `opacity: ["20%","100%"]` on an opaque element does nothing at all. Use `tt: 2` whenever the animation needs a start value.
 - **Do not put a click or hover trigger on an element its own from-state collapses** (`scaleX: 0`, `width: 0`). No box is left to click. Trigger on a parent and animate the child.
 - **Grouped timelines are authorable.** `groupId` (1–64 characters) is accepted on the MCP timeline input, and `config.assignedGroupId` on a click or hover trigger routes to it. An `assignedGroupId` that matches no timeline `groupId` is rejected rather than stored inert, so mismatches surface as an error instead of a dead interaction. Load, scroll, and continuous triggers ignore `assignedGroupId`.
-- **`wf:navbar` and `wf:dropdown` are not authorable, and neither are `wf:focus`, `wf:blur`, or `wf:change`.** The guards take no flag or session argument, so this holds for every caller regardless of Statsig state — no flag turns it on for you. Navbar and dropdown are registered in the Designer and excluded pending GA; focus, blur, and change have no Designer schema at all. Tell the user the trigger is unavailable rather than attempting a write. See [references/gated-capabilities.md](references/gated-capabilities.md).
+- **`wf:navbar` and `wf:dropdown` are not authorable, and neither are `wf:focus`, `wf:blur`, or `wf:change`.** The guards take no flag or session argument, so this holds for every caller regardless of Statsig state — no flag turns it on for you. Navbar and dropdown are registered in the Designer and excluded from the default capability set; focus, blur, and change have no Designer schema at all. Tell the user the trigger is unavailable rather than attempting a write. See [references/gated-capabilities.md](references/gated-capabilities.md). `wf:variable`, `wf:rive`, and `wf:animate-rive` are authorable; call `guide` for their shapes.
 - **No GSAP position operators** (`+=`, `<`, `>`) in `timing.position`. Use a finite number (seconds) or `'500ms'`.
 - **Duration is seconds.** `timing.duration: 0.4` is 400ms. `400` is 400 seconds. Use `"400ms"` if you think in milliseconds.
 - **From / FromTo (`tt: 1` / `2`) sit at the from-state until the trigger fires.** Prefer To (`tt: 0` or omit) when the element should be visible at rest.
