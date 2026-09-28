@@ -96,6 +96,12 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-cli:code-component | Create and deploy reusable React components for Webflow Designer |
 | webflow-cli:troubleshooter | Diagnose and fix Webflow CLI issues including installation, auth, build, and bundle problems |
 
+### Webflow Designer API Skills
+
+| Skill | Description |
+|-------|-------------|
+| webflow-designer-api:interactions | Create and edit interactions from a Designer Extension with `webflow.interactions` |
+
 ### Webflow Code Component Skills
 
 | Skill | Description |
