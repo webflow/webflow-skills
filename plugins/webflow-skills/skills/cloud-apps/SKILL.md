@@ -18,6 +18,12 @@ MCP.
 
 ### 1. Establish scope
 
+Use the Webflow MCP connection established by the user's request or existing task context. If only one connection is active, use it without asking the user to choose or reconfirm a region. If multiple connections are active and the intended target remains ambiguous, ask the user to disambiguate before proceeding with target-dependent operations. Do not switch regions to recover from missing resources or access errors.
+
+Before handing an existing MCP app or environment to the CLI for configuration writes or deployment, compare their configured regions. If they differ, do not assume either is correct or silently retarget either tool. Resolve the intended target from explicit task context; if that does not resolve the conflict, ask the user. Pause dependent mutations until the conflict is resolved.
+
+Once the intended region is established, verify that the CLI can read the exact MCP app and environment IDs, and carry that region and those IDs explicitly into subsequent mutations. Login status or a region label alone is insufficient. If verification fails, report the failure without inferring its cause and pause dependent mutations. Continue independent work whose target is established.
+
 1. Call `webflow_guide_tool` before any other Webflow MCP tool. The live guide
    and action schemas are authoritative for current arguments and responses.
 2. Use Webflow MCP tools for Webflow operations except the explicit CLI handoff
