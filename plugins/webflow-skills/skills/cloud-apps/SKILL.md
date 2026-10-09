@@ -18,6 +18,17 @@ MCP.
 
 ### 1. Establish scope
 
+**Maintain regional consistency.** Use the configured Webflow MCP connection as
+the task's region and keep all operations on that connection. EU and US resources
+and authorizations are separate. Do not switch regions to resolve missing
+resources or access errors; distinguish authentication, OAuth scopes, resource
+grants, and user permissions.
+
+Before a CLI handoff writes configuration or deploys, verify that it uses the same
+region and can read the exact MCP app and environment IDs. A login status or
+region label alone is insufficient. If the targets do not match, stop dependent
+writes and report the mismatch.
+
 1. Call `webflow_guide_tool` before any other Webflow MCP tool. The live guide
    and action schemas are authoritative for current arguments and responses.
 2. Use Webflow MCP tools for Webflow operations except the explicit CLI handoff
