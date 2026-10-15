@@ -21,6 +21,14 @@ claude plugin install webflow-skills@webflow-skills
 
 Install from the Cursor Marketplace or add manually via **Settings > Rules > Add Rule > Remote Rule (Github)** with `webflow/webflow-skills`.
 
+### Neotask
+
+Install from [Neotask Construct](https://construct.neotask.ai/p/webflow-skills):
+
+```
+neotask construct install webflow-skills
+```
+
 ### npx skills
 
 Install using the [`npx skills`](https://skills.sh) CLI:
