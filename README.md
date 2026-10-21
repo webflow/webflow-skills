@@ -85,7 +85,7 @@ All skills ship from the single `webflow-skills` plugin.
 | webflow-mcp:interactions | Create and edit IX3 interactions (click/hover/scroll/…) via MCP |
 | webflow-mcp:figma-to-webflow | Build pages, sections, components, or full sites from Figma designs using Figma MCP and Webflow MCP |
 | webflow-mcp:cloud-apps | Create and operate GitHub-source Webflow Cloud apps, including environments, deployments, configuration checks, domains, and diagnostics |
-| webflow-mcp:waf-rules | Review and change Enterprise sites' WAF rules (IP, country, ASN, User-Agent) with validation, preview, and confirmation |
+| webflow-mcp:waf-rules | Review and change Enterprise sites' WAF rules (IP, country, ASN, User-Agent) and Bot bypass settings with preview and confirmation |
 
 ### Webflow CLI Skills
 
