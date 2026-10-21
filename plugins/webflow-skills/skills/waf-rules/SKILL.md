@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:waf-rules
-description: Review and change a Webflow site's Web Application Firewall (WAF) rules through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; or review or explain the current rules. Every change is validated, previewed, and confirmed by the user before it reaches live traffic. Needs an Enterprise plan that includes WAF, and WAF MCP must be enabled for the workspace.
+description: Review and change a Webflow site's Web Application Firewall (WAF) rules through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; review or explain the current rules; or draft rules from findings about unwanted traffic. Every change is validated, previewed, and confirmed by the user before it reaches live traffic. Needs an Enterprise plan that includes WAF, and WAF MCP must be enabled for the workspace.
 ---
 
 # WAF Rules
@@ -99,6 +99,50 @@ Only the rule type being changed is checked. `validate_waf_rule` and `test_waf_r
 3. For a plain-language reading of a rule type, pass its current config to `validate_waf_rule` and use `explanation`. When domains differ, set `domains` and `previousDomains` to that one domain.
 4. `suggest_waf_changes` proposes changes and applies none. A `proposedChange` is a single entry: merge it into the full config and take it through the normal flow. Suggestions of type `setting` can't be applied with these actions.
 
+### Drafting rules from traffic findings
+
+Use this when the user brings findings (User-Agents, paths, IPs, ASNs, countries) instead of a specific rule. Draft the configs, then take each one through Phase 2 onward. Drafting changes nothing.
+
+Classification comes from the user's own traffic analysis. Don't guess it: a wrong category produces a wrong scope. If a User-Agent arrives without one, ask.
+
+| Category | Meaning | Examples | Rule |
+|---|---|---|---|
+| A. Certain bot | Self-evidently automated | `curl`, `HeadlessChrome/...`, an empty UA, a run of sequential synthetic browser versions | BLOCK, global |
+| B. Cooperative crawler | Identifies itself and respects `robots.txt` | Googlebot, Bingbot, GPTBot | ALLOW, before any BLOCK |
+| C. Monitoring | Health checks and uptime monitors | Route 53 health checks, Pingdom | No rule. The fix is stopping the health check. |
+| D. Suspicious | Looks like a browser but with unusual volume or a uniform path pattern | A current Chrome UA hitting `/` millions of times | BLOCK, `paths` limited to the confirmed bot paths. A global BLOCK is valid if the user asks. |
+
+- Treat Category C as a hypothesis until the traffic matches what that service does. For Category D, report behavior and volume only. Don't call it a confirmed bot.
+- An obsolete browser version (before 2020, such as Chrome/69) is a global BLOCK. A current version is a BLOCK with `paths` only. To track new releases without hardcoding a version, use `browserVersionFloor` with `minVersion` and `paths`.
+- Put every `ALLOW` before any `BLOCK`, and specific patterns before broad ones (`Googlebot` ALLOW before a `bot` BLOCK). Set `blockEmpty: true` when an empty User-Agent is confirmed.
+- IPs must come from the user's own origin, proxy, or CDN logs: Webflow doesn't provide raw IP logs. IP rules have no `paths`, so use a path-scoped ASN or user-agent rule for a path-scoped block.
+- Scope broad cloud ASNs (AWS 16509, DigitalOcean 14061, Hetzner 24940, OVH 16276, Azure 8075) to the confirmed bot paths. Otherwise real cloud-hosted traffic on other paths is blocked.
+- If a known automated client (an uptime check, an integration) would be locked out by a catch-all or an allow-list, tell the user a bot token fixes it.
+- A rule type with no data gets a note only, never an empty list.
+- Above each draft, give the data behind it, the false-positive risk, and what is missing.
+
+Don't measure or promise safety. Repeat any impact figures the user supplies and name their source. Otherwise write `Impact on real visitors: not assessed.` Blocking a real visitor means lost traffic that the product gives no way to see afterward. Warn about:
+
+| Scenario | Warn the user |
+|---|---|
+| A current browser version in a BLOCK | Real users on that version are blocked. Use `paths`. |
+| An ASN block that covers residential or mobile networks | Real users on those networks are blocked. |
+| A geo or ASN `ALLOW` list with a short list | Every unlisted country or network is denied, including requests with no signal. |
+| A common substring such as `bot` | It can match legitimate crawlers. Put `ALLOW` entries first. |
+| An `any` BLOCK or `ALLOW` list on a site with automated clients | The client can be locked out. Consider a bot token. |
+| A `browserVersionFloor` BLOCK without `minVersion` | If Webflow's version data is unavailable, it applies to every version of that browser. |
+
+### When a rule seems not to work
+
+Check in this order before calling a rule broken:
+
+1. A `*bot*` pattern is matched as the literal text `*bot*`, which never appears in a real User-Agent. Use `{ "pattern": "bot", "matchMode": "contains" }` or specific names such as `GPTBot`.
+2. The bot is verified and Bot bypass is on (see "Blocking bots and AI crawlers").
+3. The request carries a valid bot token, or `matchMode` and the pattern text don't match what the user expects.
+4. The traffic goes to a different hostname than the one carrying the rule. A hostname with no config isn't checked.
+5. The change was saved moments ago. Test again once before concluding it failed.
+6. The request was allowed because the WAF couldn't reach a verdict. This is rare and can't explain a steady stream getting through. Treat it as the cause only after the other checks, and suggest contacting Webflow support.
+
 ## Rule Reference
 
 `mode` is `BLOCK` or `ALLOW`. `validate_waf_rule` names the exact field when something is wrong.
@@ -127,7 +171,7 @@ Only the rule type being changed is checked. `validate_waf_rule` and `test_waf_r
 ```
 
 - 1-250 ISO 3166-1 alpha-2 codes: `GB`, not `UK`. Unofficial codes such as `EU` and `XK` are rejected. Lowercase is accepted and stored uppercase.
-- `BLOCK` blocks the listed countries. `ALLOW` blocks every country that isn't listed, and may also block requests without country data (see [IP geolocation](https://developers.cloudflare.com/network/ip-geolocation/)).
+- `BLOCK` blocks the listed countries. `ALLOW` blocks every country that isn't listed, and also blocks requests with no country data, because `ALLOW` is default-deny. `BLOCK` lets requests with no country data through (see [IP geolocation](https://developers.cloudflare.com/network/ip-geolocation/)).
 - One `mode` and one optional `paths` for the whole list, so a domain can't have a country block list and allow list at the same time.
 
 ### asnRules
@@ -137,7 +181,7 @@ Only the rule type being changed is checked. `validate_waf_rule` and `test_waf_r
 ```
 
 - 1-100 ASNs as numbers, not strings like `"AS14061"`. Examples: 16509 Amazon/AWS, 14061 DigitalOcean, 24940 Hetzner, 16276 OVH.
-- `mode` and `paths` work as in geoRules, so an `ALLOW` list may also block requests without ASN data. Blocking a hosting network blocks everything that runs there, not only scrapers.
+- `mode` and `paths` work as in geoRules, so an `ALLOW` list also blocks requests with no ASN data (default-deny), while `BLOCK` lets them through. Blocking a hosting network blocks everything that runs there, not only scrapers.
 
 ### userAgentRules
 
@@ -160,10 +204,22 @@ Above, only AcmeApp can call `/api`, `BadBot` is blocked everywhere, and request
   - `contains` (default): case-insensitive substring. Plain text: `*` and `?` aren't wildcards.
   - `exact`: the whole User-Agent must equal `pattern` (case-sensitive).
   - `any`: matches every request, including ones with no User-Agent. Omit `pattern`. Put it after the `ALLOW` entries as a catch-all BLOCK to build an allow-list.
-  - `browserVersionFloor`: matches `browser` (`chrome`, `edge`, or `firefox`; Safari isn't supported) at or above a version floor set by `withinLatest` (the latest N major versions, 1-100), `minVersion` (1-1000), or both, in which case the higher floor applies. Omit `pattern`. Usually an `ALLOW` before a broader BLOCK.
+  - `browserVersionFloor`: matches `browser` (`chrome`, `edge`, or `firefox`; Safari isn't supported) at or above a version floor set by `withinLatest` (the latest N major versions, 1-100), `minVersion` (1-1000), or both, in which case the higher floor applies. Omit `pattern`. Usually an `ALLOW` before a broader BLOCK. If Webflow's browser version data is unavailable, a rule without `minVersion` applies to the whole browser family: a BLOCK then over-blocks and an ALLOW over-allows. Set `minVersion`, and scope a BLOCK with `paths`.
 - `browser`, `withinLatest`, and `minVersion` are only allowed with `browserVersionFloor`.
 - `pattern`: up to 256 characters, using letters, digits, spaces, and `. , ; : / ( ) [ ] - _ + ! ~ * ? @ # =`.
 - `paths` is set per pattern. A pattern whose `paths` don't match the request is skipped and the next one is checked.
+
+To let recent Chrome through on `/api` and block every other User-Agent there, put a `browserVersionFloor` `ALLOW` before the catch-all. `minVersion` keeps the `ALLOW` from applying to every Chrome version if Webflow's version data is unavailable:
+
+```json
+{
+  "blockEmpty": false,
+  "patterns": [
+    { "matchMode": "browserVersionFloor", "browser": "chrome", "withinLatest": 12, "minVersion": 100, "mode": "ALLOW", "paths": [{ "path": "/api" }] },
+    { "matchMode": "any", "mode": "BLOCK", "paths": [{ "path": "/api" }] }
+  ]
+}
+```
 
 ### Blocking bots and AI crawlers
 
@@ -171,7 +227,7 @@ Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifi
 
 - While Bot bypass is on, a User-Agent block can't stop a verified crawler. Cloudflare's [bot directory](https://radar.cloudflare.com/bots/directory) lists which bots are verified. If a block on a crawler doesn't take effect, the crawler is probably verified. Say this in the preview for any crawler block.
 - Turning Bot bypass off is a setting the user changes in the Dashboard, under Site settings > Security. These actions can't change it. With it off, the rules also apply to search engine crawlers, which can affect indexing.
-- Bots with Webflow bot tokens skip the rules the same way (`bypassAuthorizedBots`).
+- Bots with Webflow bot tokens skip the rules the same way (`bypassAuthorizedBots`; absent means enabled). The client sends `x-wf-waf-authorization: wf_wafbot_<64 hex characters>`. Customers create tokens in the Dashboard's Bot access section (up to 5 per site, each with a list of allowed methods that defaults to `GET` and `HEAD`). A token skips the site's WAF rules, but never Webflow's own protections. These actions don't create tokens. Never ask the user to paste a token, and never print one.
 
 ### Path scope
 
@@ -187,7 +243,9 @@ Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifi
 
 ### How rules combine
 
-- For each request, Bot bypass runs first (see "Blocking bots and AI crawlers"), then `ipRules`, `geoRules`, `asnRules`, and `userAgentRules`, in that order. The first BLOCK stops evaluation. If nothing blocks, the request is served.
+- For each request, Webflow's own protections run first, and these rules can't override them. Bot bypass comes next (see "Blocking bots and AI crawlers"), then `ipRules`, `geoRules`, `asnRules`, and `userAgentRules`, in that order. The first BLOCK stops evaluation. If nothing blocks, the request is served.
+- Geo, ASN, and user-agent rules are independent: there is no country-and-network combination, and each applies to everything on the hostname unless it has its own `paths`.
+- A path-scoped entry whose `paths` don't match the request is skipped, so it doesn't use up the first-match slot.
 - `ALLOW` never overrides another rule type. An IP `ALLOW` doesn't let a visitor past a geo block.
 
 ### Domain scope
@@ -199,7 +257,7 @@ Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifi
 
 ### Size limit
 
-Each domain's whole WAF config, all rule types together, has a storage limit. `targets[].candidateBytes` and `candidateBytesLimit` show the headroom, and going over is a `ValidationError`. Long IP lists and many `paths` entries use it up fastest: an IP list in the high double digits can reach it before the 100-entry cap.
+Each domain's whole WAF config, all rule types together, has a storage limit of 3,584 bytes, measured as the config's JSON. A write over it fails with `WAF configuration exceeds the storage limit (N of 3584 bytes used)`. `targets[].candidateBytes` and `candidateBytesLimit` show the headroom, and going over is a `ValidationError`. Long IP lists and many `paths` entries use it up fastest: an IP list in the high double digits can reach it before the 100-entry cap.
 
 ### Cloudflare references
 
@@ -347,6 +405,37 @@ Worth knowing: the IP allow for 198.51.100.7 doesn't exempt that address from
 the country rule. If it's outside the US and Canada, it's still blocked.
 ```
 
+### Example 6: Draft rules from traffic findings
+
+**User prompt:**
+```
+Traffic analysis found curl, HeadlessChrome/112, an empty UA, an old Chrome/69 UA, and Chrome/145 hitting / and /manifest.json. Googlebot is present. Write the rules.
+```
+
+1. `get_waf_rules` shows no user-agent rules. No IP, geo, or ASN data was given, so those get a note only.
+2. Classify: Googlebot is B, `curl` and `HeadlessChrome` are A, Chrome/69 is obsolete, and Chrome/145 is current, so its block gets `paths`.
+3. Draft the user-agent config with a note above it: "`blockEmpty: true` because an empty UA was confirmed. Googlebot `ALLOW` comes first. ⚠️ `Chrome/145` is a current version, so it is limited to `/` and `/manifest.json`. Real users on Chrome/145 who open those paths will be blocked. Impact on real visitors: not assessed."
+
+```json
+{
+  "blockEmpty": true,
+  "patterns": [
+    { "pattern": "Googlebot", "matchMode": "contains", "mode": "ALLOW" },
+    { "pattern": "curl", "matchMode": "contains", "mode": "BLOCK" },
+    { "pattern": "HeadlessChrome", "matchMode": "contains", "mode": "BLOCK" },
+    { "pattern": "Chrome/69.0.3497.100", "matchMode": "contains", "mode": "BLOCK" },
+    {
+      "pattern": "Chrome/145.0.0.0",
+      "matchMode": "contains",
+      "mode": "BLOCK",
+      "paths": [{ "path": "/", "matchMode": "exact" }, { "path": "/manifest.json", "matchMode": "exact" }]
+    }
+  ]
+}
+```
+
+4. Validate, check that the `explanation` limits the Chrome/145 block to the two paths, then test, confirm, and apply as usual.
+
 ## Guidelines
 
 - Never write without the user typing `confirm` after seeing the preview. A request to review, explain, or suggest isn't permission to change anything.
@@ -357,3 +446,5 @@ the country rule. If it's outside the US and Canada, it's still blocked.
 - Warn before blocking search crawlers, whole countries, or hosting networks, and suggest `paths` to limit broad rules.
 - Don't paste `previewToken` or `confirmationToken` values into chat.
 - When the API refuses a call, relay `error.message`. Don't work around a refusal with another tool or a direct API call.
+- Don't guess a classification when drafting. Ask for it.
+- Rate limiting isn't available in this WAF, so don't suggest it. Don't draft `pathRules` or generate bot tokens.
