@@ -1,11 +1,11 @@
 ---
 name: webflow-mcp:waf-rules
-description: Review and change a Webflow site's Web Application Firewall (WAF) rules through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; review or explain the current rules; or draft rules from findings about unwanted traffic. Every change is validated, previewed, and confirmed by the user before it reaches live traffic. Needs an Enterprise plan that includes WAF, and WAF MCP must be enabled for the workspace.
+description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs an Enterprise plan that includes WAF, and WAF MCP must be enabled for the workspace.
 ---
 
 # WAF Rules
 
-Review and change the Web Application Firewall (WAF) rules Webflow enforces on a site's connected custom domains. Rule changes reach live traffic without a site publish and can lock out real visitors, so every change is validated, previewed, and confirmed by the user first.
+Review and change the Web Application Firewall (WAF) rules and Bot bypass settings Webflow enforces on a site's connected custom domains. Changes reach live traffic without a site publish and can lock out real visitors, so validate rule configs, preview changes, and get user confirmation first.
 
 ## Important Note
 
@@ -17,8 +17,10 @@ Review and change the Web Application Firewall (WAF) rules Webflow enforces on a
   - `validate_waf_rule`: checks a candidate config and explains it in plain language. Changes nothing.
   - `test_waf_rules`: previews an update or deletion and returns a `previewToken`. Changes nothing.
   - `update_waf_rule`, `delete_waf_rule`: write the live firewall
+  - `test_waf_settings`: previews Bot bypass settings and returns a `previewToken`. Changes nothing.
+  - `update_waf_settings`: writes the live Bot bypass settings
   - `suggest_waf_changes`: proposes rule changes and applies none. Read-only.
-- DO NOT call the Webflow API directly or use any other tool to change WAF rules
+- DO NOT call the Webflow API directly or use any other tool to change WAF rules or settings
 - Include the `context` parameter when the tool schema asks for it (15-25 words, third-person perspective)
 
 ## Before You Start
@@ -27,8 +29,9 @@ The API refuses a call by name when one of these is missing (see Errors):
 
 - **Enterprise plan:** WAF MCP needs an Enterprise plan that includes WAF.
 - **WAF MCP enabled for the workspace:** WAF MCP is rolling out, so if `data_enterprise_tool` doesn't list the WAF actions, or a call returns `waf_mcp_not_enabled`, it isn't enabled for the workspace yet. Tell the user. They can still manage rules in the Dashboard under Site settings > Security.
+- **Settings action availability:** discover the `data_enterprise_tool` action schema before offering a settings change. If `test_waf_settings` or `update_waf_settings` is absent, say Bot bypass changes are unavailable through this connection and point to Dashboard > Site settings > Security. Don't claim success or try to change settings through a rule config.
 - **Role:** the user must be able to manage the site's custom domains: Site manager, Designer, Limited designer, or a custom role with that permission. Designer (needs approval), Marketer, Content editor, and Reviewer can't.
-- **Scopes:** `site_config:read` for reads and `validate_waf_rule`, `site_config:write` for `test_waf_rules`, `update_waf_rule`, and `delete_waf_rule`. The Webflow MCP app requests both. If a call returns `missing_scopes`, the user has to reauthorize the connection.
+- **Scopes:** `site_config:read` for reads and `validate_waf_rule`, `site_config:write` for `test_waf_rules`, `update_waf_rule`, `delete_waf_rule`, `test_waf_settings`, and `update_waf_settings`. The Webflow MCP app requests both. If a call returns `missing_scopes`, the user has to reauthorize the connection.
 
 ## Instructions
 
@@ -40,8 +43,8 @@ The API refuses a call by name when one of these is missing (see Errors):
    - `byDomain`: each connected custom domain's config, or `null` when it has none. A config holds up to four rule types (`ipRules`, `geoRules`, `asnRules`, `userAgentRules`) plus the bot bypass settings.
    - `uniform`: true when every domain has the same config. `rules` then holds it.
    - `hostnamesSkipped`: connected domains WAF can't apply rules to yet.
-   - `siteStateHash`: `test_waf_rules`, `update_waf_rule`, and `delete_waf_rule` require it as `expectedSiteStateHash`. Read again before each change; a hash from an earlier read is refused with `WafSiteStateChanged`.
-4. If the user asked for a review or an explanation, follow "Reviewing rules" and stop. A review doesn't authorize a change.
+   - `siteStateHash`: all rule and settings previews and writes require it as `expectedSiteStateHash`. Read again before each change; a hash from an earlier read is refused with `WafSiteStateChanged`.
+4. If the user asked for a review or an explanation, follow "Reviewing rules" and stop. A review doesn't authorize a change. For Bot bypass changes, follow "Changing Bot bypass settings" instead of Phases 2–4.
 
 ### Phase 2: Build and validate the change
 
@@ -65,6 +68,15 @@ The API refuses a call by name when one of these is missing (see Errors):
 13. On `HighRiskWafChange`, follow "High-risk changes". On any other `success: false`, see "Errors".
 14. On success, report `hostnamesApplied`, `hostnamesCleared` (domain-scoped updates), and any `hostnamesSkipped`. Then call `get_waf_rules` and check that each target domain has the new config.
 
+### Changing Bot bypass settings
+
+1. Confirm both settings actions are available, then read with `get_waf_rules`. Build `settings` with only `bypassVerifiedBots` and/or `bypassAuthorizedBots`: each is an optional boolean, at least one is required, and no other keys are allowed. A combined "enable Bot bypass" or "disable Bot bypass" request always sends **both** booleans with the same value; change just one only when the user explicitly asks for that setting.
+2. Settings changes are site-wide across connected custom domains: don't send `domains`, `previousDomains`, `ruleType`, or `config`. Each domain keeps its own rules, omitted settings, and existing bot tokens. Don't create or revoke tokens, ask the user to paste one, or expose one.
+3. Call `test_waf_settings` with `site_id`, `settings`, and `expectedSiteStateHash` from the latest `get_waf_rules`. It changes nothing and returns `targets` (`hostname`, `changed`, `candidateBytes`, `candidateBytesLimit`), `hostnamesSkipped`, `previewToken`, and `expiresAt`. It checks the candidate settings, not traffic; don't use `validate_waf_rule` for settings or claim a preview proves traffic is safe.
+4. Show current and proposed values per domain, which targets change, skipped hostnames, and size headroom when close to the limit. Turning bypass **off** makes customer WAF rules apply to verified crawlers and bots using valid tokens, which may affect search indexing. Turning it **on** lets eligible bots skip customer rules, never Webflow's own security protections. For a single-setting change, describe only the affected bot category.
+5. Ask the user to type `confirm`; "yes" or "ok" isn't enough. After confirmation, call `update_waf_settings` with the **exact same** `site_id`, `settings`, and `expectedSiteStateHash`, plus the `previewToken` from that test. If the preview expires, test again; if state changed, re-read and rebuild. Show any changed preview and get confirmation again.
+6. On success, report the result and any skipped hostnames. Re-read with `get_waf_rules` and verify the requested settings on each target domain and that rules and omitted settings were preserved. Don't claim success from the preview alone.
+
 ### Deleting a rule type
 
 1. Call `test_waf_rules` with `operation: "delete"`, `ruleType`, optional `domains`, and `expectedSiteStateHash`. Don't send `config` or `previousDomains`.
@@ -75,7 +87,7 @@ To remove the last entry from `ips`, `countryList`, or `asnList`, delete the rul
 
 ### Applying without a preview
 
-`directApply: true` on `update_waf_rule` or `delete_waf_rule` skips `test_waf_rules`. Use it only when the user explicitly asks to apply without a preview, and never together with `previewToken`. Still read, validate, show the change, and get `confirm`. The high-risk confirmation still applies.
+`directApply: true` on `update_waf_rule`, `delete_waf_rule`, or `update_waf_settings` skips the corresponding test action. Use it only when the user explicitly asks to apply without a preview, and never together with `previewToken`. Still read, validate rule configs, show the change and its warnings, and get `confirm`. The high-risk confirmation still applies to rule changes.
 
 ### High-risk changes
 
@@ -97,7 +109,7 @@ Only the rule type being changed is checked. `validate_waf_rule` and `test_waf_r
 1. Read with `get_waf_rules` and describe each domain's rules in plain language, in evaluation order (see "How rules combine"). Say when domains differ.
 2. Flag what's likely to surprise the user: geo or ASN allow-lists and user-agent catch-alls; IP or user-agent `ALLOW` entries the user may expect to exempt traffic from other rule types; entries that can never match because an earlier entry catches the same traffic; `bypassVerifiedBots: false` (search crawlers can be blocked); domains with no config; `hostnamesSkipped`.
 3. For a plain-language reading of a rule type, pass its current config to `validate_waf_rule` and use `explanation`. When domains differ, set `domains` and `previousDomains` to that one domain.
-4. `suggest_waf_changes` proposes changes and applies none. A `proposedChange` is a single entry: merge it into the full config and take it through the normal flow. Suggestions of type `setting` can't be applied with these actions.
+4. `suggest_waf_changes` proposes changes and applies none. A rule `proposedChange` is a single entry: merge it into the full config and take it through the normal flow. For a suggestion of type `setting`, use "Changing Bot bypass settings" only for `bypassVerifiedBots` or `bypassAuthorizedBots`, and only after the user requests the change. Other settings aren't supported by these actions.
 
 ### Drafting rules from traffic findings
 
@@ -117,7 +129,7 @@ Classification comes from the user's own traffic analysis. Don't guess it: a wro
 - Put every `ALLOW` before any `BLOCK`, and specific patterns before broad ones (`Googlebot` ALLOW before a `bot` BLOCK). Set `blockEmpty: true` when an empty User-Agent is confirmed.
 - IPs must come from the user's own origin, proxy, or CDN logs: Webflow doesn't provide raw IP logs. IP rules have no `paths`, so use a path-scoped ASN or user-agent rule for a path-scoped block.
 - Scope broad cloud ASNs (AWS 16509, DigitalOcean 14061, Hetzner 24940, OVH 16276, Azure 8075) to the confirmed bot paths. Otherwise real cloud-hosted traffic on other paths is blocked.
-- If a known automated client (an uptime check, an integration) would be locked out by a catch-all or an allow-list, tell the user a bot token fixes it.
+- If a known automated client (an uptime check, an integration) would be locked out by a catch-all or an allow-list, explain that a bot token can bypass customer rules only while `bypassAuthorizedBots` is enabled.
 - A rule type with no data gets a note only, never an empty list.
 - Above each draft, give the data behind it, the false-positive risk, and what is missing.
 
@@ -138,7 +150,7 @@ Check in this order before calling a rule broken:
 
 1. A `*bot*` pattern is matched as the literal text `*bot*`, which never appears in a real User-Agent. Use `{ "pattern": "bot", "matchMode": "contains" }` or specific names such as `GPTBot`.
 2. The bot is verified and Bot bypass is on (see "Blocking bots and AI crawlers").
-3. The request carries a valid bot token, or `matchMode` and the pattern text don't match what the user expects.
+3. The request carries a valid bot token and `bypassAuthorizedBots` is enabled, or `matchMode` and the pattern text don't match what the user expects.
 4. The traffic goes to a different hostname than the one carrying the rule. A hostname with no config isn't checked.
 5. The change was saved moments ago. Test again once before concluding it failed.
 6. The request was allowed because the WAF couldn't reach a verdict. This is rare and can't explain a steady stream getting through. Treat it as the cause only after the other checks, and suggest contacting Webflow support.
@@ -226,8 +238,8 @@ To let recent Chrome through on `/api` and block every other User-Agent there, p
 Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifiedBots: true`, the default), every bot Cloudflare verifies skips them. Cloudflare's verified list includes the major search engines and can include AI crawlers.
 
 - While Bot bypass is on, a User-Agent block can't stop a verified crawler. Cloudflare's [bot directory](https://radar.cloudflare.com/bots/directory) lists which bots are verified. If a block on a crawler doesn't take effect, the crawler is probably verified. Say this in the preview for any crawler block.
-- Turning Bot bypass off is a setting the user changes in the Dashboard, under Site settings > Security. These actions can't change it. With it off, the rules also apply to search engine crawlers, which can affect indexing.
-- Bots with Webflow bot tokens skip the rules the same way (`bypassAuthorizedBots`; absent means enabled). The client sends `x-wf-waf-authorization: wf_wafbot_<64 hex characters>`. Customers create tokens in the Dashboard's Bot access section (up to 5 per site, each with a list of allowed methods that defaults to `GET` and `HEAD`). A token skips the site's WAF rules, but never Webflow's own protections. These actions don't create tokens. Never ask the user to paste a token, and never print one.
+- Enable or disable Bot bypass through "Changing Bot bypass settings" when both settings actions are available; otherwise point to Dashboard > Site settings > Security. The combined control changes both `bypassVerifiedBots` and `bypassAuthorizedBots`. Turning it off makes rules apply to verified crawlers and token-authorized bots, and may affect indexing.
+- Bots with Webflow bot tokens skip the rules when `bypassAuthorizedBots` is enabled (absent means enabled). The client sends `x-wf-waf-authorization: wf_wafbot_<64 hex characters>`. Customers create tokens in the Dashboard's Bot access section (up to 5 per site, each with a list of allowed methods that defaults to `GET` and `HEAD`). A token skips the site's WAF rules, but never Webflow's own protections. Don't create or revoke tokens, ask the user to paste one, or print one.
 
 ### Path scope
 
@@ -250,7 +262,7 @@ Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifi
 
 ### Domain scope
 
-- Omit `domains` to change every connected custom domain. Each domain keeps its other rule types. When the domains' configs differ, a site-wide change can be refused with `WafConfigDrift`; use domain scope instead.
+- For rule changes, omit `domains` to change every connected custom domain. Each domain keeps its other rule types. When the domains' configs differ, a site-wide rule change can be refused with `WafConfigDrift`; use domain scope instead. Settings changes are always site-wide and preserve each domain's rules.
 - `domains` names target domains as they appear in `byDomain`. A domain-scoped update also needs `previousDomains`: the domains the rule you're editing covered before the edit, or `[]` for a new rule. The rule type is removed from every domain in `previousDomains` that isn't in `domains`. Domains in neither list don't change.
 - To move a geo rule from `www.example.com` to `shop.example.com`, send `domains: ["shop.example.com"]` and `previousDomains: ["www.example.com"]`.
 - Deletions take `domains` only.
@@ -274,7 +286,7 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 | Result | Meaning and what to do |
 |--------|------------------------|
 | `ValidationError` | Invalid config or request: the shape (`details`, plus `schema` from `validate_waf_rule`), an unknown domain, the size limit, or a date range. Fix it and validate again. |
-| `WafSiteStateChanged`, `WafPreviewStale` | The rules changed after your read or test. Don't resend. Read again, rebuild the change on the new state, show the user if it differs, then validate and test again. |
+| `WafSiteStateChanged`, `WafPreviewStale` | The rules or settings changed after your read or test. Don't resend. Read again, rebuild the change on the new state, show the user if it differs, then validate rule configs and test again. |
 | `WafPreviewExpired`, `WafPreviewInvalid` | The token lapsed or doesn't match the request. Test again and apply exactly the tested values. |
 | `WafPreviewRequired` | No `previewToken` was sent. Test first. |
 | `WafConflictingApplyMode` | Both `previewToken` and `directApply` were sent. Send only the token. |
@@ -283,9 +295,9 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 | `WafPartialMutation` | Some domains changed and others didn't. Show `error.recovery` (`applied`, `failed`, `unknown`, `pending`), read again, and reconcile with the user's OK. If a domain's state is `unknown`, suggest contacting Webflow support. |
 | `WafChangeInProgress`, `WafChangeUnavailable` | Another change is running, or changes are briefly unavailable. Retry shortly. |
 | `WafChangeInterrupted` | Another change interrupted this one. Read again and review before retrying. |
-| `WafConfigDrift` | The domains have different configs, so a site-wide change is refused. Use domain scope. |
+| `WafConfigDrift` | The domains have different configs, so a site-wide rule change is refused. Use domain scope for rules, not settings. |
 | `NoCloudflareHostnames` | No custom domain WAF can apply to yet: none is connected, or setup hasn't finished. Tell the user. |
-| `WafMcpWritesUnavailable` | Changing rules through MCP isn't available for this site yet. Nothing changed and reads still work. Point the user to Site settings > Security. |
+| `WafMcpWritesUnavailable` | Changing rules or settings through MCP isn't available for this site yet. Nothing changed and reads still work. Point the user to Site settings > Security. |
 | `WafTestedApplyUnavailable` | Applying a tested preview is off for this site. Nothing changed. Use `directApply` only if the user explicitly asks. |
 | 403 `waf_mcp_not_enabled` | WAF MCP isn't enabled for this site's workspace yet. Don't retry. |
 | 403 `waf_not_included_in_plan` | The site's plan doesn't include WAF, which is available on Enterprise plans. Don't retry. |
@@ -436,12 +448,24 @@ Traffic analysis found curl, HeadlessChrome/112, an empty UA, an old Chrome/69 U
 
 4. Validate, check that the `explanation` limits the Chrome/145 block to the two paths, then test, confirm, and apply as usual.
 
+### Example 7: Enable or disable Bot bypass
+
+**User prompt:**
+```
+Turn Bot bypass off for Acme Site.
+```
+
+1. Discover both settings actions and read the current state. Build `settings: {"bypassVerifiedBots": false, "bypassAuthorizedBots": false}`. For "turn Bot bypass on", send both as `true` instead.
+2. `test_waf_settings` with `site_id`, those settings, and the latest `expectedSiteStateHash`. Show affected domains and explain: "Verified crawlers and bots using valid tokens will be subject to your WAF rules. This may affect search indexing. Your rules and existing tokens stay unchanged. Type `confirm` to apply."
+3. Wait for `confirm`. Only then call `update_waf_settings` with the identical settings and hash plus the returned `previewToken`, then re-read to verify. If either action is missing, explain that MCP settings changes are unavailable and point to Site settings > Security; don't try a rule update instead.
+
 ## Guidelines
 
-- Never write without the user typing `confirm` after seeing the preview. A request to review, explain, or suggest isn't permission to change anything.
+- Never write without the user typing `confirm` after seeing the preview (or the change summary when they explicitly skipped preview). A request to review, explain, or suggest isn't permission to change anything.
 - Never send `highRiskChangeConfirmation` unless the user typed the `confirmationPhrase` after seeing that challenge.
 - Never use `directApply` unless the user explicitly asked to skip the preview.
 - Change one rule type at a time, and always send its complete config, merged from a fresh `get_waf_rules`.
+- Keep settings separate from rule configs. Combined Bot bypass changes send both booleans with the same value; preserve rules, omitted settings, and tokens.
 - Don't resend a failed write unchanged: read again, rebuild, and test again. Every update or delete attempt counts against the site's change limit.
 - Warn before blocking search crawlers, whole countries, or hosting networks, and suggest `paths` to limit broad rules.
 - Don't paste `previewToken` or `confirmationToken` values into chat.
