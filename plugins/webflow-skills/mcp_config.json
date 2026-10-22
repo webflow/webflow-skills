@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "webflow": {
+      "serverUrl": "https://mcp.webflow.com/mcp"
+    }
+  }
+}

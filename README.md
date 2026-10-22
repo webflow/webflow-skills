@@ -21,6 +21,16 @@ claude plugin install webflow-skills@webflow-skills
 
 Install from the Cursor Marketplace or add manually via **Settings > Rules > Add Rule > Remote Rule (Github)** with `webflow/webflow-skills`.
 
+### Google Antigravity
+
+Install from the Antigravity Marketplace under **Customizations**, or install from a local clone by running this in an Antigravity conversation:
+
+```
+/plugin install /path/to/webflow-skills/plugins/webflow-skills
+```
+
+Then open the Webflow plugin and click **Set up authentication** to connect the Webflow MCP server.
+
 ### npx skills
 
 Install using the [`npx skills`](https://skills.sh) CLI:
