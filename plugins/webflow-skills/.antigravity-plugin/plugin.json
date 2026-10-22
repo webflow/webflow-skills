@@ -1,0 +1,39 @@
+{
+  "name": "webflow-skills",
+  "displayName": "Webflow",
+  "version": "1.0.10",
+  "description": "Build and manage Webflow sites from Antigravity: CMS, Designer pages and components, Code Components, site audits, and safe publishing.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Run a site audit for my Webflow site",
+    "Build this Figma design in Webflow",
+    "Create a new Webflow Code Component"
+  ],
+  "category": "Developer Tools",
+  "keywords": [
+    "webflow",
+    "mcp",
+    "cms",
+    "site-audit",
+    "seo",
+    "accessibility",
+    "designer",
+    "components",
+    "code-components",
+    "figma",
+    "cli",
+    "devlink",
+    "webflow-cloud",
+    "safe-publish"
+  ],
+  "author": {
+    "name": "Webflow",
+    "email": "developers@webflow.com",
+    "url": "https://developers.webflow.com"
+  },
+  "homepage": "https://github.com/webflow/webflow-skills#readme",
+  "repository": "https://github.com/webflow/webflow-skills",
+  "license": "MIT",
+  "skills": ["./skills"],
+  "mcpServers": "./mcp_config.json"
+}

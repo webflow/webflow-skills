@@ -19,6 +19,9 @@ Key config files:
 - `plugins/webflow-skills/.mcp.json` — Symlink to the root `.mcp.json` for Codex plugin MCP config
 - `plugins/webflow-skills/assets/logo.svg` — Symlink to the root `assets/logo.svg` for Codex plugin branding
 - `.cursor-plugin/plugin.json` + `marketplace.json` — Cursor plugin config
+- `plugins/webflow-skills/.antigravity-plugin/plugin.json` — Google Antigravity plugin manifest
+- `plugins/webflow-skills/mcp_config.json` — Antigravity MCP config (Antigravity needs `serverUrl`, so it can't reuse `.mcp.json`)
+- `plugins/webflow-skills/README.md` — Pre-install README shown in the Antigravity Marketplace
 - `agents/webflow-agent.md` — Agent setup documentation
 
 ## CI Validation
