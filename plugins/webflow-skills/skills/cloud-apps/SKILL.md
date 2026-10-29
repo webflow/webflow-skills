@@ -54,6 +54,10 @@ list_environments(app_id) -> env_id
 list_deployments(app_id, env_id) -> deployment_id
 ```
 
+Use `list_deployments` to discover existing deployments, including a retry or
+rollback source. For a deployment queued by `trigger_deployment` or `redeploy`,
+use the returned `deploymentId` directly as `get_deployment`'s `deployment_id`.
+
 App names are unique only within a site, so resolve a named app with
 `site_id + name`. If multiple resources match, present distinguishing metadata
 and require the user to select one before any mutation. Use the live guide for
@@ -246,25 +250,27 @@ For a new deployment from the connected branch or a prior exact commit:
    current configuration, so compatibility is not guaranteed.
 5. Show the returned branch or commit and explain that execution creates a new
    GitHub build, not a deployment of local files.
-6. Require `confirm`. Immediately after confirmation, record the newest
-   deployment as the correlation baseline, then execute with `dry_run: false`
-   and one stable `idempotency_key`. Reuse the key only for exact retries of this
-   request.
+6. Require `confirm`, then execute with `dry_run: false` and one stable
+   `idempotency_key`. Reuse the key only for exact retries of this request.
 7. Interpret the execution result before monitoring:
-   - `queued`: this call enqueued a deployment.
+   - `queued`: the response identifies the enqueued deployment with
+     `deploymentId`. A completed idempotency replay preserves the original ID;
+     it does not enqueue another deployment.
    - `skipped` from `trigger_deployment`: the branch has no commit, so no
-     deployment was enqueued.
+     deployment was enqueued. Stop monitoring.
    - `processing`: an earlier call with this key is already in flight; this call
-     did not enqueue a duplicate.
+     did not enqueue a duplicate and returns no deployment ID. Use the original
+     queued response's ID if available; otherwise report attribution as
+     unresolved.
    - An unknown or unreadable status leaves the outcome uncertain.
-8. The action returns no deployment ID. For `queued` or an existing in-flight
-   request, poll `list_deployments` and `get_deployment` for a record appearing
-   above the baseline captured before the first execution attempt. If that
-   baseline is unavailable, report that attribution may be ambiguous. Do not
-   assume the newest record belongs to this request when deployments are
-   concurrent.
-9. Stop when the attributed deployment leaves an active state or the bounded
-   monitoring period ends. If monitoring ends first, report the last status and
+8. Poll `get_deployment` with the selected `app_id`, `env_id`, and the returned
+   `deploymentId` as `deployment_id`. For `redeploy`, this is the new deployment's
+   ID, not the source deployment's ID. If no ID is available, report it explicitly
+   and leave attribution unresolved. Do not fall back to polling deployment
+   lists or infer an ID from recency.
+9. Continue polling that exact ID while its status is `starting`, `building`, or
+   `deploying`. Stop when it leaves those states or the bounded monitoring period
+   ends. If monitoring ends first, report the deployment ID, last status, and
    timestamp; do not call it failed or enqueue a replacement for that reason.
 10. For a retry or rollback, preview the prior deployment's exact commit hash
     and message. A rollback creates a new build at that commit; it does not move
