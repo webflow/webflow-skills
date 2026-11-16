@@ -63,6 +63,19 @@ App names are unique only within a site, so resolve a named app with
 and require the user to select one before any mutation. Use the live guide for
 filter, pagination, cursor, and action-batching mechanics.
 
+#### Environment mount rules
+
+Before `create_environment` or a mount-changing `update_environment`, call
+`get_app` and use `siteAttached`: standalone apps (`false`) allow `/` or a
+non-root mount; site-attached apps (`true`) require a non-root mount. Do not
+infer attachment from `siteId`.
+
+Branches must be unique within the app; mounts must be unique across the site,
+including sibling apps. This app's environment list alone cannot rule out a
+mount conflict with a sibling app. While `/` is occupied, another environment
+needs a different mount. Keeping an environment's existing mount is a no-op,
+not a conflict.
+
 ### 3. Follow the matching user story
 
 #### Create a GitHub-source app
@@ -72,8 +85,7 @@ filter, pagination, cursor, and action-batching mechanics.
 2. For a site-attached app, resolve the site ID. Omit `site_id` for standalone.
 3. Apply the mount contract before previewing:
    - Standalone `create_app` provisions its initial environment at `/`; omit
-     `mount` or use `/`. Additional environments and later mount updates may
-     use non-root paths through `create_environment` and `update_environment`.
+     `mount` or use `/`.
    - A site-attached app defaults to `/app`, rejects `/`, and requires a valid
      non-root mount when overriding the default.
 4. Explain that standalone creation requires a workspace-scoped user token.
@@ -188,11 +200,8 @@ filter, pagination, cursor, and action-batching mechanics.
    constructing an address.
 2. Compare the current branch and mount with the user's intended mapping. If
    the request is only diagnostic, stop after reporting the mismatch.
-3. If the correction changes the mount, call `get_app` and use `siteAttached`:
-   a standalone app (`false`) allows `/` or a non-root mount; a site-attached
-   app (`true`) requires a non-root mount. Do not infer attachment from `siteId`.
-   Mounts must be unique across the site, including sibling apps; an unchanged
-   mount on this environment is a no-op, not a conflict.
+3. If the correction changes the mount, apply the environment mount rules
+   above.
 4. For a correction, show the exact before-and-after mapping. Explain that
    `update_environment` is immediate, has no dry run, and does not deploy code.
 5. Require `confirm`, call `update_environment` once, and report the returned
@@ -211,15 +220,8 @@ filter, pagination, cursor, and action-batching mechanics.
 
 #### Create an isolated environment for a branch and deploy it
 
-1. Resolve the existing app and call `get_app`. A standalone app
-   (`siteAttached: false`) allows `/` or a non-root mount; a site-attached app
-   (`true`) requires a non-root mount. Do not infer attachment from `siteId`.
-   Standalone creation provisions the initial environment at `/`; while it
-   occupies `/`, an additional environment needs a different mount.
+1. Resolve the existing app and apply the environment mount rules above.
 2. Page through `list_environments` to check for an existing branch or mount.
-   Branches must be unique within the app; mounts must be unique across the
-   site, including sibling apps. This app's environment list alone cannot rule
-   out a mount conflict with a sibling app.
 3. Show the proposed branch and mount. Explain that `create_environment` is
    immediate, has no dry run, and creates a mapping without deploying code.
 4. Generate one stable `idempotency_key`, require `confirm`, and call
