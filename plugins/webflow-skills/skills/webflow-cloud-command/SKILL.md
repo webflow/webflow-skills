@@ -245,7 +245,7 @@ webflow apps init --import https://github.com/acme/site \
   --site-id 6234abc --mount /app
 ```
 
-**A3-b — Project app** (`--mount` is **not allowed** — a project app owns the root of its own domain):
+**A3-b — Project app** (`--mount` is **not allowed** — a project app's initial environment uses `/`):
 
 ```bash
 webflow apps init --import https://github.com/acme/site --new
@@ -567,7 +567,7 @@ webflow apps init --new
 | `WEBFLOW_API_TOKEN` in `.env`          | Written                       | Written                               |
 | `cloud.workspace_id` in `webflow.json` | Not set                       | Set at init (used by first deploy)    |
 | Scaffold                               | `astro`, `nextjs`, `vite`     | `astro`, `nextjs`, `vite`, `static`    |
-| Mount path                             | Configurable (default `/app`) | Always `/`                            |
+| Initial mount path                     | Configurable (default `/app`) | `/` at creation                       |
 | DevLink sync                           | Runs after init               | Skipped                               |
 
 **Workspace selection (project-app mode only):** if `--workspace-id` is **not** passed, the CLI calls `GET /v2/workspaces` to enumerate workspaces the token has access to. Single workspace is auto-selected; multiple workspaces trigger an interactive picker. With `--workspace-id` the API roundtrip is skipped — the CLI trusts the flag and surfaces a 404 later via `createCloudApp` if it's invalid. The chosen ID is persisted as `cloud.workspace_id` in `webflow.json`.
@@ -587,7 +587,7 @@ Creates a Cloud app **from an existing GitHub repository** instead of a starter 
 | `--import <repo-url>`     | `https://github.com/<owner>/<repo>`. Must be non-empty.                                                                                                                                                                          |
 | `--site-id <siteId>`      | Attach to an existing site. **Mutually exclusive with `--new`; exactly one is required.**                                                                                                                                        |
 | `--new`                   | Create a project app instead of attaching to a site.                                                                                                                                                                             |
-| `--mount <path>`          | **Required (and non-root) with `--site-id`. Not allowed with `--new`** — a project app owns the root of its own domain, so it always mounts at `/`.                                                                              |
+| `--mount <path>`          | **Required (and non-root) with `--site-id`. Not allowed with `--new`** — a project app's initial environment uses `/`. Later environments and mount updates may use non-root paths (see `apps environments create` below).                                                                              |
 | `--branch <branch>`       | Branch to build. Defaults to the repository's default branch.                                                                                                                                                                    |
 | `--idempotency-key <key>` | **Required for non-interactive runs** (CI, `--no-input`). Use a retry-stable key unique to this repo + target, e.g. `$GITHUB_RUN_ID-$REPOSITORY-$SITE_ID`, so a retry replays the original app instead of creating a second one. |
 | `--skip-clone`            | Create the app without cloning locally. Nothing is written to the filesystem; the app and environment IDs are printed instead.                                                                                                   |
@@ -923,7 +923,7 @@ Creates an environment on an app, bound to a branch and served at a mount path. 
 **It does NOT deploy — the environment starts empty.** Run `apps deployments trigger` afterwards to build it.
 
 - `--branch <branch>` — the Git branch this environment builds from. Must be a valid branch name and **not already used by another environment of this app**.
-- `--mount <path>` — the URL path it is served at (e.g. `/app`). Must be **unique across the site**.
+- `--mount <path>` — the URL path it is served at (e.g. `/app`). Must be **unique across the site**, including sibling apps. Standalone/project apps allow `/` or a non-root path for later environments; site-attached apps require a non-root path. Standalone app creation provisions its initial environment at `/`, so an additional environment needs a different mount while `/` is occupied.
 - `--idempotency-key <key>` — optional retry-stable key (sent as the request's `requestId`) to dedupe a retried create. Same printable-ASCII rule as `deployments redeploy`.
 
 ```bash
@@ -934,7 +934,7 @@ webflow apps deployments trigger --json   # the environment is empty until you d
 
 #### apps environments update [appId] [envId]
 
-Updates an environment's `--branch` and/or `--mount` (**at least one is required**). Same uniqueness rules as `create`. Resolves the app and environment from the positional args, `WEBFLOW_APP_ID` / `WEBFLOW_APP_ENVIRONMENT_ID`, `webflow.json`, or pickers — or via the explicit `--app-id` / `--environment-id` flags. `--dry-run` previews.
+Updates an environment's `--branch` and/or `--mount` (**at least one is required**). Same mount eligibility and uniqueness rules as `create`; keeping this environment's existing mount is a no-op, not a conflict. Resolves the app and environment from the positional args, `WEBFLOW_APP_ID` / `WEBFLOW_APP_ENVIRONMENT_ID`, `webflow.json`, or pickers — or via the explicit `--app-id` / `--environment-id` flags. `--dry-run` previews.
 
 **It does NOT deploy.** After changing `--branch`, run `apps deployments trigger` to build the new branch — until you do, the environment still serves the old build.
 
