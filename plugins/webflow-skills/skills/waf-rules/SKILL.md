@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:waf-rules
-description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs an Enterprise plan that includes WAF, and WAF MCP must be enabled for the workspace.
+description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs an Enterprise plan that includes WAF.
 ---
 
 # WAF Rules
@@ -28,7 +28,6 @@ Review and change the Web Application Firewall (WAF) rules and Bot bypass settin
 The API refuses a call by name when one of these is missing (see Errors):
 
 - **Enterprise plan:** WAF MCP needs an Enterprise plan that includes WAF.
-- **WAF MCP enabled for the workspace:** WAF MCP is rolling out, so if `data_enterprise_tool` doesn't list the WAF actions, or a call returns `waf_mcp_not_enabled`, it isn't enabled for the workspace yet. Tell the user. They can still manage rules in the Dashboard under Site settings > Security.
 - **Settings action availability:** discover the `data_enterprise_tool` action schema before offering a settings change. If `test_waf_settings` or `update_waf_settings` is absent, say Bot bypass changes are unavailable through this connection and point to Dashboard > Site settings > Security. Don't claim success or try to change settings through a rule config.
 - **Role:** the user must be able to manage the site's custom domains: Site manager, Designer, Limited designer, or a custom role with that permission. Designer (needs approval), Marketer, Content editor, and Reviewer can't.
 - **Scopes:** `site_config:read` for reads and `validate_waf_rule`, `site_config:write` for `test_waf_rules`, `update_waf_rule`, `delete_waf_rule`, `test_waf_settings`, and `update_waf_settings`. The Webflow MCP app requests both. If a call returns `missing_scopes`, the user has to reauthorize the connection.
@@ -37,7 +36,7 @@ The API refuses a call by name when one of these is missing (see Errors):
 
 ### Phase 1: Read the current rules
 
-1. Call `webflow_guide_tool`. When WAF MCP is enabled, it includes a WAF section.
+1. Call `webflow_guide_tool`. It includes a WAF section.
 2. Resolve the site with `list_sites`. If the user didn't name one, or the name matches several, ask.
 3. Call `get_waf_rules` and keep:
    - `byDomain`: each connected custom domain's config, or `null` when it has none. A config holds up to four rule types (`ipRules`, `geoRules`, `asnRules`, `userAgentRules`) plus the bot bypass settings.
@@ -297,9 +296,7 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 | `WafChangeInterrupted` | Another change interrupted this one. Read again and review before retrying. |
 | `WafConfigDrift` | The domains have different configs, so a site-wide rule change is refused. Use domain scope for rules, not settings. |
 | `NoCloudflareHostnames` | No custom domain WAF can apply to yet: none is connected, or setup hasn't finished. Tell the user. |
-| `WafMcpWritesUnavailable` | Changing rules or settings through MCP isn't available for this site yet. Nothing changed and reads still work. Point the user to Site settings > Security. |
 | `WafTestedApplyUnavailable` | Applying a tested preview is off for this site. Nothing changed. Use `directApply` only if the user explicitly asks. |
-| 403 `waf_mcp_not_enabled` | WAF MCP isn't enabled for this site's workspace yet. Don't retry. |
 | 403 `waf_not_included_in_plan` | The site's plan doesn't include WAF, which is available on Enterprise plans. Don't retry. |
 | 403 `forbidden` | The user's role can't manage this site's domains. Don't retry. |
 | 403 `missing_scopes` | The connection lacks `site_config:read` or `site_config:write`. The user reauthorizes the Webflow MCP connection. |
