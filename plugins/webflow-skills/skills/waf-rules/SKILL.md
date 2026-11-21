@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:waf-rules
-description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs an Enterprise plan that includes WAF.
+description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs a site where WAF is available.
 ---
 
 # WAF Rules
@@ -27,7 +27,7 @@ Review and change the Web Application Firewall (WAF) rules and Bot bypass settin
 
 The API refuses a call by name when one of these is missing (see Errors):
 
-- **Enterprise plan:** WAF MCP needs an Enterprise plan that includes WAF.
+- **WAF available:** the site must have WAF available.
 - **Settings action availability:** discover the `data_enterprise_tool` action schema before offering a settings change. If `test_waf_settings` or `update_waf_settings` is absent, say Bot bypass changes are unavailable through this connection and point to Dashboard > Site settings > Security. Don't claim success or try to change settings through a rule config.
 - **Role:** the user must be able to manage the site's custom domains: Site manager, Designer, Limited designer, or a custom role with that permission. Designer (needs approval), Marketer, Content editor, and Reviewer can't.
 - **Scopes:** `site_config:read` for reads and `validate_waf_rule`, `site_config:write` for `test_waf_rules`, `update_waf_rule`, `delete_waf_rule`, `test_waf_settings`, and `update_waf_settings`. The Webflow MCP app requests both. If a call returns `missing_scopes`, the user has to reauthorize the connection.
@@ -297,11 +297,10 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 | `WafConfigDrift` | The domains have different configs, so a site-wide rule change is refused. Use domain scope for rules, not settings. |
 | `NoCloudflareHostnames` | No custom domain WAF can apply to yet: none is connected, or setup hasn't finished. Tell the user. |
 | `WafTestedApplyUnavailable` | Applying a tested preview is off for this site. Nothing changed. Use `directApply` only if the user explicitly asks. |
-| 403 `waf_not_included_in_plan` | The site's plan doesn't include WAF, which is available on Enterprise plans. Don't retry. |
+| 403 `not_enterprise_plan_site` | WAF isn't available for this site. Reach out to Support to explore plans with this feature available. |
 | 403 `forbidden` | The user's role can't manage this site's domains. Don't retry. |
 | 403 `missing_scopes` | The connection lacks `site_config:read` or `site_config:write`. The user reauthorizes the Webflow MCP connection. |
 | 404 | The site isn't in this authorization or isn't active. |
-| 503 `waf_access_unavailable` | WAF access couldn't be checked, and nothing changed. Retry in a few minutes. |
 | Anything else | Relay `error.message`. Don't retry a write more than once. |
 
 ## Examples
