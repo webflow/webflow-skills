@@ -51,14 +51,14 @@ The API refuses a call by name when one of these is missing (see Errors):
 6. Choose the scope (see "Domain scope"): site-wide when the change is for every domain and they share the current config, otherwise `domains` plus `previousDomains`.
 7. Call `validate_waf_rule` with `ruleType`, `config`, and the `domains` and `previousDomains` you plan to use. It's read-only and needs no hash, so call it as often as needed.
    - `success: false` with `ValidationError`: fix the config from `error.details` (field path and message) and `error.schema` (the JSON Schema for the rule type, present when the shape itself is wrong). Cross-field user-agent rules appear only in `details`. Validate again. If an entry that's already live is what fails (older rules can predate today's checks), tell the user instead of dropping or rewriting it silently.
-   - `success: true`: read every `explanation` line and check it against what the user asked for. If it describes anything they didn't ask for, such as "blocks every other country", fix the config or ask. Use the normalized `config` it returns from here on.
+   - `success: true`: read every `explanation` line and check it against what the user asked for. If it describes anything they didn't ask for, such as "blocks every other country", fix the config or ask. If it says a browser version floor matches every version when Webflow's version data is unavailable, add `minVersion`. Use the normalized `config` it returns from here on.
    - Non-empty `riskFindings`: tell the user now that applying will need a second confirmation (see "High-risk changes"), and offer `paths` to narrow the rule.
 8. If the request spans several rule types, make one change per rule type, in sequence. You can validate them all and confirm them together, but re-read and test each one right before applying it: every apply changes the `siteStateHash`.
 
 ### Phase 3: Preview and confirm
 
 9. Call `test_waf_rules` with the same `ruleType`, `config`, `domains`, and `previousDomains`, plus `expectedSiteStateHash` from your latest `get_waf_rules`.
-10. Show the user a preview: rule type and scope, current and new entries, which domains change (`targets[].changed`), each `riskFindings` message, any `hostnamesSkipped`, and size headroom when `candidateBytes` is close to `candidateBytesLimit`. The test checks configuration, not traffic, so it can't say which visitors will be blocked.
+10. Show the user a preview: rule type and scope, current and new entries, which domains change (`targets[].changed`), each `riskFindings` message, and any `hostnamesSkipped`. The test checks configuration, not traffic, so it can't say which visitors will be blocked.
 11. Ask the user to type `confirm`. "Yes" or "ok" isn't enough. The `previewToken` expires at `expiresAt`, about 5 minutes after the test. If it lapses, test again, and show the preview again if the targets or risks changed.
 
 ### Phase 4: Apply and verify
@@ -71,8 +71,8 @@ The API refuses a call by name when one of these is missing (see Errors):
 
 1. Confirm both settings actions are available, then read with `get_waf_rules`. Build `settings` with only `bypassVerifiedBots` and/or `bypassAuthorizedBots`: each is an optional boolean, at least one is required, and no other keys are allowed. A combined "enable Bot bypass" or "disable Bot bypass" request always sends **both** booleans with the same value; change just one only when the user explicitly asks for that setting.
 2. Settings changes are site-wide across connected custom domains: don't send `domains`, `previousDomains`, `ruleType`, or `config`. Each domain keeps its own rules, omitted settings, and existing bot tokens. Don't create or revoke tokens, ask the user to paste one, or expose one.
-3. Call `test_waf_settings` with `site_id`, `settings`, and `expectedSiteStateHash` from the latest `get_waf_rules`. It changes nothing and returns `targets` (`hostname`, `changed`, `candidateBytes`, `candidateBytesLimit`), `hostnamesSkipped`, `previewToken`, and `expiresAt`. It checks the candidate settings, not traffic; don't use `validate_waf_rule` for settings or claim a preview proves traffic is safe.
-4. Show current and proposed values per domain, which targets change, skipped hostnames, and size headroom when close to the limit. Turning bypass **off** makes customer WAF rules apply to verified crawlers and bots using valid tokens, which may affect search indexing. Turning it **on** lets eligible bots skip customer rules, never Webflow's own security protections. For a single-setting change, describe only the affected bot category.
+3. Call `test_waf_settings` with `site_id`, `settings`, and `expectedSiteStateHash` from the latest `get_waf_rules`. It changes nothing and returns `targets` (`hostname`, `changed`), `hostnamesSkipped`, `previewToken`, and `expiresAt`. It checks the candidate settings, not traffic; don't use `validate_waf_rule` for settings or claim a preview proves traffic is safe.
+4. Show current and proposed values per domain, which targets change, and skipped hostnames. Turning bypass **off** makes customer WAF rules apply to verified crawlers and bots using valid tokens, which may affect search indexing. Turning it **on** lets eligible bots skip customer rules, never Webflow's own security protections. For a single-setting change, describe only the affected bot category.
 5. Ask the user to type `confirm`; "yes" or "ok" isn't enough. After confirmation, call `update_waf_settings` with the **exact same** `site_id`, `settings`, and `expectedSiteStateHash`, plus the `previewToken` from that test. If the preview expires, test again; if state changed, re-read and rebuild. Show any changed preview and get confirmation again.
 6. On success, report the result and any skipped hostnames. Re-read with `get_waf_rules` and verify the requested settings on each target domain and that rules and omitted settings were preserved. Don't claim success from the preview alone.
 
@@ -170,7 +170,7 @@ Check in this order before calling a rule broken:
 }
 ```
 
-- 1-100 entries: IPv4 or IPv6 addresses or CIDR ranges. The size limit can run out before 100 (see "Size limit"). IPv4 needs all four parts (`10.0.0.0/8`, not `10/8`).
+- At least 1 entry, up to 80 IPv4 and up to 100 IPv6 addresses or CIDR ranges. IPv4 needs all four parts (`10.0.0.0/8`, not `10/8`).
 - First match wins. Above, `198.51.100.7` isn't blocked by the `/24` because it matches first.
 - `ALLOW` only skips the rest of the IP list. It doesn't exempt the request from geo, ASN, or user-agent rules.
 - IP entries can't have `paths`.
@@ -215,7 +215,7 @@ Above, only AcmeApp can call `/api`, `BadBot` is blocked everywhere, and request
   - `contains` (default): case-insensitive substring. Plain text: `*` and `?` aren't wildcards.
   - `exact`: the whole User-Agent must equal `pattern` (case-sensitive).
   - `any`: matches every request, including ones with no User-Agent. Omit `pattern`. Put it after the `ALLOW` entries as a catch-all BLOCK to build an allow-list.
-  - `browserVersionFloor`: matches `browser` (`chrome`, `edge`, or `firefox`; Safari isn't supported) at or above a version floor set by `withinLatest` (the latest N major versions, 1-100), `minVersion` (1-1000), or both, in which case the higher floor applies. Omit `pattern`. Usually an `ALLOW` before a broader BLOCK. If Webflow's browser version data is unavailable, a rule without `minVersion` applies to the whole browser family: a BLOCK then over-blocks and an ALLOW over-allows. Set `minVersion`, and scope a BLOCK with `paths`.
+  - `browserVersionFloor`: matches a recent browser, meaning the named `browser` (`chrome`, `edge`, or `firefox`) at or above a version floor. The floor is `withinLatest` (the latest N major versions, 1-100), `minVersion` (1-1000), or both, in which case the higher floor applies. It can't match versions below the floor, so to turn older browsers away, `ALLOW` the floor and then `BLOCK` the rest. `chrome` doesn't match Edge or Opera, and Safari isn't supported. Omit `pattern`. If Webflow's browser version data is unavailable, a rule without `minVersion` applies to the whole browser family: a BLOCK then over-blocks and an ALLOW over-allows. Always set `minVersion`, and scope a BLOCK with `paths`.
 - `browser`, `withinLatest`, and `minVersion` are only allowed with `browserVersionFloor`.
 - `pattern`: up to 256 characters, using letters, digits, spaces, and `. , ; : / ( ) [ ] - _ + ! ~ * ? @ # =`.
 - `paths` is set per pattern. A pattern whose `paths` don't match the request is skipped and the next one is checked.
@@ -232,12 +232,15 @@ To let recent Chrome through on `/api` and block every other User-Agent there, p
 }
 ```
 
+To allow the other supported browsers too, add a floor `ALLOW` for each of `edge` and `firefox` before the catch-all. A browser without its own `ALLOW` is blocked, and a `chrome` floor doesn't cover Edge.
+
 ### Blocking bots and AI crawlers
 
 Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifiedBots: true`, the default), every bot Cloudflare verifies skips them. Cloudflare's verified list includes the major search engines and can include AI crawlers.
 
 - While Bot bypass is on, a User-Agent block can't stop a verified crawler. Cloudflare's [bot directory](https://radar.cloudflare.com/bots/directory) lists which bots are verified. If a block on a crawler doesn't take effect, the crawler is probably verified. Say this in the preview for any crawler block.
 - Enable or disable Bot bypass through "Changing Bot bypass settings" when both settings actions are available; otherwise point to Dashboard > Site settings > Security. The combined control changes both `bypassVerifiedBots` and `bypassAuthorizedBots`. Turning it off makes rules apply to verified crawlers and token-authorized bots, and may affect indexing.
+- To block verified crawlers but keep token-authorized bots working, turn off only `bypassVerifiedBots` and leave `bypassAuthorizedBots` on. Turning off only `bypassAuthorizedBots` does the reverse: every bot token stops working, because none is honored at the edge. Change one setting only when the user asks for that bot category, and name the category in the preview.
 - Bots with Webflow bot tokens skip the rules when `bypassAuthorizedBots` is enabled (absent means enabled). The client sends `x-wf-waf-authorization: wf_wafbot_<64 hex characters>`. Customers create tokens in the Dashboard's Bot access section (up to 5 per site, each with a list of allowed methods that defaults to `GET` and `HEAD`). A token skips the site's WAF rules, but never Webflow's own protections. Don't create or revoke tokens, ask the user to paste one, or print one.
 
 ### Path scope
@@ -266,10 +269,6 @@ Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifi
 - To move a geo rule from `www.example.com` to `shop.example.com`, send `domains: ["shop.example.com"]` and `previousDomains: ["www.example.com"]`.
 - Deletions take `domains` only.
 
-### Size limit
-
-Each domain's whole WAF config, all rule types together, has a storage limit of 3,584 bytes, measured as the config's JSON. A write over it fails with `WAF configuration exceeds the storage limit (N of 3584 bytes used)`. `targets[].candidateBytes` and `candidateBytesLimit` show the headroom, and going over is a `ValidationError`. Long IP lists and many `paths` entries use it up fastest: an IP list in the high double digits can reach it before the 100-entry cap.
-
 ### Cloudflare references
 
 Webflow's WAF uses Cloudflare's data about each request (its country, ASN, and verified-bot status), but the rule format and behavior above are Webflow's own. Cloudflare's WAF custom rules, managed rules, rate limiting rules, and rule expressions aren't available through Webflow's WAF, so don't suggest or write them.
@@ -284,7 +283,7 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 
 | Result | Meaning and what to do |
 |--------|------------------------|
-| `ValidationError` | Invalid config or request: the shape (`details`, plus `schema` from `validate_waf_rule`), an unknown domain, the size limit, or a date range. Fix it and validate again. |
+| `ValidationError` | Invalid config or request: the shape (`details`, plus `schema` from `validate_waf_rule`), an unknown domain, or a date range. Fix it and validate again. |
 | `WafSiteStateChanged`, `WafPreviewStale` | The rules or settings changed after your read or test. Don't resend. Read again, rebuild the change on the new state, show the user if it differs, then validate rule configs and test again. |
 | `WafPreviewExpired`, `WafPreviewInvalid` | The token lapsed or doesn't match the request. Test again and apply exactly the tested values. |
 | `WafPreviewRequired` | No `previewToken` was sent. Test first. |
@@ -297,11 +296,10 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 | `WafConfigDrift` | The domains have different configs, so a site-wide rule change is refused. Use domain scope for rules, not settings. |
 | `NoCloudflareHostnames` | No custom domain WAF can apply to yet: none is connected, or setup hasn't finished. Tell the user. |
 | `WafTestedApplyUnavailable` | Applying a tested preview is off for this site. Nothing changed. Use `directApply` only if the user explicitly asks. |
-| 403 `waf_not_included_in_plan` | The site's plan doesn't include WAF, which is available on Enterprise plans. Don't retry. |
+| 403 `not_enterprise_plan_site` | WAF isn't available for this site. Reach out to Support to explore plans with this feature available. |
 | 403 `forbidden` | The user's role can't manage this site's domains. Don't retry. |
 | 403 `missing_scopes` | The connection lacks `site_config:read` or `site_config:write`. The user reauthorizes the Webflow MCP connection. |
 | 404 | The site isn't in this authorization or isn't active. |
-| 503 `waf_access_unavailable` | WAF access couldn't be checked, and nothing changed. Retry in a few minutes. |
 | Anything else | Relay `error.message`. Don't retry a write more than once. |
 
 ## Examples
