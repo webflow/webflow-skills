@@ -1,6 +1,6 @@
 ---
 name: webflow-mcp:waf-rules
-description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs a site where WAF is available.
+description: Review and change a Webflow site's Web Application Firewall (WAF) rules and Bot bypass settings through Webflow MCP. Use when the user wants to block or allow countries, IP addresses or CIDR ranges, networks (ASNs), bots, AI crawlers, scrapers, or User-Agents, optionally only on some paths; add, edit, or remove firewall or WAF rules; enable or disable Bot bypass; review or explain the current rules; or draft rules from findings about unwanted traffic. Changes are previewed and confirmed by the user before they reach live traffic. Needs an Enterprise plan that includes WAF.
 ---
 
 # WAF Rules
@@ -27,7 +27,7 @@ Review and change the Web Application Firewall (WAF) rules and Bot bypass settin
 
 The API refuses a call by name when one of these is missing (see Errors):
 
-- **WAF available:** the site must have WAF available.
+- **Enterprise plan:** WAF MCP needs an Enterprise plan that includes WAF.
 - **Settings action availability:** discover the `data_enterprise_tool` action schema before offering a settings change. If `test_waf_settings` or `update_waf_settings` is absent, say Bot bypass changes are unavailable through this connection and point to Dashboard > Site settings > Security. Don't claim success or try to change settings through a rule config.
 - **Role:** the user must be able to manage the site's custom domains: Site manager, Designer, Limited designer, or a custom role with that permission. Designer (needs approval), Marketer, Content editor, and Reviewer can't.
 - **Scopes:** `site_config:read` for reads and `validate_waf_rule`, `site_config:write` for `test_waf_rules`, `update_waf_rule`, `delete_waf_rule`, `test_waf_settings`, and `update_waf_settings`. The Webflow MCP app requests both. If a call returns `missing_scopes`, the user has to reauthorize the connection.
