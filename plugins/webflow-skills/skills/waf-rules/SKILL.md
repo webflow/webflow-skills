@@ -58,7 +58,7 @@ The API refuses a call by name when one of these is missing (see Errors):
 ### Phase 3: Preview and confirm
 
 9. Call `test_waf_rules` with the same `ruleType`, `config`, `domains`, and `previousDomains`, plus `expectedSiteStateHash` from your latest `get_waf_rules`.
-10. Show the user a preview: rule type and scope, current and new entries, which domains change (`targets[].changed`), each `riskFindings` message, any `hostnamesSkipped`, and size headroom when `candidateBytes` is close to `candidateBytesLimit`. The test checks configuration, not traffic, so it can't say which visitors will be blocked.
+10. Show the user a preview: rule type and scope, current and new entries, which domains change (`targets[].changed`), each `riskFindings` message, and any `hostnamesSkipped`. The test checks configuration, not traffic, so it can't say which visitors will be blocked.
 11. Ask the user to type `confirm`. "Yes" or "ok" isn't enough. The `previewToken` expires at `expiresAt`, about 5 minutes after the test. If it lapses, test again, and show the preview again if the targets or risks changed.
 
 ### Phase 4: Apply and verify
@@ -71,8 +71,8 @@ The API refuses a call by name when one of these is missing (see Errors):
 
 1. Confirm both settings actions are available, then read with `get_waf_rules`. Build `settings` with only `bypassVerifiedBots` and/or `bypassAuthorizedBots`: each is an optional boolean, at least one is required, and no other keys are allowed. A combined "enable Bot bypass" or "disable Bot bypass" request always sends **both** booleans with the same value; change just one only when the user explicitly asks for that setting.
 2. Settings changes are site-wide across connected custom domains: don't send `domains`, `previousDomains`, `ruleType`, or `config`. Each domain keeps its own rules, omitted settings, and existing bot tokens. Don't create or revoke tokens, ask the user to paste one, or expose one.
-3. Call `test_waf_settings` with `site_id`, `settings`, and `expectedSiteStateHash` from the latest `get_waf_rules`. It changes nothing and returns `targets` (`hostname`, `changed`, `candidateBytes`, `candidateBytesLimit`), `hostnamesSkipped`, `previewToken`, and `expiresAt`. It checks the candidate settings, not traffic; don't use `validate_waf_rule` for settings or claim a preview proves traffic is safe.
-4. Show current and proposed values per domain, which targets change, skipped hostnames, and size headroom when close to the limit. Turning bypass **off** makes customer WAF rules apply to verified crawlers and bots using valid tokens, which may affect search indexing. Turning it **on** lets eligible bots skip customer rules, never Webflow's own security protections. For a single-setting change, describe only the affected bot category.
+3. Call `test_waf_settings` with `site_id`, `settings`, and `expectedSiteStateHash` from the latest `get_waf_rules`. It changes nothing and returns `targets` (`hostname`, `changed`), `hostnamesSkipped`, `previewToken`, and `expiresAt`. It checks the candidate settings, not traffic; don't use `validate_waf_rule` for settings or claim a preview proves traffic is safe.
+4. Show current and proposed values per domain, which targets change, and skipped hostnames. Turning bypass **off** makes customer WAF rules apply to verified crawlers and bots using valid tokens, which may affect search indexing. Turning it **on** lets eligible bots skip customer rules, never Webflow's own security protections. For a single-setting change, describe only the affected bot category.
 5. Ask the user to type `confirm`; "yes" or "ok" isn't enough. After confirmation, call `update_waf_settings` with the **exact same** `site_id`, `settings`, and `expectedSiteStateHash`, plus the `previewToken` from that test. If the preview expires, test again; if state changed, re-read and rebuild. Show any changed preview and get confirmation again.
 6. On success, report the result and any skipped hostnames. Re-read with `get_waf_rules` and verify the requested settings on each target domain and that rules and omitted settings were preserved. Don't claim success from the preview alone.
 
@@ -170,7 +170,7 @@ Check in this order before calling a rule broken:
 }
 ```
 
-- 1-100 entries: IPv4 or IPv6 addresses or CIDR ranges. The size limit can run out before 100 (see "Size limit"). IPv4 needs all four parts (`10.0.0.0/8`, not `10/8`).
+- At least 1 entry, up to 80 IPv4 and up to 100 IPv6 addresses or CIDR ranges. IPv4 needs all four parts (`10.0.0.0/8`, not `10/8`).
 - First match wins. Above, `198.51.100.7` isn't blocked by the `/24` because it matches first.
 - `ALLOW` only skips the rest of the IP list. It doesn't exempt the request from geo, ASN, or user-agent rules.
 - IP entries can't have `paths`.
@@ -267,10 +267,6 @@ Bot bypass runs before all of the site's WAF rules. While it's on (`bypassVerifi
 - To move a geo rule from `www.example.com` to `shop.example.com`, send `domains: ["shop.example.com"]` and `previousDomains: ["www.example.com"]`.
 - Deletions take `domains` only.
 
-### Size limit
-
-Each domain's whole WAF config, all rule types together, has a storage limit of 3,584 bytes, measured as the config's JSON. A write over it fails with `WAF configuration exceeds the storage limit (N of 3584 bytes used)`. `targets[].candidateBytes` and `candidateBytesLimit` show the headroom, and going over is a `ValidationError`. Long IP lists and many `paths` entries use it up fastest: an IP list in the high double digits can reach it before the 100-entry cap.
-
 ### Cloudflare references
 
 Webflow's WAF uses Cloudflare's data about each request (its country, ASN, and verified-bot status), but the rule format and behavior above are Webflow's own. Cloudflare's WAF custom rules, managed rules, rate limiting rules, and rule expressions aren't available through Webflow's WAF, so don't suggest or write them.
@@ -285,7 +281,7 @@ Every WAF action answers `{success: true, ...}` or `{success: false, error: {nam
 
 | Result | Meaning and what to do |
 |--------|------------------------|
-| `ValidationError` | Invalid config or request: the shape (`details`, plus `schema` from `validate_waf_rule`), an unknown domain, the size limit, or a date range. Fix it and validate again. |
+| `ValidationError` | Invalid config or request: the shape (`details`, plus `schema` from `validate_waf_rule`), an unknown domain, or a date range. Fix it and validate again. |
 | `WafSiteStateChanged`, `WafPreviewStale` | The rules or settings changed after your read or test. Don't resend. Read again, rebuild the change on the new state, show the user if it differs, then validate rule configs and test again. |
 | `WafPreviewExpired`, `WafPreviewInvalid` | The token lapsed or doesn't match the request. Test again and apply exactly the tested values. |
 | `WafPreviewRequired` | No `previewToken` was sent. Test first. |
