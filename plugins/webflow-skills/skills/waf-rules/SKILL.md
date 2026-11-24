@@ -51,7 +51,7 @@ The API refuses a call by name when one of these is missing (see Errors):
 6. Choose the scope (see "Domain scope"): site-wide when the change is for every domain and they share the current config, otherwise `domains` plus `previousDomains`.
 7. Call `validate_waf_rule` with `ruleType`, `config`, and the `domains` and `previousDomains` you plan to use. It's read-only and needs no hash, so call it as often as needed.
    - `success: false` with `ValidationError`: fix the config from `error.details` (field path and message) and `error.schema` (the JSON Schema for the rule type, present when the shape itself is wrong). Cross-field user-agent rules appear only in `details`. Validate again. If an entry that's already live is what fails (older rules can predate today's checks), tell the user instead of dropping or rewriting it silently.
-   - `success: true`: read every `explanation` line and check it against what the user asked for. If it describes anything they didn't ask for, such as "blocks every other country", fix the config or ask. Use the normalized `config` it returns from here on.
+   - `success: true`: read every `explanation` line and check it against what the user asked for. If it describes anything they didn't ask for, such as "blocks every other country", fix the config or ask. If it says a browser version floor matches every version when Webflow's version data is unavailable, add `minVersion`. Use the normalized `config` it returns from here on.
    - Non-empty `riskFindings`: tell the user now that applying will need a second confirmation (see "High-risk changes"), and offer `paths` to narrow the rule.
 8. If the request spans several rule types, make one change per rule type, in sequence. You can validate them all and confirm them together, but re-read and test each one right before applying it: every apply changes the `siteStateHash`.
 
@@ -215,7 +215,7 @@ Above, only AcmeApp can call `/api`, `BadBot` is blocked everywhere, and request
   - `contains` (default): case-insensitive substring. Plain text: `*` and `?` aren't wildcards.
   - `exact`: the whole User-Agent must equal `pattern` (case-sensitive).
   - `any`: matches every request, including ones with no User-Agent. Omit `pattern`. Put it after the `ALLOW` entries as a catch-all BLOCK to build an allow-list.
-  - `browserVersionFloor`: matches `browser` (`chrome`, `edge`, or `firefox`; Safari isn't supported) at or above a version floor set by `withinLatest` (the latest N major versions, 1-100), `minVersion` (1-1000), or both, in which case the higher floor applies. Omit `pattern`. Usually an `ALLOW` before a broader BLOCK. If Webflow's browser version data is unavailable, a rule without `minVersion` applies to the whole browser family: a BLOCK then over-blocks and an ALLOW over-allows. Set `minVersion`, and scope a BLOCK with `paths`.
+  - `browserVersionFloor`: matches a recent browser, meaning the named `browser` (`chrome`, `edge`, or `firefox`) at or above a version floor. The floor is `withinLatest` (the latest N major versions, 1-100), `minVersion` (1-1000), or both, in which case the higher floor applies. It can't match versions below the floor, so to turn older browsers away, `ALLOW` the floor and then `BLOCK` the rest. `chrome` doesn't match Edge or Opera, and Safari isn't supported. Omit `pattern`. If Webflow's browser version data is unavailable, a rule without `minVersion` applies to the whole browser family: a BLOCK then over-blocks and an ALLOW over-allows. Always set `minVersion`, and scope a BLOCK with `paths`.
 - `browser`, `withinLatest`, and `minVersion` are only allowed with `browserVersionFloor`.
 - `pattern`: up to 256 characters, using letters, digits, spaces, and `. , ; : / ( ) [ ] - _ + ! ~ * ? @ # =`.
 - `paths` is set per pattern. A pattern whose `paths` don't match the request is skipped and the next one is checked.
@@ -231,6 +231,8 @@ To let recent Chrome through on `/api` and block every other User-Agent there, p
   ]
 }
 ```
+
+To allow the other supported browsers too, add a floor `ALLOW` for each of `edge` and `firefox` before the catch-all. A browser without its own `ALLOW` is blocked, and a `chrome` floor doesn't cover Edge.
 
 ### Blocking bots and AI crawlers
 
