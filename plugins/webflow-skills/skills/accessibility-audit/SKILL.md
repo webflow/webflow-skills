@@ -1,12 +1,12 @@
 ---
 name: webflow-mcp:accessibility-audit
-description: Run comprehensive accessibility audit (WCAG 2.1) on Webflow pages - checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID — no Designer connection required. Excludes image alt text (covered by asset-audit skill).
+description: Run comprehensive accessibility audit (WCAG 2.2) on Webflow pages. Checks buttons, forms, links, focus states, headings, keyboard navigation, and generates detailed reports with fixes. Runs entirely headlessly against a page ID, no Designer connection required. Excludes image alt text (covered by asset-audit skill).
 mcp-version: 2.0.1
 ---
 
 # Accessibility Audit
 
-Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue detection and actionable fixes.
+Comprehensive WCAG 2.2 accessibility audit for Webflow pages with detailed issue detection and actionable fixes.
 
 ## Important Note
 
@@ -22,6 +22,20 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 - All tool calls must include the required `context` parameter (15-25 words, third-person perspective)
 - **No Designer connection is required for the audit or fixes.** `data_element_tool` operates headlessly on any page ID from `list_pages`. Designer is only needed if you choose to use `element_snapshot_tool` for optional visual previews.
 
+## Scope & Testing Framework
+
+**This skill scans for detectable accessibility issues only.** It runs checks based on element attributes and structure. Before starting any audit, tell the user plainly that this is an automated first pass, not a substitute for hands-on testing, and that a clean report doesn't mean a page is fully accessible.
+
+Webflow's guidance on [accessibility testing](https://webflow.com/webflow-way/design-systems/accessibility) lays out three levels of rigor. Share this framework with the user in the disclosure and again at the end of the report, so they know where this skill fits and what to do next:
+
+| Level | What it covers |
+|-------|-----------------|
+| **Good** | Using automated or manual accessibility testing tools to uncover machine-detectable errors. This skill's automated checks live at this tier: a useful first pass, not a full audit. |
+| **Better** | Testing with real assistive technology: screen readers (NVDA, JAWS, Narrator, VoiceOver, Talkback), voice input tools (Dragon, Microsoft Voice Access), browser zoom/font-size controls, OS accessibility settings, screen magnifiers, and keyboard-only navigation. Emulation platforms like Assistiv Labs help cover more browser + assistive-tech combinations. |
+| **Best** | Testing with actual disabled users: the gold standard. Platforms like Fable can help connect with people to test with. |
+
+Recommend the user progress toward Better and Best testing for anything beyond a quick spot check, especially before major launches.
+
 ## Instructions
 
 ### Phase 1: Site & Page Selection
@@ -30,9 +44,9 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
    - If user provides page ID, use it directly
    - Otherwise, use `data_pages_tool` with action `list_pages` to show available pages
    - Let user select which page(s) to audit
-3. **Confirm audit scope**: Ask user what to check:
+3. **Disclose scope, then confirm audit scope**: Tell the user this scan only detects issues visible in element attributes and structure (see Scope & Testing Framework above). It's the "Good" tier of testing, not a substitute for assistive-tech or user testing. Then ask what to check:
    - Full audit (all accessibility checks)
-   - Critical issues only (WCAG Level A)
+   - Critical issues only (Success Criterion Level A)
    - Specific categories (forms, buttons, navigation, etc.)
 
 ### Phase 2: Element Extraction & Analysis
@@ -56,89 +70,95 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 ### Phase 3: Accessibility Checks
 
 #### Critical Issues (Must Fix - WCAG Level A)
-7. **Icon-only buttons without labels** (WCAG 4.1.2)
+7. **Icon-only buttons without labels** (Success Criterion 4.1.2)
    - Find: Button elements with no text content
    - Check: Missing `aria-label` or `aria-labelledby`
    - Impact: Screen readers cannot identify button purpose
    - Fix: Add `aria-label` attribute with descriptive text
 
-8. **Form inputs without labels** (WCAG 1.3.1)
+8. **Form inputs without labels** (Success Criterion 1.3.1)
     - Find: Input, Select, Textarea elements
     - Check: Missing associated label or `aria-label`
     - Impact: Users don't know what input is for
     - Fix: Add `aria-label` or associate with `<label>` using `id`
 
-9. **Non-semantic click handlers** (WCAG 2.1.1)
+9. **Non-semantic click handlers** (Success Criterion 2.1.1)
     - Find: Div or Span elements (identified by element type)
     - Check: Interactive behavior without proper role/keyboard support
     - Impact: Not keyboard accessible, screen readers miss interactivity
     - Fix: Add `role="button"`, `tabIndex="0"`, suggest using real `<button>`
 
-10. **Links without destination** (WCAG 2.1.1)
+10. **Links without destination** (Success Criterion 2.1.1)
     - Find: Link elements with no `href` attribute
     - Check: Links that only use onClick without href
     - Impact: Not keyboard accessible, breaks browser features
     - Fix: Add proper `href` or convert to button
 
 #### Serious Issues (Should Fix - WCAG Level AA)
-11. **Focus outline removed without replacement** (WCAG 2.4.7)
+11. **Focus outline removed without replacement** (Success Criterion 2.4.7)
     - Find: Elements with `outline: none` style
     - Check: No visible alternative focus indicator
     - Impact: Keyboard users can't see focus
     - Fix: Add visible focus style (border, box-shadow, background change)
 
-12. **Missing keyboard handlers** (WCAG 2.1.1)
+12. **Missing keyboard handlers** (Success Criterion 2.1.1)
     - Find: Elements with onClick handlers
     - Check: Missing onKeyDown for Enter/Space keys
     - Impact: Not usable with keyboard alone
     - Fix: Add keyboard event handlers
 
-13. **Touch target too small** (WCAG 2.5.5)
-    - Find: Clickable elements (buttons, links)
-    - Check: Width or height < 44px
-    - Impact: Hard to tap on mobile devices
-    - Fix: Increase padding or min-width/min-height to 44px
+13. **Touch target too small** (Success Criterion 2.5.8 Target Size Minimum, new in 2.2)
+    - Find: Clickable elements (buttons, links) that aren't inline text and have no exception (e.g., not part of a sentence)
+    - Check: Width or height < 24px (fails the Level AA minimum)
+    - Impact: Hard to tap accurately, especially for users with motor impairments
+    - Fix: Increase padding or min-width/min-height to at least 24px; 44px is recommended (Success Criterion 2.5.5 Target Size Enhanced, Level AAA) for comfortable tap targets
+
+14. **Focus not obscured by sticky content** (Success Criterion 2.4.11, new in 2.2)
+    - Find: Focusable elements near sticky/fixed headers, footers, or cookie banners
+    - Check: Whether a focused element could be entirely hidden behind `position: fixed`/`sticky` content with a higher stacking order
+    - Impact: Keyboard users can lose track of where focus is
+    - Fix: Add scroll-margin/padding so focused elements clear sticky content, or lower the sticky element's z-index; flag ambiguous cases for manual verification with `element_snapshot_tool` (Designer required)
 
 #### Moderate Issues (Consider Fixing)
-14. **Heading hierarchy problems** (WCAG 1.3.1)
+15. **Heading hierarchy problems** (Success Criterion 1.3.1)
     - Find: Heading elements (h1-h6)
     - Check: Skipped levels (h1 → h3, skipping h2)
     - Impact: Confusing document structure
     - Fix: Use proper sequential heading levels
 
-15. **Positive tabIndex** (WCAG 2.4.3)
+16. **Positive tabIndex** (Success Criterion 2.4.3)
     - Find: Elements with tabIndex > 0
     - Check: Disrupts natural tab order
     - Impact: Confusing keyboard navigation
     - Fix: Use tabIndex="0" or "-1" only, let natural DOM order work
 
-16. **Role without required attributes** (WCAG 4.1.2)
+17. **Role without required attributes** (Success Criterion 4.1.2)
     - Find: Elements with ARIA roles
     - Check: Missing required ARIA attributes (e.g., role="button" without tabIndex)
     - Impact: Incomplete accessibility semantics
     - Fix: Add required attributes for role
 
 ### Phase 4: Issue Categorization & Scoring
-17. **Categorize all findings**:
+18. **Categorize all findings**:
     - Critical: Must fix (blocks access)
     - Serious: Should fix (significantly impacts usability)
     - Moderate: Consider fixing (improves experience)
 
-18. **Calculate accessibility score** (0-100):
+19. **Calculate accessibility score** (0-100):
     - Start at 100
     - Critical issue: -10 points each
     - Serious issue: -5 points each
     - Moderate issue: -2 points each
     - Minimum score: 0
 
-19. **Generate severity summary**:
+20. **Generate severity summary**:
     - Total issues found
     - Breakdown by severity
     - Most common issue types
     - Pages/sections most affected
 
 ### Phase 5: Report Generation
-20. **Create detailed report** with specific format:
+21. **Create detailed report** with specific format:
     ```
     ═══════════════════════════════════════════════════
     ACCESSIBILITY AUDIT: [Page Name]
@@ -195,15 +215,16 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     ═══════════════════════════════════════════════════
     ```
 
-21. **Provide actionable insights**:
+22. **Provide actionable insights**:
     - Prioritized fix list (critical first)
     - Quick wins (easy fixes with big impact)
     - Design pattern recommendations
     - Resources for learning more
+    - A recap of the Good/Better/Best testing framework, noting this scan covers "Good" and recommending Better (assistive-tech testing) and Best (testing with disabled users) as next steps
 
 ### Phase 6: Fix Suggestions & Approval (Optional)
-22. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
-23. **Show preview of fixes**:
+23. **Offer to fix issues automatically**: Fixes don't require Designer, so offer auto-fixes directly
+24. **Show preview of fixes**:
     ```
     Which issues would you like to fix?
 
@@ -225,24 +246,24 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
     Type numbers to skip (e.g., "3"), "all" for all, "none" to cancel
     ```
 
-24. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
+25. **Apply approved fixes**: Use `data_element_tool` with action `set_attributes`
     - Process in batches
     - Show progress for large fix sets
     - Report success/failure for each
 
-25. **Generate post-fix report**:
+26. **Generate post-fix report**:
     - Issues fixed: X
     - Issues remaining: Y
     - New accessibility score: XX/100 (improved from YY/100)
 
 ### Phase 7: Export & Resources (Optional)
-26. **Offer export formats**:
+27. **Offer export formats**:
     - Markdown (readable documentation)
     - JSON (machine-readable for tracking)
     - CSV (spreadsheet for team review)
 
-27. **Provide resources**:
-    - WCAG 2.1 quick reference links
+28. **Provide resources**:
+    - WCAG 2.2 quick reference links
     - Webflow accessibility best practices
     - Recommended testing tools (browser extensions, screen readers)
 
@@ -264,6 +285,11 @@ Comprehensive WCAG 2.1 accessibility audit for Webflow pages with detailed issue
 ❌ Animation/motion preferences
 ❌ Screen reader testing (needs manual verification)
 ❌ Content readability (language level, clarity)
+❌ Dragging Movements alternatives (Success Criterion 2.5.7 — needs interaction testing beyond static attributes)
+❌ Consistent Help placement across pages (Success Criterion 3.2.6 — requires site-wide navigation analysis)
+❌ Redundant Entry in multi-step forms (Success Criterion 3.3.7 — requires flow-level form analysis)
+❌ Accessible Authentication methods (Success Criterion 3.3.8 — requires reviewing the login/auth flow itself)
+❌ Assistive technology or real-user testing (the "Better" and "Best" tiers — see Scope & Testing Framework)
 
 ### Limitations
 - Cannot detect visual-only issues (color contrast, small text)
@@ -283,6 +309,8 @@ Run an accessibility audit on my homepage
 **Step 1: Site & Page Selection**
 ```
 🔍 Accessibility Audit: Page Selection
+
+Heads up: this scan only detects issues visible in element attributes and structure — Webflow's "Good" tier of accessibility testing. It's a solid first pass, but it doesn't replace testing with assistive technology ("Better") or with disabled users ("Best"). I'll recap that framework at the end of the report.
 
 I'll help you audit your homepage for accessibility issues.
 
@@ -315,7 +343,7 @@ Which page would you like to audit? (1 for Home)
 What level of audit would you like?
 
 1. Full audit (all WCAG checks) - Recommended
-2. Critical issues only (Level A compliance)
+2. Critical issues only (Level A conformance)
 3. Specific categories (buttons, forms, navigation)
 
 Your choice: (1/2/3)
@@ -381,12 +409,12 @@ SERIOUS (5 issues)
   WCAG: 2.4.7 Focus Visible
 
 [A11Y] Element: Button "Subscribe"
-  Issue: Touch target too small (30px × 36px)
+  Issue: Touch target too small (20px × 22px)
   Location: Footer newsletter form
   Element ID: {component: "footer-01", element: "submit-btn"}
   Current: Small button
-  Fix: Increase padding or set min-height: 44px
-  WCAG: 2.5.5 Target Size
+  Fix: Increase padding or set min-height: 24px (44px recommended)
+  WCAG: 2.5.8 Target Size (Minimum)
 
 [continues with 3 more serious issues...]
 
@@ -429,6 +457,8 @@ Quick Wins (Easy + High Impact):
 2. Add visible focus styles for keyboard users
 3. Test with keyboard navigation (Tab, Enter, Space keys)
 4. Consider testing with screen reader (NVDA/JAWS/VoiceOver)
+
+📐 Where this fits: this automated scan covers the "Good" tier of Webflow's Good/Better/Best testing framework. For "Better," test with assistive tech (screen readers, voice input, keyboard-only nav). For "Best," test directly with disabled users (e.g. via Fable). See https://webflow.com/webflow-way/design-systems/accessibility for details.
 
 Would you like me to help fix these issues?
 ```
@@ -661,21 +691,26 @@ Would you like me to:
 - Provide specific, actionable fixes
 - Encourage testing with real assistive technology
 - Emphasize that automated checks are just the start
+- Disclose upfront that this skill only detects issues visible in element attributes/structure, and close out reports with the Good/Better/Best testing framework recap
 
 ## Resources to Include
 
-### WCAG 2.1 Quick Reference
-- https://www.w3.org/WAI/WCAG21/quickref/
+### WCAG 2.2 Quick Reference
+- https://www.w3.org/WAI/WCAG22/quickref/
 
 ### Webflow Accessibility Resources
 - Webflow University: Accessibility best practices
 - Using semantic HTML in Webflow
 - Adding ARIA attributes in Webflow
+- Webflow's Good/Better/Best accessibility testing framework: https://webflow.com/webflow-way/design-systems/accessibility
 
 ### Testing Tools
-- Keyboard: Tab, Shift+Tab, Enter, Space
-- Screen readers: NVDA (Windows), JAWS, VoiceOver (Mac/iOS)
-- Browser extensions: axe DevTools, WAVE, Lighthouse
+- Keyboard: Tab, Shift+Tab, Enter, Space, Arrows
+- Screen readers: NVDA, JAWS, Narrator (Windows), VoiceOver (Mac/iOS), Talkback (Android)
+- Voice input tools: Dragon, Microsoft Voice Access
+- Browser extensions: axe DevTools, Accessibility Insights, WAVE, Lighthouse
+- Browser zoom and font size controls
+- Operating system accessibility settings: font sizing, Contrast Themes, transparency preferences
 
 ### Common Fixes
 - Button labels: Always include visible text or aria-label
